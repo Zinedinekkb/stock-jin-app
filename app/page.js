@@ -17,7 +17,7 @@ import TabMenu from './components/TabMenu';
 import { db, auth } from '@/lib/firebase';
 import { 
   collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc,
-  serverTimestamp, query, orderBy, where, writeBatch // <--- [เพิ่ม] writeBatch
+  serverTimestamp, query, orderBy, where, writeBatch
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
 
@@ -149,9 +149,7 @@ export default function StockJinApp() {
     return `ร้านจิน ข้าวมันไก่\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
   };
 
-  // -------------------------------------------------------------------
-  // [NEW] Logic สำหรับ Void/Edit Transaction (คืนค่าสต็อก)
-  // -------------------------------------------------------------------
+  // --- LOGIC: Void/Edit/Reorder ---
   const revertStock = async (tx) => {
     const reversePromises = (tx.items || []).map(async (item) => {
        const qtyUsed = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : 0;
@@ -195,9 +193,6 @@ export default function StockJinApp() {
     }, 'info');
   };
 
-  // -------------------------------------------------------------------
-  // [NEW] Logic สำหรับ Reorder Stock (จัดลำดับสินค้า)
-  // -------------------------------------------------------------------
   const handleReorderStock = async (reorderedItems) => {
     try {
       const batch = writeBatch(db);
@@ -213,21 +208,59 @@ export default function StockJinApp() {
   };
 
 
-  // --- ACTIONS ---
+  // --- ACTIONS: Request Transaction (WITH LINE NOTIFY) ---
   const handleRequestTransaction = async () => {
     if (cart.length === 0) return;
+    
     showConfirm(
       `ยืนยันคำขอ ${transMode === 'IN' ? 'รับของ' : 'เบิกของ'}`, 
       `รายการจะถูกส่งไปที่หน้า "สถานะ" เพื่อรอการตรวจสอบและยืนยันยอดจริงอีกครั้ง`,
       async () => {
         const now = new Date();
+        const dateStr = now.toLocaleString('th-TH');
+        
+        // 1. บันทึกลง Firebase
         const newTx = {
-          type: transMode, date: now.toLocaleString('th-TH'), timestamp: now.getTime(),
-          items: cart, note: note, recorder: user ? user.name : 'Staff',
-          recorderEmail: user ? user.email : 'Unknown', status: 'pending', actualItems: null
+          type: transMode,
+          date: dateStr,
+          timestamp: now.getTime(),
+          items: cart,
+          note: note,
+          recorder: user ? user.name : 'Staff',
+          recorderEmail: user ? user.email : 'Unknown',
+          status: 'pending',
+          actualItems: null
         };
         await addDoc(collection(db, 'transactions'), newTx);
-        setCart([]); setNote(''); showNotification('ส่งคำขอเรียบร้อย! ไปดูหน้าสถานะเลย'); setActiveTab('status');
+
+        // 2. --- ส่วนแจ้งเตือน LINE (Messaging API Broadcast) ---
+        try {
+            let msg = `🔔 มีรายการใหม่ (รอตรวจสอบ)\n`;
+            msg += `ประเภท: ${transMode === 'IN' ? '📥 รับสินค้าเข้า' : '📤 เบิกสินค้าออก'}\n`;
+            msg += `โดย: ${user ? user.name : 'Staff'}\n`;
+            msg += `เวลา: ${dateStr}\n`;
+            msg += `------------------\n`;
+            cart.forEach(item => {
+                msg += `- ${item.name}: ${item.qty} ${item.unit}\n`;
+            });
+            if (note) msg += `หมายเหตุ: ${note}\n`;
+            msg += `------------------\n`;
+            msg += `โปรดตรวจสอบที่หน้าระบบ`;
+
+            await fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg })
+            });
+        } catch (err) {
+            console.error("Line Notify Error:", err);
+        }
+        // ----------------------------------------------------
+
+        setCart([]);
+        setNote('');
+        showNotification('ส่งคำขอและแจ้งเตือนไลน์แล้ว!');
+        setActiveTab('status');
       }, 'info'
     );
   };
@@ -266,7 +299,6 @@ export default function StockJinApp() {
   // CRUD Functions
   const handleAddProduct = async () => {
     if (!newProdData.name) return showNotification('ข้อมูลไม่ครบ!');
-    // เพิ่ม order: 9999 ให้ไปอยู่ท้ายๆ ก่อน
     await addDoc(collection(db, 'products'), { ...newProdData, stock: parseInt(newProdData.stock)||0, order: 9999, createdAt: serverTimestamp() });
     setNewProductMode(false); setNewProdData({ name: '', sku: '', unit: '', stock: 0, category: '' }); showNotification('เพิ่มสินค้าแล้ว');
   };
@@ -380,7 +412,6 @@ export default function StockJinApp() {
               handleAddProduct={handleAddProduct} handleSaveEdit={handleSaveEdit} handleDeleteProduct={handleDeleteProduct}
               handleSaveCategory={handleSaveCategory} handleEditCategory={handleEditCategory} handleDeleteCategory={handleDeleteCategory}
               collapsedCats={collapsedCats} toggleCollapse={toggleCollapse} openEditModal={openEditModal}
-              // [NEW] ส่งฟังก์ชันจัดลำดับไปให้ TabStock
               handleReorderStock={handleReorderStock}
           />} 
           {activeTab === 'transaction' && user && <TabTransaction 
@@ -397,7 +428,6 @@ export default function StockJinApp() {
               actualQty={actualQty} setActualQty={setActualQty}
               openVerifyModal={openVerifyModal} handleVerifyAndSave={handleVerifyAndSave}
               copyToClipboard={copyToClipboard} generateSummaryText={generateSummaryText}
-              // [NEW] ส่งฟังก์ชัน Void/Edit ไปให้ TabStatus
               handleVoidTransaction={handleVoidTransaction}
               handleEditCompletedTx={handleEditCompletedTx}
           />}
