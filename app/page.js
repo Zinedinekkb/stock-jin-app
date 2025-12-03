@@ -13,6 +13,9 @@ import TabTransaction from './components/TabTransaction';
 import TabStatus from './components/TabStatus';
 import TabMenu from './components/TabMenu';
 
+// --- IMPORT SERVICE (ของใหม่!) ---
+import { submitTransactionService } from '@/app/services/transactionService';
+
 // --- FIREBASE IMPORTS ---
 import { db, auth } from '@/lib/firebase';
 import { 
@@ -149,7 +152,9 @@ export default function StockJinApp() {
     return `ร้านจิน ข้าวมันไก่\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
   };
 
-  // --- LOGIC: Void/Edit/Reorder ---
+  // -------------------------------------------------------------------
+  // [NEW] Logic สำหรับ Void/Edit Transaction (คืนค่าสต็อก)
+  // -------------------------------------------------------------------
   const revertStock = async (tx) => {
     const reversePromises = (tx.items || []).map(async (item) => {
        const qtyUsed = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : 0;
@@ -208,7 +213,7 @@ export default function StockJinApp() {
   };
 
 
-  // --- ACTIONS: Request Transaction (WITH LINE NOTIFY) ---
+  // --- ACTIONS: Request Transaction (ใช้ Service แยกไฟล์) ---
   const handleRequestTransaction = async () => {
     if (cart.length === 0) return;
     
@@ -216,51 +221,26 @@ export default function StockJinApp() {
       `ยืนยันคำขอ ${transMode === 'IN' ? 'รับของ' : 'เบิกของ'}`, 
       `รายการจะถูกส่งไปที่หน้า "สถานะ" เพื่อรอการตรวจสอบและยืนยันยอดจริงอีกครั้ง`,
       async () => {
-        const now = new Date();
-        const dateStr = now.toLocaleString('th-TH');
-        
-        // 1. บันทึกลง Firebase
-        const newTx = {
-          type: transMode,
-          date: dateStr,
-          timestamp: now.getTime(),
-          items: cart,
-          note: note,
-          recorder: user ? user.name : 'Staff',
-          recorderEmail: user ? user.email : 'Unknown',
-          status: 'pending',
-          actualItems: null
-        };
-        await addDoc(collection(db, 'transactions'), newTx);
-
-        // 2. --- ส่วนแจ้งเตือน LINE (Messaging API Broadcast) ---
         try {
-            let msg = `🔔 มีรายการใหม่ (รอตรวจสอบ)\n`;
-            msg += `ประเภท: ${transMode === 'IN' ? '📥 รับสินค้าเข้า' : '📤 เบิกสินค้าออก'}\n`;
-            msg += `โดย: ${user ? user.name : 'Staff'}\n`;
-            msg += `เวลา: ${dateStr}\n`;
-            msg += `------------------\n`;
-            cart.forEach(item => {
-                msg += `- ${item.name}: ${item.qty} ${item.unit}\n`;
+            // เรียกใช้ Service จากไฟล์ใหม่ (ส่งค่าที่จำเป็นไป)
+            await submitTransactionService({
+                cart,
+                transMode,
+                note,
+                user
             });
-            if (note) msg += `หมายเหตุ: ${note}\n`;
-            msg += `------------------\n`;
-            msg += `โปรดตรวจสอบที่หน้าระบบ`;
 
-            await fetch('/api/notify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: msg })
-            });
-        } catch (err) {
-            console.error("Line Notify Error:", err);
+            // ถ้าสำเร็จ ก็เคลียร์หน้าจอ
+            setCart([]);
+            setNote('');
+            showNotification('ส่งคำขอเรียบร้อย! (แจ้งเตือนไลน์แล้ว)');
+            setActiveTab('status');
+
+        } catch (error) {
+            // ถ้าพัง แจ้งเตือน
+            console.error(error);
+            showNotification('เกิดข้อผิดพลาด กรุณาลองใหม่');
         }
-        // ----------------------------------------------------
-
-        setCart([]);
-        setNote('');
-        showNotification('ส่งคำขอและแจ้งเตือนไลน์แล้ว!');
-        setActiveTab('status');
       }, 'info'
     );
   };
