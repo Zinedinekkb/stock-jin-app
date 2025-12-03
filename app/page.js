@@ -16,10 +16,9 @@ import TabMenu from './components/TabMenu';
 // --- FIREBASE IMPORTS ---
 import { db, auth } from '@/lib/firebase';
 import { 
-  collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc,
-  serverTimestamp, query, orderBy, where, getDoc 
+  collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc,
+  serverTimestamp, query, orderBy, where, writeBatch // <--- [เพิ่ม] writeBatch
 } from 'firebase/firestore';
-// Import createUser เพิ่มเข้ามา
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function StockJinApp() {
@@ -71,48 +70,30 @@ export default function StockJinApp() {
   // Admin: Pending Users
   const [pendingUsers, setPendingUsers] = useState([]);
 
-  // --- CHECK AUTH STATUS & PERMISSION ---
+  // --- CHECK AUTH STATUS ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        // 1. ดึงข้อมูล User เพิ่มเติมจาก Firestore (เพื่อดู role และ status)
         const userRef = doc(db, 'users', currentUser.uid);
         const userSnap = await getDoc(userRef);
 
         if (userSnap.exists()) {
           const userData = userSnap.data();
-          
-          // 2. เช็คสถานะ: ถ้ายังไม่ Approved -> ถีบออก !!
           if (userData.status !== 'approved') {
             await signOut(auth);
             setUser(null);
             showConfirm('รอการอนุมัติ', 'บัญชีของคุณสมัครเรียบร้อยแล้ว กรุณารอแอดมินอนุมัติก่อนเข้าใช้งาน', () => {}, 'info');
           } else {
-            // 3. ถ้าผ่าน -> ให้เข้าใช้งาน
             setUser({
               uid: currentUser.uid,
               email: currentUser.email,
               name: userData.name || currentUser.email.split('@')[0],
-              role: userData.role || 'staff' // admin หรือ staff
+              role: userData.role || 'staff'
             });
           }
         } else {
-          // กรณีพิเศษ: เป็น User เก่าที่ไม่มีข้อมูลใน Firestore (เช่น เฮียจินที่สร้างไปก่อนหน้านี้)
-          // ให้ถือว่าเป็น Admin ไปเลย (Backdoor สำหรับเจ้าของ)
-          setUser({
-            uid: currentUser.uid,
-            email: currentUser.email,
-            name: 'เฮียจิน (Owner)',
-            role: 'admin'
-          });
-          // สร้าง Doc ย้อนหลังให้ด้วย
-          await setDoc(userRef, {
-             name: 'เฮียจิน (Owner)', 
-             email: currentUser.email, 
-             role: 'admin', 
-             status: 'approved',
-             createdAt: serverTimestamp()
-          });
+          setUser({ uid: currentUser.uid, email: currentUser.email, name: 'เฮียจิน (Owner)', role: 'admin' });
+          await setDoc(userRef, { name: 'เฮียจิน (Owner)', email: currentUser.email, role: 'admin', status: 'approved', createdAt: serverTimestamp() });
         }
       } else {
         setUser(null);
@@ -126,7 +107,6 @@ export default function StockJinApp() {
   useEffect(() => {
     if (!user) return;
     
-    // Listeners เดิม
     const qProd = query(collection(db, 'products'), orderBy('name'));
     const unsubProd = onSnapshot(qProd, (snapshot) => setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
     const qCat = query(collection(db, 'categories'), orderBy('name'));
@@ -134,7 +114,6 @@ export default function StockJinApp() {
     const qTx = query(collection(db, 'transactions'), orderBy('timestamp', 'desc'));
     const unsubTx = onSnapshot(qTx, (snapshot) => setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
 
-    // New Listener: สำหรับ Admin ดูคนรออนุมัติ
     let unsubPending = () => {};
     if (user.role === 'admin') {
       const qPending = query(collection(db, 'users'), where('status', '==', 'pending'));
@@ -151,20 +130,16 @@ export default function StockJinApp() {
     setModalConfig({ isOpen: true, title, message, type, onConfirm: () => { onConfirm(); setModalConfig(prev => ({ ...prev, isOpen: false })); }});
   };
 
-  const showNotification = (msg) => {
-    setToastMsg(msg);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2000);
-  };
-
+  const showNotification = (msg) => { setToastMsg(msg); setShowToast(true); setTimeout(() => setShowToast(false), 2000); };
   const toggleCollapse = (catName) => setCollapsedCats(prev => ({ ...prev, [catName]: !prev[catName] }));
   const copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => showNotification('คัดลอกแล้ว!')).catch(() => showNotification('คัดลอกไม่สำเร็จ'));
 
   const generateSummaryText = (tx) => {
     if (!tx) return '';
     const isPending = tx.status === 'pending';
+    const isCancelled = tx.status === 'cancelled';
     const header = tx.type === 'IN' ? '📥 รับสินค้าเข้า (STOCK IN)' : '📤 เบิกสินค้าออก (STOCK OUT)';
-    const statusText = isPending ? '(รอตรวจสอบ)' : '(สำเร็จ)';
+    const statusText = isPending ? '(รอตรวจสอบ)' : isCancelled ? '(ยกเลิกรายการ)' : '(สำเร็จ)';
     const items = tx.items || [];
     const itemsList = items.map((item, idx) => {
       const qtyShow = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : item.qty;
@@ -173,6 +148,70 @@ export default function StockJinApp() {
     }).join('\n');
     return `ร้านจิน ข้าวมันไก่\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
   };
+
+  // -------------------------------------------------------------------
+  // [NEW] Logic สำหรับ Void/Edit Transaction (คืนค่าสต็อก)
+  // -------------------------------------------------------------------
+  const revertStock = async (tx) => {
+    const reversePromises = (tx.items || []).map(async (item) => {
+       const qtyUsed = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : 0;
+       if (qtyUsed > 0) {
+         const productRef = doc(db, 'products', item.id);
+         const productSnap = await getDoc(productRef);
+         if (productSnap.exists()) {
+            const currentStock = productSnap.data().stock || 0;
+            let revertedStock = currentStock;
+            if (tx.type === 'IN') revertedStock = currentStock - qtyUsed;
+            else revertedStock = currentStock + qtyUsed;
+            await updateDoc(productRef, { stock: Math.max(0, revertedStock) });
+         }
+       }
+    });
+    await Promise.all(reversePromises);
+  };
+
+  const handleVoidTransaction = (tx) => {
+    showConfirm('ยืนยันยกเลิกบิล?', 'ระบบจะทำการคืนค่าสต็อกสินค้า และเปลี่ยนสถานะเป็น "ยกเลิก"', async () => {
+       await revertStock(tx);
+       await updateDoc(doc(db, 'transactions', tx.id), {
+          status: 'cancelled',
+          cancelledBy: user.name,
+          cancelledAt: new Date().toLocaleString('th-TH')
+       });
+       setVerifyingTx(null); showNotification('ยกเลิกบิลและคืนค่าสต็อกแล้ว');
+    }, 'danger');
+  };
+
+  const handleEditCompletedTx = (tx) => {
+    showConfirm('ต้องการแก้ไขรายการ?', 'สต็อกจะถูกคืนค่าเดิม และรายการนี้จะกลับไปสถานะ "รอตรวจสอบ"', async () => {
+       await revertStock(tx);
+       await updateDoc(doc(db, 'transactions', tx.id), { status: 'pending', actualItems: null, verifiedBy: null, verifiedAt: null });
+       setStatusFilter('pending'); 
+       const initialActual = {};
+       (tx.items || []).forEach(item => { initialActual[item.id] = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : item.qty; });
+       setActualQty(initialActual);
+       setVerifyingTx({ ...tx, status: 'pending' });
+       showNotification('รายการกลับสู่สถานะรอตรวจสอบแล้ว');
+    }, 'info');
+  };
+
+  // -------------------------------------------------------------------
+  // [NEW] Logic สำหรับ Reorder Stock (จัดลำดับสินค้า)
+  // -------------------------------------------------------------------
+  const handleReorderStock = async (reorderedItems) => {
+    try {
+      const batch = writeBatch(db);
+      reorderedItems.forEach((item, index) => {
+        const productRef = doc(db, 'products', item.id);
+        batch.update(productRef, { order: index });
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error("Reorder Error:", error);
+      showNotification('จัดลำดับไม่สำเร็จ');
+    }
+  };
+
 
   // --- ACTIONS ---
   const handleRequestTransaction = async () => {
@@ -227,7 +266,8 @@ export default function StockJinApp() {
   // CRUD Functions
   const handleAddProduct = async () => {
     if (!newProdData.name) return showNotification('ข้อมูลไม่ครบ!');
-    await addDoc(collection(db, 'products'), { ...newProdData, stock: parseInt(newProdData.stock)||0, createdAt: serverTimestamp() });
+    // เพิ่ม order: 9999 ให้ไปอยู่ท้ายๆ ก่อน
+    await addDoc(collection(db, 'products'), { ...newProdData, stock: parseInt(newProdData.stock)||0, order: 9999, createdAt: serverTimestamp() });
     setNewProductMode(false); setNewProdData({ name: '', sku: '', unit: '', stock: 0, category: '' }); showNotification('เพิ่มสินค้าแล้ว');
   };
   const openEditModal = (p) => { setEditingProduct(p); setEditFormData({ ...p }); };
@@ -256,13 +296,12 @@ export default function StockJinApp() {
   const handleRemoveItem = (id) => setCart(prev => prev.filter(i=>i.id!==id));
   const handleCartQtyChange = (id, val) => { const qty = parseInt(val) || 0; if (qty <= 0) return handleRemoveItem(id); setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i)); };
 
-  // --- AUTH & REGISTER LOGIC ---
+  // Auth Functions
   const handleLogin = async () => {
     if (!loginForm.username || !loginForm.password) { setLoginError('กรุณากรอกข้อมูลให้ครบ'); return; }
     setLoginError('');
     try { 
       await signInWithEmailAndPassword(auth, loginForm.username, loginForm.password); 
-      // useEffect จะทำงานต่อเองเพื่อเช็ค Status
     } 
     catch (error) { console.error("Login Error:", error); setLoginError('อีเมลหรือรหัสผ่านไม่ถูกต้อง'); }
   };
@@ -275,29 +314,17 @@ export default function StockJinApp() {
       setRegisterError('รหัสผ่านไม่ตรงกัน'); return;
     }
     setRegisterError('');
-    
     try {
-      // 1. สร้าง User ใน Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, registerForm.email, registerForm.password);
       const user = userCredential.user;
-
-      // 2. สร้างข้อมูลใน Firestore (Status: pending)
       await setDoc(doc(db, 'users', user.uid), {
-        name: registerForm.name,
-        email: registerForm.email,
-        role: 'staff',
-        status: 'pending', // <--- รออนุมัติ
-        createdAt: serverTimestamp()
+        name: registerForm.name, email: registerForm.email, role: 'staff', status: 'pending', createdAt: serverTimestamp()
       });
-
-      // 3. Logout ทันที เพราะยังไม่ Approved
       await signOut(auth);
-      
       showConfirm('สมัครสมาชิกสำเร็จ', 'กรุณาแจ้งแอดมินเพื่อทำการอนุมัติบัญชีของท่าน', () => {
         setIsRegisterMode(false);
         setRegisterForm({ name: '', email: '', password: '', confirmPassword: '' });
       }, 'success');
-
     } catch (error) {
       console.error("Register Error:", error);
       if (error.code === 'auth/email-already-in-use') setRegisterError('อีเมลนี้ถูกใช้งานแล้ว');
@@ -308,7 +335,6 @@ export default function StockJinApp() {
 
   const handleLogout = async () => { try { await signOut(auth); setUser(null); setActiveTab('menu'); setLoginForm({ username: '', password: '' }); } catch (error) { console.error("Logout Error:", error); } };
 
-  // --- ADMIN ACTIONS ---
   const handleApproveUser = async (uid) => {
     showConfirm('อนุมัติผู้ใช้?', 'ผู้ใช้นี้จะสามารถเข้าสู่ระบบและใช้งานได้ทันที', async () => {
        await updateDoc(doc(db, 'users', uid), { status: 'approved' });
@@ -318,7 +344,6 @@ export default function StockJinApp() {
 
   const handleRejectUser = async (uid) => {
     showConfirm('ปฏิเสธผู้ใช้?', 'ผู้ใช้นี้จะถูกลบออกจากระบบ', async () => {
-       // ลบแค่ใน DB (ใน Auth ลบไม่ได้ด้วย Client SDK ปกติ แต่แค่นี้เขาก็เข้าไม่ได้แล้ว)
        await deleteDoc(doc(db, 'users', uid));
        showNotification('ปฏิเสธเรียบร้อย');
     }, 'danger');
@@ -355,6 +380,8 @@ export default function StockJinApp() {
               handleAddProduct={handleAddProduct} handleSaveEdit={handleSaveEdit} handleDeleteProduct={handleDeleteProduct}
               handleSaveCategory={handleSaveCategory} handleEditCategory={handleEditCategory} handleDeleteCategory={handleDeleteCategory}
               collapsedCats={collapsedCats} toggleCollapse={toggleCollapse} openEditModal={openEditModal}
+              // [NEW] ส่งฟังก์ชันจัดลำดับไปให้ TabStock
+              handleReorderStock={handleReorderStock}
           />} 
           {activeTab === 'transaction' && user && <TabTransaction 
               products={products} categories={categories}
@@ -370,14 +397,15 @@ export default function StockJinApp() {
               actualQty={actualQty} setActualQty={setActualQty}
               openVerifyModal={openVerifyModal} handleVerifyAndSave={handleVerifyAndSave}
               copyToClipboard={copyToClipboard} generateSummaryText={generateSummaryText}
+              // [NEW] ส่งฟังก์ชัน Void/Edit ไปให้ TabStatus
+              handleVoidTransaction={handleVoidTransaction}
+              handleEditCompletedTx={handleEditCompletedTx}
           />}
           {activeTab === 'menu' && <TabMenu 
               user={user} loginForm={loginForm} setLoginForm={setLoginForm} handleLogin={handleLogin} handleLogout={handleLogout} loginError={loginError}
-              // Register Props
               isRegisterMode={isRegisterMode} setIsRegisterMode={setIsRegisterMode}
               registerForm={registerForm} setRegisterForm={setRegisterForm}
               handleRegister={handleRegister} registerError={registerError}
-              // Admin Props
               pendingUsers={pendingUsers} handleApproveUser={handleApproveUser} handleRejectUser={handleRejectUser}
           />}
         </div>

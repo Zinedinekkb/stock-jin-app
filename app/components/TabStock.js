@@ -1,12 +1,12 @@
 // app/components/TabStock.js
-import React from 'react';
-import { Layers, Edit2, Plus, ChevronRight, ChevronDown, Trash2, Palette, X, Minus, Save } from 'lucide-react';
+import React, { useState } from 'react';
+import { Layers, Edit2, Plus, ChevronRight, ChevronDown, Trash2, Palette, X, Minus, Save, Pipette, ArrowUp, ArrowDown } from 'lucide-react';
 
 const AVAILABLE_COLORS = [
     'bg-green-600', 'bg-green-800', 'bg-yellow-500', 'bg-yellow-600', 
     'bg-red-600', 'bg-orange-600', 'bg-gray-500', 'bg-gray-700',
     'bg-blue-600', 'bg-blue-800', 'bg-indigo-600', 'bg-purple-700',
-  ];
+];
 
 export default function TabStock({ 
   products, categories, 
@@ -22,8 +22,43 @@ export default function TabStock({
   openEditModal,
   // Actions
   handleAddProduct, handleSaveEdit, handleDeleteProduct,
-  handleSaveCategory, handleEditCategory, handleDeleteCategory
+  handleSaveCategory, handleEditCategory, handleDeleteCategory,
+  // [NEW] รับฟังก์ชันจัดลำดับมา
+  handleReorderStock
 }) {
+  // State สำหรับเปิด/ปิดถาดสี
+  const [showColorPicker, setShowColorPicker] = useState(false);
+
+  // ฟังก์ชันช่วยแปลงสี (รองรับทั้ง Tailwind Class และ Hex Code)
+  const renderColorCircle = (colorCode, sizeClass = "w-6 h-6") => {
+    const safeColor = colorCode || 'bg-gray-200';
+    const isHex = safeColor.startsWith('#');
+    return (
+      <div 
+        className={`${sizeClass} rounded-full border border-gray-200 shadow-sm ${!isHex ? safeColor : ''}`} 
+        style={isHex ? { backgroundColor: safeColor } : {}}
+      ></div>
+    );
+  };
+
+  // [NEW] ฟังก์ชันจัดการการเลื่อนสินค้า (แก้ Bug กดแล้วเด้งหน้าต่าง Edit)
+  const moveItem = (e, itemList, index, direction) => {
+    e.stopPropagation(); // <--- หยุดการคลิกไม่ให้ทะลุไปโดนการ์ดข้างหลัง
+
+    const newItems = [...itemList];
+    const targetIndex = index + direction;
+
+    if (targetIndex < 0 || targetIndex >= newItems.length) return;
+
+    // สลับตำแหน่ง
+    [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
+
+    // บันทึก
+    if(handleReorderStock) {
+        handleReorderStock(newItems);
+    }
+  };
+
   return (
       <div className="space-y-4 pb-20 animate-fade-in-slide relative">
         <div className="flex justify-between items-center sticky top-0 bg-gray-50/95 py-2 z-10 backdrop-blur-md transition-all">
@@ -41,6 +76,8 @@ export default function TabStock({
                <h3 className="font-bold text-green-800 flex items-center gap-2"><Layers size={18} /> จัดการหมวดหมู่</h3>
                <button onClick={() => { setShowCatManager(false); setEditingCategory(null); setNewCatData({name:'',color:'bg-green-600'}); }}><X size={20} className="text-gray-400"/></button>
              </div>
+             
+             {/* รายการหมวดหมู่ */}
              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1">
                {categories.map(cat => (
                  <div 
@@ -49,20 +86,59 @@ export default function TabStock({
                    onClick={() => handleEditCategory(cat)}
                  >
                    <div className="flex items-center gap-3">
-                     <div className={`w-6 h-6 rounded-full ${cat.color} border-2 border-white shadow-sm`}></div>
+                     {renderColorCircle(cat.color, "w-6 h-6")}
                      <span className="text-sm font-semibold text-gray-700">{cat.name}</span>
                    </div>
                    <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id, cat.name); }} className="text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
                  </div>
                ))}
              </div>
-             <div className="flex gap-2 items-center border-t pt-4">
-                <div className="group relative">
-                   <div className={`w-9 h-9 rounded-full ${newCatData.color} cursor-pointer border-2 border-white shadow-md flex items-center justify-center`}><Palette size={16} className="text-white opacity-90"/></div>
-                   <div className="absolute bottom-12 left-0 z-50 bg-white shadow-xl p-3 rounded-2xl grid grid-cols-6 gap-2 w-56 hidden group-hover:grid border animate-fade-in">
-                     {AVAILABLE_COLORS.map(c => <div key={c} onClick={() => setNewCatData({ ...newCatData, color: c })} className={`w-5 h-5 rounded-full ${c} cursor-pointer hover:scale-125 transition-transform shadow-sm`}></div>)}
-                   </div>
+
+             {/* ฟอร์มเพิ่ม/แก้ไขหมวดหมู่ + Color Picker ใหม่ */}
+             <div className="flex gap-2 items-center border-t pt-4 relative">
+                
+                {/* ปุ่มเลือกสี (Click Toggle) */}
+                <div className="relative">
+                   <button 
+                     onClick={() => setShowColorPicker(!showColorPicker)}
+                     className="w-10 h-10 rounded-full cursor-pointer border-2 border-white shadow-md flex items-center justify-center transition-transform active:scale-90 overflow-hidden relative"
+                   >
+                     {/* โชว์สีที่เลือกอยู่ */}
+                     <div className={`w-full h-full ${!newCatData.color.startsWith('#') ? newCatData.color : ''}`} style={newCatData.color.startsWith('#') ? {backgroundColor: newCatData.color} : {}}></div>
+                     <Palette size={16} className="text-white absolute drop-shadow-md z-10"/>
+                   </button>
+
+                   {/* ถาดสี (จะโชว์เมื่อ showColorPicker เป็น true เท่านั้น) */}
+                   {showColorPicker && (
+                     <div className="absolute bottom-12 left-0 z-50 bg-white shadow-xl p-3 rounded-2xl border animate-fade-in w-64">
+                       <div className="grid grid-cols-6 gap-2">
+                          {/* 1. สีมาตรฐานจาก Tailwind */}
+                          {AVAILABLE_COLORS.map(c => (
+                            <div 
+                              key={c} 
+                              onClick={() => { setNewCatData({ ...newCatData, color: c }); setShowColorPicker(false); }} 
+                              className={`w-6 h-6 rounded-full ${c} cursor-pointer hover:scale-125 transition-transform shadow-sm border border-gray-100`}
+                            ></div>
+                          ))}
+                          
+                          {/* 2. ปุ่มผสมสีเอง (Color Picker Input) */}
+                          <label className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 cursor-pointer hover:scale-125 transition-transform shadow-sm border border-gray-100 flex items-center justify-center relative overflow-hidden">
+                            <input 
+                              type="color" 
+                              className="opacity-0 w-[200%] h-[200%] absolute cursor-pointer"
+                              onChange={(e) => { 
+                                setNewCatData({ ...newCatData, color: e.target.value }); 
+                                setShowColorPicker(false); 
+                              }}
+                            />
+                            <Plus size={14} className="text-white pointer-events-none"/>
+                          </label>
+                       </div>
+                       <div className="absolute -bottom-2 left-3 w-4 h-4 bg-white transform rotate-45 border-b border-r border-gray-200"></div>
+                     </div>
+                   )}
                  </div>
+
                 <input placeholder="ชื่อหมวดใหม่..." className="flex-1 border p-2.5 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-200 outline-none" value={newCatData.name} onChange={e => setNewCatData({...newCatData, name: e.target.value})} />
                 <button onClick={handleSaveCategory} className="bg-green-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg w-20">
                   {editingCategory ? 'แก้ไข' : 'เพิ่ม'}
@@ -86,23 +162,64 @@ export default function TabStock({
 
         <div className="space-y-4">
           {categories.map(cat => {
-            const catProducts = products.filter(p => (p.category || 'ไม่ระบุ') === cat.name);
+            // กรองและจัดลำดับสินค้า
+            const catProducts = products
+                .filter(p => (p.category || 'ไม่ระบุ') === cat.name)
+                .sort((a, b) => (a.order || 0) - (b.order || 0)); // เรียงตาม order
+                
             const isCollapsed = collapsedCats[cat.name];
-            const colorClass = cat.color;
+            
             return (
               <div key={cat.id} className="space-y-2">
                 <div onClick={() => toggleCollapse(cat.name)} className="flex items-center gap-2 cursor-pointer select-none py-2 px-1 active:scale-[0.99] transition-transform group">
                   <div className={`p-1 rounded-full bg-white border border-gray-200 shadow-sm`}>{isCollapsed ? <ChevronRight size={18} className="text-gray-500"/> : <ChevronDown size={18} className="text-gray-600"/>}</div>
-                  <div className={`w-3 h-3 rounded-full ${colorClass} shadow-sm border border-white`}></div>
+                  
+                  {renderColorCircle(cat.color, "w-3 h-3")}
+                  
                   <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">{cat.name} <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-bold">{catProducts.length}</span></h3>
                 </div>
                 {!isCollapsed && (
                   <div className="space-y-3 pl-2 border-l-2 border-dashed border-gray-300 ml-3.5 animate-fade-in-slide">
-                    {catProducts.length === 0 ? <div className="text-xs text-gray-400 italic pl-3 py-2">ว่างเปล่า...</div> : catProducts.map(p => (
-                        <div key={p.id} onClick={() => isEditingStock && openEditModal(p)} className={`bg-white p-3.5 rounded-2xl shadow-sm border flex justify-between items-center relative overflow-hidden transition-all duration-300 ${isEditingStock ? 'border-yellow-400 ring-2 ring-yellow-100 cursor-pointer active:scale-95' : 'border-gray-200 hover:border-green-300'}`}>
-                          <div className={`absolute left-0 top-0 bottom-0 w-[5px] ${colorClass}`}></div>
-                          <div className="pl-3 flex-1"><h3 className="font-bold text-gray-800 text-sm">{p.name}</h3><p className="text-[10px] text-gray-500 bg-gray-50 inline-block px-1.5 rounded mt-1 font-mono">#{p.sku}</p></div>
-                          <div className="flex items-center gap-3"><div className="text-right"><p className={`text-lg font-black ${p.stock < 5 ? 'text-red-600' : 'text-green-800'}`}>{p.stock}</p><p className="text-[10px] text-gray-500 font-medium">{p.unit}</p></div>{isEditingStock && <div className="bg-yellow-100 p-2 rounded-full text-yellow-700"><Edit2 size={14} /></div>}</div>
+                    {catProducts.length === 0 ? <div className="text-xs text-gray-400 italic pl-3 py-2">ว่างเปล่า...</div> : catProducts.map((p, idx) => (
+                        <div key={p.id} className={`bg-white p-3.5 rounded-2xl shadow-sm border flex justify-between items-center relative overflow-hidden transition-all duration-300 ${isEditingStock ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-gray-200 hover:border-green-300'}`}>
+                          
+                          <div className={`absolute left-0 top-0 bottom-0 w-[5px] ${!cat.color.startsWith('#') ? cat.color : ''}`} style={cat.color.startsWith('#') ? {backgroundColor: cat.color} : {}}></div>
+                          
+                          <div className="pl-3 flex-1" onClick={() => isEditingStock && openEditModal(p)}>
+                             <h3 className="font-bold text-gray-800 text-sm">{p.name}</h3>
+                             <p className="text-[10px] text-gray-500 bg-gray-50 inline-block px-1.5 rounded mt-1 font-mono">#{p.sku}</p>
+                          </div>
+                          
+                          {/* ส่วนควบคุม: ถ้า Edit อยู่จะโชว์ปุ่มเลื่อน */}
+                          <div className="flex items-center gap-3">
+                             {isEditingStock ? (
+                                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 mr-1">
+                                    <button 
+                                        onClick={(e) => moveItem(e, catProducts, idx, -1)} // <--- ส่ง e ไปด้วย
+                                        disabled={idx === 0}
+                                        className={`p-1.5 rounded-md ${idx === 0 ? 'text-gray-300' : 'text-gray-600 hover:bg-white hover:shadow-sm active:scale-90'}`}
+                                    >
+                                        <ArrowUp size={16}/>
+                                    </button>
+                                    <button 
+                                        onClick={(e) => moveItem(e, catProducts, idx, 1)} // <--- ส่ง e ไปด้วย
+                                        disabled={idx === catProducts.length - 1}
+                                        className={`p-1.5 rounded-md ${idx === catProducts.length - 1 ? 'text-gray-300' : 'text-gray-600 hover:bg-white hover:shadow-sm active:scale-90'}`}
+                                    >
+                                        <ArrowDown size={16}/>
+                                    </button>
+                                </div>
+                             ) : (
+                                <div className="text-right">
+                                    <p className={`text-lg font-black ${p.stock < 5 ? 'text-red-600' : 'text-green-800'}`}>{p.stock}</p>
+                                    <p className="text-[10px] text-gray-500 font-medium">{p.unit}</p>
+                                </div>
+                             )}
+
+                             {isEditingStock && (
+                                 <div onClick={() => openEditModal(p)} className="bg-yellow-100 p-2 rounded-full text-yellow-700 cursor-pointer active:scale-90"><Edit2 size={14} /></div>
+                             )}
+                          </div>
                         </div>
                       ))}
                   </div>
