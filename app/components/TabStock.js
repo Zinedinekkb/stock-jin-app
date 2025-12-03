@@ -41,9 +41,14 @@ export default function TabStock({
     );
   };
 
-  // [NEW] ฟังก์ชันจัดการการเลื่อนสินค้า (แก้ Bug กดแล้วเด้งหน้าต่าง Edit)
+  // ฟังก์ชันจัดการการเลื่อนสินค้า (Reorder)
   const moveItem = (e, itemList, index, direction) => {
-    e.stopPropagation(); // <--- หยุดการคลิกไม่ให้ทะลุไปโดนการ์ดข้างหลัง
+    e.stopPropagation(); // หยุดไม่ให้คลิกทะลุไปโดนการ์ด
+
+    if (!handleReorderStock) {
+        alert("⚠️ เกิดข้อผิดพลาด: ไม่พบคำสั่ง handleReorderStock\nกรุณาเช็คไฟล์ page.js ว่าใส่ Props ครบไหม");
+        return;
+    }
 
     const newItems = [...itemList];
     const targetIndex = index + direction;
@@ -54,9 +59,7 @@ export default function TabStock({
     [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
 
     // บันทึก
-    if(handleReorderStock) {
-        handleReorderStock(newItems);
-    }
+    handleReorderStock(newItems);
   };
 
   return (
@@ -162,10 +165,9 @@ export default function TabStock({
 
         <div className="space-y-4">
           {categories.map(cat => {
-            // กรองและจัดลำดับสินค้า
             const catProducts = products
                 .filter(p => (p.category || 'ไม่ระบุ') === cat.name)
-                .sort((a, b) => (a.order || 0) - (b.order || 0)); // เรียงตาม order
+                .sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name));
                 
             const isCollapsed = collapsedCats[cat.name];
             
@@ -195,14 +197,14 @@ export default function TabStock({
                              {isEditingStock ? (
                                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 mr-1">
                                     <button 
-                                        onClick={(e) => moveItem(e, catProducts, idx, -1)} // <--- ส่ง e ไปด้วย
+                                        onClick={(e) => moveItem(e, catProducts, idx, -1)} 
                                         disabled={idx === 0}
                                         className={`p-1.5 rounded-md ${idx === 0 ? 'text-gray-300' : 'text-gray-600 hover:bg-white hover:shadow-sm active:scale-90'}`}
                                     >
                                         <ArrowUp size={16}/>
                                     </button>
                                     <button 
-                                        onClick={(e) => moveItem(e, catProducts, idx, 1)} // <--- ส่ง e ไปด้วย
+                                        onClick={(e) => moveItem(e, catProducts, idx, 1)} 
                                         disabled={idx === catProducts.length - 1}
                                         className={`p-1.5 rounded-md ${idx === catProducts.length - 1 ? 'text-gray-300' : 'text-gray-600 hover:bg-white hover:shadow-sm active:scale-90'}`}
                                     >
@@ -247,19 +249,23 @@ export default function TabStock({
                   </select>
                 </div>
                 <div className="flex gap-3"><input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3" value={editFormData.sku} onChange={e => setEditFormData({...editFormData, sku: e.target.value})}/><input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3" value={editFormData.unit} onChange={e => setEditFormData({...editFormData, unit: e.target.value})}/></div>
+                
+                {/* ----------------- แก้ไขตรงนี้ ----------------- */}
                 <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100">
                   <label className="text-xs font-bold text-yellow-800 uppercase tracking-wider">Stock</label>
-                  <div className="flex items-center gap-4 mt-2">
+                  <div className="flex items-center justify-center gap-4 mt-2"> {/* เพิ่ม justify-center */}
                     <button onClick={() => setEditFormData({...editFormData, stock: Math.max(0, parseInt(editFormData.stock) - 1)})} className="w-10 h-10 bg-white border border-yellow-200 rounded-xl flex items-center justify-center shadow-sm text-yellow-600"><Minus size={20}/></button>
                     <input 
                       type="number" 
-                      className="flex-1 text-center bg-transparent font-black text-3xl text-gray-800 outline-none" 
+                      className="w-24 text-center bg-transparent font-black text-3xl text-gray-800 outline-none" /* เปลี่ยน flex-1 เป็น w-24 */
                       value={editFormData.stock} 
                       onChange={e => setEditFormData({...editFormData, stock: e.target.value})}
                     />
                     <button onClick={() => setEditFormData({...editFormData, stock: parseInt(editFormData.stock) + 1})} className="w-10 h-10 bg-white border border-yellow-200 rounded-xl flex items-center justify-center shadow-sm text-yellow-600"><Plus size={20}/></button>
                   </div>
                 </div>
+                {/* ----------------------------------------------- */}
+
                 <div className="flex gap-3 pt-4"><button onClick={handleDeleteProduct} className="flex-1 bg-red-50 text-red-600 py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-red-100"><Trash2 size={20} /> ลบ</button><button onClick={handleSaveEdit} className="flex-[2] bg-green-700 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-green-800 flex justify-center items-center gap-2"><Save size={20} /> บันทึก</button></div>
               </div>
             </div>
