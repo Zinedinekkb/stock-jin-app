@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, Check, Utensils, Loader2
 } from 'lucide-react';
 
-// --- IMPORT COMPONENTS (ที่เพิ่งสร้าง) ---
+// --- IMPORT COMPONENTS ---
 import ConfirmModal from './components/ConfirmModal';
 import TabDashboard from './components/TabDashboard';
 import TabStock from './components/TabStock';
@@ -16,10 +16,11 @@ import TabMenu from './components/TabMenu';
 // --- FIREBASE IMPORTS ---
 import { db, auth } from '@/lib/firebase';
 import { 
-  collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, 
-  serverTimestamp, query, orderBy
+  collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc,
+  serverTimestamp, query, orderBy, where, getDoc 
 } from 'firebase/firestore';
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+// Import createUser เพิ่มเข้ามา
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function StockJinApp() {
   const [activeTab, setActiveTab] = useState('transaction'); 
@@ -52,28 +53,67 @@ export default function StockJinApp() {
   const [statusFilter, setStatusFilter] = useState('pending');
   const [verifyingTx, setVerifyingTx] = useState(null);
   const [actualQty, setActualQty] = useState({});
-
   const [dateFilterType, setDateFilterType] = useState('7days'); 
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
-  // --- AUTH STATE ---
+  // --- AUTH & REGISTER STATE ---
   const [user, setUser] = useState(null); 
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [loginError, setLoginError] = useState('');
+  
+  // Register State
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [registerError, setRegisterError] = useState('');
 
-  // --- CHECK AUTH STATUS ---
+  // Admin: Pending Users
+  const [pendingUsers, setPendingUsers] = useState([]);
+
+  // --- CHECK AUTH STATUS & PERMISSION ---
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        const name = currentUser.email.split('@')[0];
-        setUser({
-          uid: currentUser.uid,
-          email: currentUser.email,
-          name: name.charAt(0).toUpperCase() + name.slice(1),
-          role: 'Admin'
-        });
+        // 1. ดึงข้อมูล User เพิ่มเติมจาก Firestore (เพื่อดู role และ status)
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
+
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          
+          // 2. เช็คสถานะ: ถ้ายังไม่ Approved -> ถีบออก !!
+          if (userData.status !== 'approved') {
+            await signOut(auth);
+            setUser(null);
+            showConfirm('รอการอนุมัติ', 'บัญชีของคุณสมัครเรียบร้อยแล้ว กรุณารอแอดมินอนุมัติก่อนเข้าใช้งาน', () => {}, 'info');
+          } else {
+            // 3. ถ้าผ่าน -> ให้เข้าใช้งาน
+            setUser({
+              uid: currentUser.uid,
+              email: currentUser.email,
+              name: userData.name || currentUser.email.split('@')[0],
+              role: userData.role || 'staff' // admin หรือ staff
+            });
+          }
+        } else {
+          // กรณีพิเศษ: เป็น User เก่าที่ไม่มีข้อมูลใน Firestore (เช่น เฮียจินที่สร้างไปก่อนหน้านี้)
+          // ให้ถือว่าเป็น Admin ไปเลย (Backdoor สำหรับเจ้าของ)
+          setUser({
+            uid: currentUser.uid,
+            email: currentUser.email,
+            name: 'เฮียจิน (Owner)',
+            role: 'admin'
+          });
+          // สร้าง Doc ย้อนหลังให้ด้วย
+          await setDoc(userRef, {
+             name: 'เฮียจิน (Owner)', 
+             email: currentUser.email, 
+             role: 'admin', 
+             status: 'approved',
+             createdAt: serverTimestamp()
+          });
+        }
       } else {
         setUser(null);
       }
@@ -85,6 +125,8 @@ export default function StockJinApp() {
   // --- FIREBASE LISTENERS ---
   useEffect(() => {
     if (!user) return;
+    
+    // Listeners เดิม
     const qProd = query(collection(db, 'products'), orderBy('name'));
     const unsubProd = onSnapshot(qProd, (snapshot) => setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
     const qCat = query(collection(db, 'categories'), orderBy('name'));
@@ -92,7 +134,16 @@ export default function StockJinApp() {
     const qTx = query(collection(db, 'transactions'), orderBy('timestamp', 'desc'));
     const unsubTx = onSnapshot(qTx, (snapshot) => setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
 
-    return () => { unsubProd(); unsubCat(); unsubTx(); };
+    // New Listener: สำหรับ Admin ดูคนรออนุมัติ
+    let unsubPending = () => {};
+    if (user.role === 'admin') {
+      const qPending = query(collection(db, 'users'), where('status', '==', 'pending'));
+      unsubPending = onSnapshot(qPending, (snapshot) => {
+        setPendingUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+    }
+
+    return () => { unsubProd(); unsubCat(); unsubTx(); unsubPending(); };
   }, [user]);
 
   // --- HELPER FUNCTIONS ---
@@ -123,7 +174,7 @@ export default function StockJinApp() {
     return `ร้านจิน ข้าวมันไก่\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
   };
 
-  // --- ACTIONS (ยังคงไว้ในหน้าหลักเพื่อให้จัดการ State ง่าย) ---
+  // --- ACTIONS ---
   const handleRequestTransaction = async () => {
     if (cart.length === 0) return;
     showConfirm(
@@ -205,18 +256,77 @@ export default function StockJinApp() {
   const handleRemoveItem = (id) => setCart(prev => prev.filter(i=>i.id!==id));
   const handleCartQtyChange = (id, val) => { const qty = parseInt(val) || 0; if (qty <= 0) return handleRemoveItem(id); setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i)); };
 
-  // Auth Functions
+  // --- AUTH & REGISTER LOGIC ---
   const handleLogin = async () => {
     if (!loginForm.username || !loginForm.password) { setLoginError('กรุณากรอกข้อมูลให้ครบ'); return; }
     setLoginError('');
-    try { await signInWithEmailAndPassword(auth, loginForm.username, loginForm.password); showNotification('ยินดีต้อนรับครับ!'); } 
+    try { 
+      await signInWithEmailAndPassword(auth, loginForm.username, loginForm.password); 
+      // useEffect จะทำงานต่อเองเพื่อเช็ค Status
+    } 
     catch (error) { console.error("Login Error:", error); setLoginError('อีเมลหรือรหัสผ่านไม่ถูกต้อง'); }
   };
+
+  const handleRegister = async () => {
+    if (!registerForm.name || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
+      setRegisterError('กรุณากรอกข้อมูลให้ครบ'); return;
+    }
+    if (registerForm.password !== registerForm.confirmPassword) {
+      setRegisterError('รหัสผ่านไม่ตรงกัน'); return;
+    }
+    setRegisterError('');
+    
+    try {
+      // 1. สร้าง User ใน Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, registerForm.email, registerForm.password);
+      const user = userCredential.user;
+
+      // 2. สร้างข้อมูลใน Firestore (Status: pending)
+      await setDoc(doc(db, 'users', user.uid), {
+        name: registerForm.name,
+        email: registerForm.email,
+        role: 'staff',
+        status: 'pending', // <--- รออนุมัติ
+        createdAt: serverTimestamp()
+      });
+
+      // 3. Logout ทันที เพราะยังไม่ Approved
+      await signOut(auth);
+      
+      showConfirm('สมัครสมาชิกสำเร็จ', 'กรุณาแจ้งแอดมินเพื่อทำการอนุมัติบัญชีของท่าน', () => {
+        setIsRegisterMode(false);
+        setRegisterForm({ name: '', email: '', password: '', confirmPassword: '' });
+      }, 'success');
+
+    } catch (error) {
+      console.error("Register Error:", error);
+      if (error.code === 'auth/email-already-in-use') setRegisterError('อีเมลนี้ถูกใช้งานแล้ว');
+      else if (error.code === 'auth/weak-password') setRegisterError('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+      else setRegisterError('เกิดข้อผิดพลาดในการสมัคร');
+    }
+  };
+
   const handleLogout = async () => { try { await signOut(auth); setUser(null); setActiveTab('menu'); setLoginForm({ username: '', password: '' }); } catch (error) { console.error("Logout Error:", error); } };
+
+  // --- ADMIN ACTIONS ---
+  const handleApproveUser = async (uid) => {
+    showConfirm('อนุมัติผู้ใช้?', 'ผู้ใช้นี้จะสามารถเข้าสู่ระบบและใช้งานได้ทันที', async () => {
+       await updateDoc(doc(db, 'users', uid), { status: 'approved' });
+       showNotification('อนุมัติเรียบร้อย');
+    }, 'info');
+  };
+
+  const handleRejectUser = async (uid) => {
+    showConfirm('ปฏิเสธผู้ใช้?', 'ผู้ใช้นี้จะถูกลบออกจากระบบ', async () => {
+       // ลบแค่ใน DB (ใน Auth ลบไม่ได้ด้วย Client SDK ปกติ แต่แค่นี้เขาก็เข้าไม่ได้แล้ว)
+       await deleteDoc(doc(db, 'users', uid));
+       showNotification('ปฏิเสธเรียบร้อย');
+    }, 'danger');
+  };
 
   // --- RENDER MAIN ---
   if (isLoadingAuth) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-center space-y-3"><Loader2 size={40} className="animate-spin text-green-700 mx-auto"/><p className="text-green-800 font-bold animate-pulse">กำลังโหลด Stock Jin...</p></div></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-center space-y-3"><Loader2 size={40} className="animate-spin text-green-700 mx-auto"/><p className="text-green-800 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p></div></div>;
   }
   if (!user && activeTab !== 'menu') setActiveTab('menu');
 
@@ -261,7 +371,15 @@ export default function StockJinApp() {
               openVerifyModal={openVerifyModal} handleVerifyAndSave={handleVerifyAndSave}
               copyToClipboard={copyToClipboard} generateSummaryText={generateSummaryText}
           />}
-          {activeTab === 'menu' && <TabMenu user={user} loginForm={loginForm} setLoginForm={setLoginForm} handleLogin={handleLogin} handleLogout={handleLogout} loginError={loginError} />}
+          {activeTab === 'menu' && <TabMenu 
+              user={user} loginForm={loginForm} setLoginForm={setLoginForm} handleLogin={handleLogin} handleLogout={handleLogout} loginError={loginError}
+              // Register Props
+              isRegisterMode={isRegisterMode} setIsRegisterMode={setIsRegisterMode}
+              registerForm={registerForm} setRegisterForm={setRegisterForm}
+              handleRegister={handleRegister} registerError={registerError}
+              // Admin Props
+              pendingUsers={pendingUsers} handleApproveUser={handleApproveUser} handleRejectUser={handleRejectUser}
+          />}
         </div>
 
         {/* Bottom Nav */}
