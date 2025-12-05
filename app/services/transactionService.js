@@ -1,12 +1,13 @@
-// app/services/transactionService.js
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export const submitTransactionService = async ({ cart, transMode, note, user }) => {
+  console.log("🟢 [Service] เริ่มทำงาน..."); 
+
   const now = new Date();
   const dateStr = now.toLocaleString('th-TH');
 
-  // 1. บันทึกลง Firebase
+  // 1. บันทึก Firebase (เหมือนเดิม)
   const newTx = {
     type: transMode,
     date: dateStr,
@@ -20,39 +21,29 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
   };
 
   try {
-    // บันทึกข้อมูล
     await addDoc(collection(db, 'transactions'), newTx);
+    console.log("✅ บันทึก Firebase สำเร็จ");
 
-    // 2. ปั้นข้อความ LINE
-    let msg = `🔔 มีรายการใหม่ (รอตรวจสอบ)\n`;
-    msg += `----------------------------\n`;
-    msg += `📦 ประเภท: ${transMode === 'IN' ? '📥 รับสินค้าเข้า' : '📤 เบิกสินค้าออก'}\n`;
-    msg += `👤 โดย: ${user ? user.name : 'Staff'}\n`;
-    msg += `🕒 เวลา: ${dateStr}\n`;
-    msg += `----------------------------\n`;
-    msg += `รายการสินค้า:\n`;
-    cart.forEach(item => {
-        msg += `• ${item.name}: ${item.qty} ${item.unit}\n`;
-    });
+    // 2. ส่งข้อมูลไป API (แก้ตรงนี้! ส่งไปทั้งก้อนเลย เดี๋ยวให้ API ไปจัดสวยๆ เอง)
+    console.log("🟠 กำลังส่งข้อมูลดิบไป API...");
     
-    if (note) {
-        msg += `\n📝 หมายเหตุ: ${note}\n`;
-    }
-    msg += `----------------------------\n`;
-    msg += `🔗 โปรดตรวจสอบและยืนยันในระบบ`;
-
-    // 3. ส่ง LINE (ยิงเข้า API ของเราเอง)
     await fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg })
+        body: JSON.stringify({ 
+            cart, 
+            transMode, 
+            note, 
+            user,
+            dateStr 
+        })
     });
 
+    console.log("✅ ส่งข้อมูลสำเร็จ");
     return { success: true };
 
   } catch (error) {
-    console.error("Transaction Error:", error);
-    // ส่ง Error กลับไปบอกหน้าบ้าน
+    console.error("🔴 Error:", error);
     throw error;
   }
 };

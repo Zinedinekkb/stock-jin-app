@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, Check, Utensils, Loader2
+  LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, Check, Utensils, Loader2, AlertTriangle, Trash2
 } from 'lucide-react';
 
 // --- IMPORT COMPONENTS ---
@@ -13,7 +13,7 @@ import TabTransaction from './components/TabTransaction';
 import TabStatus from './components/TabStatus';
 import TabMenu from './components/TabMenu';
 
-// --- IMPORT SERVICE (ของใหม่!) ---
+// --- IMPORT SERVICE ---
 import { submitTransactionService } from '@/app/services/transactionService';
 
 // --- FIREBASE IMPORTS ---
@@ -219,7 +219,6 @@ export default function StockJinApp() {
       `รายการจะถูกส่งไปที่หน้า "สถานะ" เพื่อรอการตรวจสอบและยืนยันยอดจริงอีกครั้ง`,
       async () => {
         try {
-            // เรียกใช้ Service จากไฟล์ใหม่ (ส่งค่าที่จำเป็นไป)
             await submitTransactionService({
                 cart,
                 transMode,
@@ -227,14 +226,12 @@ export default function StockJinApp() {
                 user
             });
 
-            // ถ้าสำเร็จ ก็เคลียร์หน้าจอ
             setCart([]);
             setNote('');
             showNotification('ส่งคำขอเรียบร้อย! (แจ้งเตือนไลน์แล้ว)');
             setActiveTab('status');
 
         } catch (error) {
-            // ถ้าพัง แจ้งเตือน
             console.error(error);
             showNotification('เกิดข้อผิดพลาด กรุณาลองใหม่');
         }
@@ -275,10 +272,15 @@ export default function StockJinApp() {
 
   // CRUD Functions
   const handleAddProduct = async () => {
-    if (!newProdData.name) return showNotification('ข้อมูลไม่ครบ!');
+    // [แก้ไข] ดักจับ: ห้ามสร้างถ้าไม่ได้เลือกหมวดหมู่
+    if (!newProdData.name || !newProdData.category) {
+        return showNotification('กรุณากรอกชื่อสินค้า และเลือกหมวดหมู่!');
+    }
+
     await addDoc(collection(db, 'products'), { ...newProdData, stock: parseInt(newProdData.stock)||0, order: 9999, createdAt: serverTimestamp() });
     setNewProductMode(false); setNewProdData({ name: '', sku: '', unit: '', stock: 0, category: '' }); showNotification('เพิ่มสินค้าแล้ว');
   };
+
   const openEditModal = (p) => { setEditingProduct(p); setEditFormData({ ...p }); };
   const handleSaveEdit = async () => {
     if (!editFormData.name) return showNotification('ห้ามเว้นว่าง!');
@@ -286,6 +288,15 @@ export default function StockJinApp() {
     setEditingProduct(null); showNotification('แก้ไขแล้ว');
   };
   const handleDeleteProduct = async () => { await deleteDoc(doc(db, 'products', editingProduct.id)); setEditingProduct(null); showNotification('ลบแล้ว'); };
+  
+  // Quick Delete for Ghost Products
+  const handleQuickDelete = async (id) => {
+    if(window.confirm('ยืนยันลบสินค้านี้?')) {
+        await deleteDoc(doc(db, 'products', id));
+        showNotification('ลบสินค้าเรียบร้อย');
+    }
+  };
+
   const handleSaveCategory = async () => {
     if(!newCatData.name) return showNotification('ใส่ชื่อหมวดด้วย!');
     if (editingCategory) await updateDoc(doc(db, 'categories', editingCategory.id), newCatData);
@@ -376,21 +387,51 @@ export default function StockJinApp() {
         {/* Content */}
         <div className="p-4 flex-1 overflow-y-auto scrollbar-hide pb-24 bg-gray-50">
           {activeTab === 'dashboard' && user && <TabDashboard transactions={transactions} dateFilterType={dateFilterType} setDateFilterType={setDateFilterType} setCustomStartDate={setCustomStartDate} setCustomEndDate={setCustomEndDate} />}
-          {activeTab === 'stock' && user && <TabStock 
-              products={products} categories={categories}
-              isEditingStock={isEditingStock} setIsEditingStock={setIsEditingStock}
-              newProductMode={newProductMode} setNewProductMode={setNewProductMode}
-              showCatManager={showCatManager} setShowCatManager={setShowCatManager}
-              newCatData={newCatData} setNewCatData={setNewCatData}
-              newProdData={newProdData} setNewProdData={setNewProdData}
-              editFormData={editFormData} setEditFormData={setEditFormData}
-              editingProduct={editingProduct} setEditingProduct={setEditingProduct}
-              editingCategory={editingCategory} setEditingCategory={setEditingCategory}
-              handleAddProduct={handleAddProduct} handleSaveEdit={handleSaveEdit} handleDeleteProduct={handleDeleteProduct}
-              handleSaveCategory={handleSaveCategory} handleEditCategory={handleEditCategory} handleDeleteCategory={handleDeleteCategory}
-              collapsedCats={collapsedCats} toggleCollapse={toggleCollapse} openEditModal={openEditModal}
-              handleReorderStock={handleReorderStock}
-          />} 
+          
+          {activeTab === 'stock' && user && (
+            <>
+                {/* --- ส่วนแก้ปัญหา: แสดงสินค้าที่ไม่มีหมวดหมู่ (Ghost Products) --- */}
+                {products.some(p => !p.category) && (
+                  <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="text-red-500" size={20} />
+                        <h3 className="text-red-700 font-bold text-sm">พบสินค้าตกหล่น (ไม่มีหมวดหมู่)</h3>
+                    </div>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                      {products.filter(p => !p.category).map(p => (
+                        <div key={p.id} className="flex justify-between items-center bg-white p-2 rounded border border-red-100 shadow-sm">
+                          <span className="text-sm font-medium text-gray-700">{p.name}</span>
+                          <button 
+                            onClick={() => handleQuickDelete(p.id)}
+                            className="flex items-center gap-1 text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200 transition-colors"
+                          >
+                            <Trash2 size={12} /> ลบทิ้ง
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* --- จบส่วนแก้ปัญหา --- */}
+
+                <TabStock 
+                    products={products} categories={categories}
+                    isEditingStock={isEditingStock} setIsEditingStock={setIsEditingStock}
+                    newProductMode={newProductMode} setNewProductMode={setNewProductMode}
+                    showCatManager={showCatManager} setShowCatManager={setShowCatManager}
+                    newCatData={newCatData} setNewCatData={setNewCatData}
+                    newProdData={newProdData} setNewProdData={setNewProdData}
+                    editFormData={editFormData} setEditFormData={setEditFormData}
+                    editingProduct={editingProduct} setEditingProduct={setEditingProduct}
+                    editingCategory={editingCategory} setEditingCategory={setEditingCategory}
+                    handleAddProduct={handleAddProduct} handleSaveEdit={handleSaveEdit} handleDeleteProduct={handleDeleteProduct}
+                    handleSaveCategory={handleSaveCategory} handleEditCategory={handleEditCategory} handleDeleteCategory={handleDeleteCategory}
+                    collapsedCats={collapsedCats} toggleCollapse={toggleCollapse} openEditModal={openEditModal}
+                    handleReorderStock={handleReorderStock}
+                />
+            </>
+          )} 
+
           {activeTab === 'transaction' && user && <TabTransaction 
               products={products} categories={categories}
               transMode={transMode} setTransMode={setTransMode}
