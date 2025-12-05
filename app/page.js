@@ -152,9 +152,7 @@ export default function StockJinApp() {
     return `ร้านจิน ข้าวมันไก่\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
   };
 
-  // -------------------------------------------------------------------
-  // [NEW] Logic สำหรับ Void/Edit Transaction (คืนค่าสต็อก)
-  // -------------------------------------------------------------------
+  // --- LOGIC: Void/Edit/Reorder ---
   const revertStock = async (tx) => {
     const reversePromises = (tx.items || []).map(async (item) => {
        const qtyUsed = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : 0;
@@ -211,7 +209,6 @@ export default function StockJinApp() {
       showNotification('จัดลำดับไม่สำเร็จ');
     }
   };
-
 
   // --- ACTIONS: Request Transaction (ใช้ Service แยกไฟล์) ---
   const handleRequestTransaction = async () => {
