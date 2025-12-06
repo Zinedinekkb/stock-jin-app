@@ -179,7 +179,24 @@ export default function StockJinApp() {
        setVerifyingTx(null); showNotification('ยกเลิกบิลและคืนค่าสต็อกแล้ว');
     }, 'danger');
   };
+  // [NEW] Admin Only: ลบประวัติถาวร (ไม่คืนสต็อก ลบแค่ดาต้าเบส)
+  const handleDeleteHistory = (tx) => {
+    // กันเหนียว: เช็คอีกรอบว่าเป็น Admin ไหม
+    if (user?.role !== 'admin') {
+        return showNotification('เฉพาะผู้ดูแลระบบเท่านั้น!');
+    }
 
+    showConfirm(
+        'ลบประวัติถาวร?', 
+        'รายการนี้จะหายไปจากระบบทันที (ไม่มีผลกับสต็อก)', 
+        async () => {
+            await deleteDoc(doc(db, 'transactions', tx.id));
+            setVerifyingTx(null); // ปิดหน้าต่าง
+            showNotification('ลบรายการเรียบร้อย');
+        }, 
+        'danger'
+    );
+  };
   const handleEditCompletedTx = (tx) => {
     showConfirm('ต้องการแก้ไขรายการ?', 'สต็อกจะถูกคืนค่าเดิม และรายการนี้จะกลับไปสถานะ "รอตรวจสอบ"', async () => {
        await revertStock(tx);
@@ -403,6 +420,8 @@ export default function StockJinApp() {
               copyToClipboard={copyToClipboard} generateSummaryText={generateSummaryText}
               handleVoidTransaction={handleVoidTransaction}
               handleEditCompletedTx={handleEditCompletedTx}
+              user={user}
+              handleDeleteHistory={handleDeleteHistory}
           />}
           {activeTab === 'menu' && <TabMenu 
               user={user} loginForm={loginForm} setLoginForm={setLoginForm} handleLogin={handleLogin} handleLogout={handleLogout} loginError={loginError}

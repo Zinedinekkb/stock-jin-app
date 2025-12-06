@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, CheckCircle2, ChevronRight, ClipboardList, FileText, X, Minus, Plus, Copy, RotateCcw, Trash2, Ban } from 'lucide-react';
+import { Clock, CheckCircle2, ChevronRight, ClipboardList, FileText, X, Minus, Plus, Copy, RotateCcw, Trash2, Ban, ShieldAlert } from 'lucide-react';
 
 export default function TabStatus({
   transactions, statusFilter, setStatusFilter,
@@ -7,9 +7,10 @@ export default function TabStatus({
   actualQty, setActualQty,
   openVerifyModal, handleVerifyAndSave,
   copyToClipboard, generateSummaryText,
-  handleVoidTransaction, handleEditCompletedTx
+  handleVoidTransaction, handleEditCompletedTx,
+  // รับ props เพิ่ม
+  user, handleDeleteHistory
 }) {
-    // กรองข้อมูลตาม Tab ที่เลือก (pending / completed / cancelled)
     const filteredTx = transactions.filter(tx => {
       if (statusFilter === 'pending') return tx.status === 'pending';
       if (statusFilter === 'completed') return tx.status === 'completed';
@@ -21,7 +22,6 @@ export default function TabStatus({
       <div className="space-y-4 pb-20 animate-fade-in-slide relative">
         <h2 className="text-2xl font-bold text-green-900 sticky top-0 bg-gray-50 z-10 py-2">สถานะคำสั่ง</h2>
         
-        {/* เพิ่มปุ่ม Tab "ยกเลิก" */}
         <div className="flex bg-gray-200 p-1 rounded-xl sticky top-12 z-10 overflow-x-auto">
           <button onClick={() => setStatusFilter('pending')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${statusFilter === 'pending' ? 'bg-white shadow text-orange-600' : 'text-gray-500'}`}><Clock size={16}/> รอตรวจ</button>
           <button onClick={() => setStatusFilter('completed')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${statusFilter === 'completed' ? 'bg-white shadow text-green-600' : 'text-gray-500'}`}><CheckCircle2 size={16}/> สำเร็จ</button>
@@ -34,7 +34,7 @@ export default function TabStatus({
               key={tx.id} 
               onClick={() => openVerifyModal(tx)}
               className={`bg-white p-4 rounded-2xl shadow-sm border-l-4 cursor-pointer active:scale-95 transition-transform flex justify-between items-center ${
-                tx.status === 'cancelled' ? 'border-gray-400 opacity-60' : // สไตล์สำหรับรายการที่ยกเลิก
+                tx.status === 'cancelled' ? 'border-gray-400 opacity-60' : 
                 tx.type === 'IN' ? 'border-green-500' : 'border-red-500'
               }`}
             >
@@ -115,32 +115,41 @@ export default function TabStatus({
                 ))}
               </div>
 
-              <div className="p-4 bg-gray-50 border-t border-gray-100">
-                {verifyingTx.status === 'pending' ? (
+              <div className="p-4 bg-gray-50 border-t border-gray-100 space-y-3">
+                {/* ปุ่มสำหรับรายการ Pending */}
+                {verifyingTx.status === 'pending' && (
                   <button onClick={handleVerifyAndSave} className="w-full py-3.5 rounded-xl bg-orange-500 text-white font-bold shadow-lg shadow-orange-200 active:scale-95 transition-transform flex items-center justify-center gap-2">
                     <CheckCircle2 size={20}/> ยืนยันยอดและอัปเดตสต็อก
                   </button>
-                ) : verifyingTx.status === 'completed' ? (
-                  <div className="space-y-3">
+                )}
+
+                {/* ปุ่มสำหรับรายการ Completed (Copy / Edit / Void) */}
+                {verifyingTx.status === 'completed' && (
+                  <>
                      <button onClick={() => copyToClipboard(generateSummaryText(verifyingTx))} className="w-full py-3 rounded-xl bg-gray-800 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
                        <Copy size={18}/> คัดลอกประวัติ
                      </button>
-                     
                      <div className="flex gap-2">
                         <button onClick={() => handleEditCompletedTx(verifyingTx)} className="flex-1 py-3 rounded-xl bg-yellow-100 text-yellow-700 font-bold border border-yellow-200 active:scale-95 transition-transform flex items-center justify-center gap-2">
-                           <RotateCcw size={18}/> แก้ไข (คืนค่า)
+                           <RotateCcw size={18}/> แก้ไข
                         </button>
                         <button onClick={() => handleVoidTransaction(verifyingTx)} className="flex-1 py-3 rounded-xl bg-red-100 text-red-700 font-bold border border-red-200 active:scale-95 transition-transform flex items-center justify-center gap-2">
-                           <Trash2 size={18}/> ยกเลิกบิล
+                           <Ban size={18}/> ยกเลิก
                         </button>
                      </div>
-                  </div>
-                ) : (
-                  // สำหรับสถานะ 'cancelled'
-                  <div className="w-full py-3 rounded-xl bg-gray-200 text-gray-500 font-bold text-center border border-gray-300">
-                     รายการนี้ถูกยกเลิกแล้ว
-                  </div>
+                  </>
                 )}
+
+                {/* ปุ่มลบประวัติถาวร (เฉพาะ Admin และสถานะต้องไม่ใช่ Pending) */}
+                {user?.role === 'admin' && verifyingTx.status !== 'pending' && (
+                    <button 
+                        onClick={() => handleDeleteHistory(verifyingTx)} 
+                        className="w-full py-2.5 rounded-xl bg-white border-2 border-red-100 text-red-500 font-bold text-xs flex items-center justify-center gap-2 mt-2 hover:bg-red-50"
+                    >
+                        <Trash2 size={14}/> ลบประวัตินี้ถาวร (Admin Only)
+                    </button>
+                )}
+                
               </div>
             </div>
           </div>
