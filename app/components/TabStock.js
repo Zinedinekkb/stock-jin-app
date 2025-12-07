@@ -30,6 +30,7 @@ export default function TabStock({
 }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
 
+  // ฟังก์ชันช่วยแสดงวงกลมสี
   const renderColorCircle = (colorCode, sizeClass = "w-6 h-6") => {
     const safeColor = colorCode || 'bg-gray-200';
     const isHex = safeColor.startsWith('#');
@@ -41,12 +42,10 @@ export default function TabStock({
     );
   };
 
+  // ฟังก์ชันเลื่อนลำดับสินค้า
   const moveItem = (e, itemList, index, direction) => {
     e.stopPropagation();
-    if (!handleReorderStock) {
-        alert("⚠️ Error: handleReorderStock not found");
-        return;
-    }
+    if (!handleReorderStock) return;
     const newItems = [...itemList];
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= newItems.length) return;
@@ -54,6 +53,7 @@ export default function TabStock({
     handleReorderStock(newItems);
   };
 
+  // ฟังก์ชันสร้างข้อความสรุปสต็อก (Text)
   const handleCopyStockReport = () => {
     const now = new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
     let report = `📦 สต็อกคงเหลือ (อัปเดต ${now})\n`;
@@ -73,6 +73,7 @@ export default function TabStock({
         }
     });
 
+    // สินค้าไม่มีหมวด
     const noCatProducts = products.filter(p => !p.category);
     if (noCatProducts.length > 0) {
         report += `\n⚠️ อื่นๆ (ไม่ระบุหมวด)\n`;
@@ -89,10 +90,11 @@ export default function TabStock({
 
   return (
       <div className="space-y-4 pb-20 animate-fade-in-slide relative">
+        {/* --- Header & Buttons --- */}
         <div className="flex justify-between items-center sticky top-0 bg-gray-50/95 py-2 z-10 backdrop-blur-md transition-all">
           <h2 className="text-2xl font-bold text-green-900">คลังสินค้า</h2>
           <div className="flex gap-2">
-             {/* --- [โซนปุ่มรายงาน] --- */}
+             {/* โซนปุ่มรายงาน (Copy / LINE) */}
              <div className="flex bg-white rounded-full shadow-sm border border-gray-200 p-0.5">
                  <button onClick={handleCopyStockReport} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 active:scale-90 transition-all" title="คัดลอกข้อความ">
                     <Clipboard size={18} />
@@ -102,14 +104,14 @@ export default function TabStock({
                     <Share2 size={18} />
                  </button>
              </div>
-             {/* ----------------------- */}
-
+             
              <button onClick={() => { setShowCatManager(true); setNewProductMode(false); setIsEditingStock(false); }} className="p-2.5 rounded-full shadow-sm bg-white text-gray-600 active:scale-95 border border-gray-200"><Layers size={20} /></button>
              <button onClick={() => { setIsEditingStock(!isEditingStock); setNewProductMode(false); setShowCatManager(false); }} className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-sm transition-all border ${isEditingStock ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-white text-gray-600 border-gray-200'}`}><Edit2 size={18} />{isEditingStock && <span className="text-xs font-bold">แก้ไข</span>}</button>
             {!isEditingStock && <button onClick={() => { setNewProductMode(true); setShowCatManager(false); }} className="bg-green-700 text-yellow-100 p-2.5 rounded-full shadow-lg active:scale-95 transition-transform hover:bg-green-800 border border-green-600"><Plus size={20} /></button>}
           </div>
         </div>
         
+        {/* --- Category Manager Modal --- */}
         {showCatManager && (
           <div className="bg-white p-5 rounded-2xl shadow-xl border border-gray-200 mb-4 animate-scale-in">
              <div className="flex justify-between items-center mb-4 pb-2 border-b">
@@ -119,15 +121,8 @@ export default function TabStock({
              
              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1">
                {categories.map(cat => (
-                 <div 
-                   key={cat.id} 
-                   className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer ${editingCategory?.id === cat.id ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-100'}`}
-                   onClick={() => handleEditCategory(cat)}
-                 >
-                   <div className="flex items-center gap-3">
-                     {renderColorCircle(cat.color, "w-6 h-6")}
-                     <span className="text-sm font-semibold text-gray-700">{cat.name}</span>
-                   </div>
+                 <div key={cat.id} className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer ${editingCategory?.id === cat.id ? 'bg-green-50 border-green-300' : 'bg-gray-50 border-gray-100'}`} onClick={() => handleEditCategory(cat)}>
+                   <div className="flex items-center gap-3">{renderColorCircle(cat.color, "w-6 h-6")}<span className="text-sm font-semibold text-gray-700">{cat.name}</span></div>
                    <button onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id, cat.name); }} className="text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
                  </div>
                ))}
@@ -135,49 +130,27 @@ export default function TabStock({
 
              <div className="flex gap-2 items-center border-t pt-4 relative">
                 <div className="relative">
-                   <button 
-                     onClick={() => setShowColorPicker(!showColorPicker)}
-                     className="w-10 h-10 rounded-full cursor-pointer border-2 border-white shadow-md flex items-center justify-center transition-transform active:scale-90 overflow-hidden relative"
-                   >
+                   <button onClick={() => setShowColorPicker(!showColorPicker)} className="w-10 h-10 rounded-full cursor-pointer border-2 border-white shadow-md flex items-center justify-center transition-transform active:scale-90 overflow-hidden relative">
                      <div className={`w-full h-full ${!newCatData.color.startsWith('#') ? newCatData.color : ''}`} style={newCatData.color.startsWith('#') ? {backgroundColor: newCatData.color} : {}}></div>
                      <Palette size={16} className="text-white absolute drop-shadow-md z-10"/>
                    </button>
-
                    {showColorPicker && (
                      <div className="absolute bottom-12 left-0 z-50 bg-white shadow-xl p-3 rounded-2xl border animate-fade-in w-64">
                        <div className="grid grid-cols-6 gap-2">
-                          {AVAILABLE_COLORS.map(c => (
-                            <div 
-                              key={c} 
-                              onClick={() => { setNewCatData({ ...newCatData, color: c }); setShowColorPicker(false); }} 
-                              className={`w-6 h-6 rounded-full ${c} cursor-pointer hover:scale-125 transition-transform shadow-sm border border-gray-100`}
-                            ></div>
-                          ))}
-                          <label className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 cursor-pointer hover:scale-125 transition-transform shadow-sm border border-gray-100 flex items-center justify-center relative overflow-hidden">
-                            <input 
-                              type="color" 
-                              className="opacity-0 w-[200%] h-[200%] absolute cursor-pointer"
-                              onChange={(e) => { 
-                                setNewCatData({ ...newCatData, color: e.target.value }); 
-                                setShowColorPicker(false); 
-                              }}
-                            />
-                            <Plus size={14} className="text-white pointer-events-none"/>
-                          </label>
+                          {AVAILABLE_COLORS.map(c => <div key={c} onClick={() => { setNewCatData({ ...newCatData, color: c }); setShowColorPicker(false); }} className={`w-6 h-6 rounded-full ${c} cursor-pointer hover:scale-125 transition-transform shadow-sm border border-gray-100`}></div>)}
+                          <label className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 cursor-pointer hover:scale-125 transition-transform shadow-sm border border-gray-100 flex items-center justify-center relative overflow-hidden"><input type="color" className="opacity-0 w-[200%] h-[200%] absolute cursor-pointer" onChange={(e) => { setNewCatData({ ...newCatData, color: e.target.value }); setShowColorPicker(false); }}/><Plus size={14} className="text-white pointer-events-none"/></label>
                        </div>
                        <div className="absolute -bottom-2 left-3 w-4 h-4 bg-white transform rotate-45 border-b border-r border-gray-200"></div>
                      </div>
                    )}
                  </div>
-
                 <input placeholder="ชื่อหมวดใหม่..." className="flex-1 border p-2.5 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-green-200 outline-none" value={newCatData.name} onChange={e => setNewCatData({...newCatData, name: e.target.value})} />
-                <button onClick={handleSaveCategory} className="bg-green-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg w-20">
-                  {editingCategory ? 'แก้ไข' : 'เพิ่ม'}
-                </button>
+                <button onClick={handleSaveCategory} className="bg-green-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg w-20">{editingCategory ? 'แก้ไข' : 'เพิ่ม'}</button>
              </div>
           </div>
         )}
 
+        {/* --- Add New Product Modal --- */}
         {newProductMode && !isEditingStock && (
           <div className="bg-white p-5 rounded-2xl shadow-xl border border-green-100 mb-4 animate-scale-in">
             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-green-800 text-lg">เพิ่มสินค้าใหม่</h3><button onClick={() => setNewProductMode(false)}><X size={24} className="text-gray-400"/></button></div>
@@ -191,6 +164,7 @@ export default function TabStock({
           </div>
         )}
 
+        {/* --- Product List (By Category) --- */}
         <div className="space-y-4">
           {categories.map(cat => {
             const catProducts = products
@@ -218,20 +192,8 @@ export default function TabStock({
                           <div className="flex items-center gap-3">
                              {isEditingStock ? (
                                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 mr-1">
-                                    <button 
-                                        onClick={(e) => moveItem(e, catProducts, idx, -1)} 
-                                        disabled={idx === 0}
-                                        className={`p-1.5 rounded-md ${idx === 0 ? 'text-gray-300' : 'text-gray-600 hover:bg-white hover:shadow-sm active:scale-90'}`}
-                                    >
-                                        <ArrowUp size={16}/>
-                                    </button>
-                                    <button 
-                                        onClick={(e) => moveItem(e, catProducts, idx, 1)} 
-                                        disabled={idx === catProducts.length - 1}
-                                        className={`p-1.5 rounded-md ${idx === catProducts.length - 1 ? 'text-gray-300' : 'text-gray-600 hover:bg-white hover:shadow-sm active:scale-90'}`}
-                                    >
-                                        <ArrowDown size={16}/>
-                                    </button>
+                                    <button onClick={(e) => moveItem(e, catProducts, idx, -1)} disabled={idx === 0} className={`p-1.5 rounded-md ${idx === 0 ? 'text-gray-300' : 'text-gray-600 hover:bg-white hover:shadow-sm active:scale-90'}`}><ArrowUp size={16}/></button>
+                                    <button onClick={(e) => moveItem(e, catProducts, idx, 1)} disabled={idx === catProducts.length - 1} className={`p-1.5 rounded-md ${idx === catProducts.length - 1 ? 'text-gray-300' : 'text-gray-600 hover:bg-white hover:shadow-sm active:scale-90'}`}><ArrowDown size={16}/></button>
                                 </div>
                              ) : (
                                 <div className="text-right">
@@ -239,10 +201,7 @@ export default function TabStock({
                                     <p className="text-[10px] text-gray-500 font-medium">{p.unit}</p>
                                 </div>
                              )}
-
-                             {isEditingStock && (
-                                 <div onClick={() => openEditModal(p)} className="bg-yellow-100 p-2 rounded-full text-yellow-700 cursor-pointer active:scale-90"><Edit2 size={14} /></div>
-                             )}
+                             {isEditingStock && <div onClick={() => openEditModal(p)} className="bg-yellow-100 p-2 rounded-full text-yellow-700 cursor-pointer active:scale-90"><Edit2 size={14} /></div>}
                           </div>
                         </div>
                       ))}
@@ -253,7 +212,7 @@ export default function TabStock({
           })}
         </div>
 
-        {/* --- โซนสินค้าตกหล่น (ไม่มีหมวดหมู่) --- */}
+        {/* --- [ส่วนที่หายไป] โซนสินค้าตกหล่น (ไม่มีหมวดหมู่) --- */}
         {products.filter(p => !p.category).length > 0 && (
           <div className="mt-8 border-t-4 border-red-100 pt-4 animate-bounce-in">
             <div className="flex items-center gap-2 mb-3 bg-red-50 p-3 rounded-xl border border-red-200">
@@ -279,7 +238,9 @@ export default function TabStock({
             </div>
           </div>
         )}
+        {/* ------------------------------------------------ */}
 
+        {/* --- Edit Product Modal --- */}
         {editingProduct && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
             <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 transform transition-all animate-scale-in border-4 border-yellow-100">
