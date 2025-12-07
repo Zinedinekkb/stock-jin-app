@@ -1,6 +1,7 @@
 // app/components/TabStock.js
 import React, { useState } from 'react';
-import { Layers, Edit2, Plus, ChevronRight, ChevronDown, Trash2, Palette, X, Minus, Save, Pipette, ArrowUp, ArrowDown, AlertTriangle } from 'lucide-react';
+import { Layers, Edit2, Plus, ChevronRight, ChevronDown, Trash2, Palette, X, Minus, Save, Pipette, ArrowUp, ArrowDown, AlertTriangle, Clipboard, Share2 } from 'lucide-react';
+
 const AVAILABLE_COLORS = [
     'bg-green-600', 'bg-green-800', 'bg-yellow-500', 'bg-yellow-600', 
     'bg-red-600', 'bg-orange-600', 'bg-gray-500', 'bg-gray-700',
@@ -22,13 +23,13 @@ export default function TabStock({
   // Actions
   handleAddProduct, handleSaveEdit, handleDeleteProduct,
   handleSaveCategory, handleEditCategory, handleDeleteCategory,
-  // [NEW] รับฟังก์ชันจัดลำดับมา
-  handleReorderStock
+  handleReorderStock,
+  // New Props
+  copyToClipboard,
+  handleSendStockToLine
 }) {
-  // State สำหรับเปิด/ปิดถาดสี
   const [showColorPicker, setShowColorPicker] = useState(false);
 
-  // ฟังก์ชันช่วยแปลงสี (รองรับทั้ง Tailwind Class และ Hex Code)
   const renderColorCircle = (colorCode, sizeClass = "w-6 h-6") => {
     const safeColor = colorCode || 'bg-gray-200';
     const isHex = safeColor.startsWith('#');
@@ -40,25 +41,50 @@ export default function TabStock({
     );
   };
 
-  // ฟังก์ชันจัดการการเลื่อนสินค้า (Reorder)
   const moveItem = (e, itemList, index, direction) => {
-    e.stopPropagation(); // หยุดไม่ให้คลิกทะลุไปโดนการ์ด
-
+    e.stopPropagation();
     if (!handleReorderStock) {
-        alert("⚠️ เกิดข้อผิดพลาด: ไม่พบคำสั่ง handleReorderStock\nกรุณาเช็คไฟล์ page.js ว่าใส่ Props ครบไหม");
+        alert("⚠️ Error: handleReorderStock not found");
         return;
     }
-
     const newItems = [...itemList];
     const targetIndex = index + direction;
-
     if (targetIndex < 0 || targetIndex >= newItems.length) return;
-
-    // สลับตำแหน่ง
     [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
-
-    // บันทึก
     handleReorderStock(newItems);
+  };
+
+  const handleCopyStockReport = () => {
+    const now = new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+    let report = `📦 สต็อกคงเหลือ (อัปเดต ${now})\n`;
+    report += `--------------------------------\n`;
+
+    categories.forEach(cat => {
+        const catProducts = products
+            .filter(p => p.category === cat.name)
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        if (catProducts.length > 0) {
+            report += `\n🔹 ${cat.name}\n`;
+            catProducts.forEach(p => {
+                const stockStatus = p.stock === 0 ? '❌ หมด' : `${p.stock} ${p.unit}`;
+                report += `- ${p.name} : ${stockStatus}\n`;
+            });
+        }
+    });
+
+    const noCatProducts = products.filter(p => !p.category);
+    if (noCatProducts.length > 0) {
+        report += `\n⚠️ อื่นๆ (ไม่ระบุหมวด)\n`;
+        noCatProducts.forEach(p => {
+            report += `- ${p.name} : ${p.stock} ${p.unit}\n`;
+        });
+    }
+
+    report += `\n--------------------------------\n`;
+    report += `เช็คยอดโดย: Stock Jin App`;
+
+    copyToClipboard(report);
   };
 
   return (
@@ -66,6 +92,18 @@ export default function TabStock({
         <div className="flex justify-between items-center sticky top-0 bg-gray-50/95 py-2 z-10 backdrop-blur-md transition-all">
           <h2 className="text-2xl font-bold text-green-900">คลังสินค้า</h2>
           <div className="flex gap-2">
+             {/* --- [โซนปุ่มรายงาน] --- */}
+             <div className="flex bg-white rounded-full shadow-sm border border-gray-200 p-0.5">
+                 <button onClick={handleCopyStockReport} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 active:scale-90 transition-all" title="คัดลอกข้อความ">
+                    <Clipboard size={18} />
+                 </button>
+                 <div className="w-[1px] bg-gray-200 my-1"></div>
+                 <button onClick={handleSendStockToLine} className="p-2 rounded-full text-green-600 hover:bg-green-50 active:scale-90 transition-all" title="ส่งเข้า LINE">
+                    <Share2 size={18} />
+                 </button>
+             </div>
+             {/* ----------------------- */}
+
              <button onClick={() => { setShowCatManager(true); setNewProductMode(false); setIsEditingStock(false); }} className="p-2.5 rounded-full shadow-sm bg-white text-gray-600 active:scale-95 border border-gray-200"><Layers size={20} /></button>
              <button onClick={() => { setIsEditingStock(!isEditingStock); setNewProductMode(false); setShowCatManager(false); }} className={`flex items-center gap-2 px-4 py-2 rounded-full shadow-sm transition-all border ${isEditingStock ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 'bg-white text-gray-600 border-gray-200'}`}><Edit2 size={18} />{isEditingStock && <span className="text-xs font-bold">แก้ไข</span>}</button>
             {!isEditingStock && <button onClick={() => { setNewProductMode(true); setShowCatManager(false); }} className="bg-green-700 text-yellow-100 p-2.5 rounded-full shadow-lg active:scale-95 transition-transform hover:bg-green-800 border border-green-600"><Plus size={20} /></button>}
@@ -79,7 +117,6 @@ export default function TabStock({
                <button onClick={() => { setShowCatManager(false); setEditingCategory(null); setNewCatData({name:'',color:'bg-green-600'}); }}><X size={20} className="text-gray-400"/></button>
              </div>
              
-             {/* รายการหมวดหมู่ */}
              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1">
                {categories.map(cat => (
                  <div 
@@ -96,25 +133,19 @@ export default function TabStock({
                ))}
              </div>
 
-             {/* ฟอร์มเพิ่ม/แก้ไขหมวดหมู่ + Color Picker ใหม่ */}
              <div className="flex gap-2 items-center border-t pt-4 relative">
-                
-                {/* ปุ่มเลือกสี (Click Toggle) */}
                 <div className="relative">
                    <button 
                      onClick={() => setShowColorPicker(!showColorPicker)}
                      className="w-10 h-10 rounded-full cursor-pointer border-2 border-white shadow-md flex items-center justify-center transition-transform active:scale-90 overflow-hidden relative"
                    >
-                     {/* โชว์สีที่เลือกอยู่ */}
                      <div className={`w-full h-full ${!newCatData.color.startsWith('#') ? newCatData.color : ''}`} style={newCatData.color.startsWith('#') ? {backgroundColor: newCatData.color} : {}}></div>
                      <Palette size={16} className="text-white absolute drop-shadow-md z-10"/>
                    </button>
 
-                   {/* ถาดสี (จะโชว์เมื่อ showColorPicker เป็น true เท่านั้น) */}
                    {showColorPicker && (
                      <div className="absolute bottom-12 left-0 z-50 bg-white shadow-xl p-3 rounded-2xl border animate-fade-in w-64">
                        <div className="grid grid-cols-6 gap-2">
-                          {/* 1. สีมาตรฐานจาก Tailwind */}
                           {AVAILABLE_COLORS.map(c => (
                             <div 
                               key={c} 
@@ -122,8 +153,6 @@ export default function TabStock({
                               className={`w-6 h-6 rounded-full ${c} cursor-pointer hover:scale-125 transition-transform shadow-sm border border-gray-100`}
                             ></div>
                           ))}
-                          
-                          {/* 2. ปุ่มผสมสีเอง (Color Picker Input) */}
                           <label className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-yellow-500 cursor-pointer hover:scale-125 transition-transform shadow-sm border border-gray-100 flex items-center justify-center relative overflow-hidden">
                             <input 
                               type="color" 
@@ -167,31 +196,25 @@ export default function TabStock({
             const catProducts = products
                 .filter(p => (p.category || 'ไม่ระบุ') === cat.name)
                 .sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name));
-                
             const isCollapsed = collapsedCats[cat.name];
             
             return (
               <div key={cat.id} className="space-y-2">
                 <div onClick={() => toggleCollapse(cat.name)} className="flex items-center gap-2 cursor-pointer select-none py-2 px-1 active:scale-[0.99] transition-transform group">
                   <div className={`p-1 rounded-full bg-white border border-gray-200 shadow-sm`}>{isCollapsed ? <ChevronRight size={18} className="text-gray-500"/> : <ChevronDown size={18} className="text-gray-600"/>}</div>
-                  
                   {renderColorCircle(cat.color, "w-3 h-3")}
-                  
                   <h3 className="font-bold text-gray-700 text-sm flex items-center gap-2">{cat.name} <span className="text-[10px] bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full font-bold">{catProducts.length}</span></h3>
                 </div>
                 {!isCollapsed && (
                   <div className="space-y-3 pl-2 border-l-2 border-dashed border-gray-300 ml-3.5 animate-fade-in-slide">
                     {catProducts.length === 0 ? <div className="text-xs text-gray-400 italic pl-3 py-2">ว่างเปล่า...</div> : catProducts.map((p, idx) => (
                         <div key={p.id} className={`bg-white p-3.5 rounded-2xl shadow-sm border flex justify-between items-center relative overflow-hidden transition-all duration-300 ${isEditingStock ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-gray-200 hover:border-green-300'}`}>
-                          
                           <div className={`absolute left-0 top-0 bottom-0 w-[5px] ${!cat.color.startsWith('#') ? cat.color : ''}`} style={cat.color.startsWith('#') ? {backgroundColor: cat.color} : {}}></div>
-                          
                           <div className="pl-3 flex-1" onClick={() => isEditingStock && openEditModal(p)}>
                              <h3 className="font-bold text-gray-800 text-sm">{p.name}</h3>
                              <p className="text-[10px] text-gray-500 bg-gray-50 inline-block px-1.5 rounded mt-1 font-mono">#{p.sku}</p>
                           </div>
                           
-                          {/* ส่วนควบคุม: ถ้า Edit อยู่จะโชว์ปุ่มเลื่อน */}
                           <div className="flex items-center gap-3">
                              {isEditingStock ? (
                                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 mr-1">
@@ -230,47 +253,7 @@ export default function TabStock({
           })}
         </div>
 
-        {editingProduct && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 transform transition-all animate-scale-in border-4 border-yellow-100">
-              <div className="flex justify-between items-center mb-6 border-b pb-3"><h3 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Edit2 size={24} className="text-yellow-500"/> แก้ไขสินค้า</h3><button onClick={() => setEditingProduct(null)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button></div>
-              <div className="space-y-4">
-                <input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 focus:ring-2 focus:ring-yellow-200 outline-none" value={editFormData.name} onChange={e => setEditFormData({...editFormData, name: e.target.value})}/>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-500 ml-1">หมวดหมู่</label>
-                  <select 
-                    className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 focus:bg-white outline-none" 
-                    value={editFormData.category} 
-                    onChange={(e) => setEditFormData({...editFormData, category: e.target.value})}
-                  >
-                    <option value="">-- เลือกหมวด --</option>
-                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                  </select>
-                </div>
-                <div className="flex gap-3"><input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3" value={editFormData.sku} onChange={e => setEditFormData({...editFormData, sku: e.target.value})}/><input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3" value={editFormData.unit} onChange={e => setEditFormData({...editFormData, unit: e.target.value})}/></div>
-                
-                {/* ----------------- แก้ไขตรงนี้ ----------------- */}
-                <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100">
-                  <label className="text-xs font-bold text-yellow-800 uppercase tracking-wider">Stock</label>
-                  <div className="flex items-center justify-center gap-4 mt-2"> {/* เพิ่ม justify-center */}
-                    <button onClick={() => setEditFormData({...editFormData, stock: Math.max(0, parseInt(editFormData.stock) - 1)})} className="w-10 h-10 bg-white border border-yellow-200 rounded-xl flex items-center justify-center shadow-sm text-yellow-600"><Minus size={20}/></button>
-                    <input 
-                      type="number" 
-                      className="w-24 text-center bg-transparent font-black text-3xl text-gray-800 outline-none" /* เปลี่ยน flex-1 เป็น w-24 */
-                      value={editFormData.stock} 
-                      onChange={e => setEditFormData({...editFormData, stock: e.target.value})}
-                    />
-                    <button onClick={() => setEditFormData({...editFormData, stock: parseInt(editFormData.stock) + 1})} className="w-10 h-10 bg-white border border-yellow-200 rounded-xl flex items-center justify-center shadow-sm text-yellow-600"><Plus size={20}/></button>
-                  </div>
-                </div>
-                {/* ----------------------------------------------- */}
-
-                <div className="flex gap-3 pt-4"><button onClick={handleDeleteProduct} className="flex-1 bg-red-50 text-red-600 py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-red-100"><Trash2 size={20} /> ลบ</button><button onClick={handleSaveEdit} className="flex-[2] bg-green-700 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-green-800 flex justify-center items-center gap-2"><Save size={20} /> บันทึก</button></div>
-              </div>
-            </div>
-          </div>
-        )}
-      {/* --- [เพิ่มใหม่] ส่วนกู้คืนสินค้าที่ไม่มีหมวดหมู่ --- */}
+        {/* --- โซนสินค้าตกหล่น (ไม่มีหมวดหมู่) --- */}
         {products.filter(p => !p.category).length > 0 && (
           <div className="mt-8 border-t-4 border-red-100 pt-4 animate-bounce-in">
             <div className="flex items-center gap-2 mb-3 bg-red-50 p-3 rounded-xl border border-red-200">
@@ -296,7 +279,45 @@ export default function TabStock({
             </div>
           </div>
         )}
-        {/* ------------------------------------------------ */}
+
+        {editingProduct && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 transform transition-all animate-scale-in border-4 border-yellow-100">
+              <div className="flex justify-between items-center mb-6 border-b pb-3"><h3 className="text-xl font-bold text-gray-800 flex items-center gap-2"><Edit2 size={24} className="text-yellow-500"/> แก้ไขสินค้า</h3><button onClick={() => setEditingProduct(null)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button></div>
+              <div className="space-y-4">
+                <input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 focus:ring-2 focus:ring-yellow-200 outline-none" value={editFormData.name} onChange={e => setEditFormData({...editFormData, name: e.target.value})}/>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 ml-1">หมวดหมู่</label>
+                  <select 
+                    className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 focus:bg-white outline-none" 
+                    value={editFormData.category} 
+                    onChange={(e) => setEditFormData({...editFormData, category: e.target.value})}
+                  >
+                    <option value="">-- เลือกหมวด --</option>
+                    {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex gap-3"><input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3" value={editFormData.sku} onChange={e => setEditFormData({...editFormData, sku: e.target.value})}/><input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3" value={editFormData.unit} onChange={e => setEditFormData({...editFormData, unit: e.target.value})}/></div>
+                
+                <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100">
+                  <label className="text-xs font-bold text-yellow-800 uppercase tracking-wider">Stock</label>
+                  <div className="flex items-center justify-center gap-4 mt-2">
+                    <button onClick={() => setEditFormData({...editFormData, stock: Math.max(0, parseInt(editFormData.stock) - 1)})} className="w-10 h-10 bg-white border border-yellow-200 rounded-xl flex items-center justify-center shadow-sm text-yellow-600"><Minus size={20}/></button>
+                    <input 
+                      type="number" 
+                      className="w-24 text-center bg-transparent font-black text-3xl text-gray-800 outline-none"
+                      value={editFormData.stock} 
+                      onChange={e => setEditFormData({...editFormData, stock: e.target.value})}
+                    />
+                    <button onClick={() => setEditFormData({...editFormData, stock: parseInt(editFormData.stock) + 1})} className="w-10 h-10 bg-white border border-yellow-200 rounded-xl flex items-center justify-center shadow-sm text-yellow-600"><Plus size={20}/></button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-4"><button onClick={handleDeleteProduct} className="flex-1 bg-red-50 text-red-600 py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-red-100"><Trash2 size={20} /> ลบ</button><button onClick={handleSaveEdit} className="flex-[2] bg-green-700 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-green-800 flex justify-center items-center gap-2"><Save size={20} /> บันทึก</button></div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
   );
 }

@@ -5,13 +5,13 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
   const now = new Date();
   const dateStr = now.toLocaleString('th-TH');
 
-  // 1. บันทึก Firebase (เหมือนเดิม)
+  // 1. บันทึก Firebase
   const newTx = {
     type: transMode,
     date: dateStr,
     timestamp: now.getTime(),
     items: cart,
-    note: note || '', // กันเหนียว: ถ้าไม่มี note ให้เป็นค่าว่าง
+    note: note || '',
     recorder: user ? user.name : 'Staff',
     recorderEmail: user ? user.email : 'Unknown',
     status: 'pending',
@@ -21,8 +21,7 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
   try {
     await addDoc(collection(db, 'transactions'), newTx);
 
-    // 2. ส่ง LINE (ปรับปรุงใหม่: กรองข้อมูลให้สะอาดก่อนส่ง)
-    // เราจะสร้าง object ใหม่ที่เอาเฉพาะข้อมูลที่จำเป็นจริงๆ ส่งไป (ตัดขยะทิ้ง)
+    // 2. ส่ง LINE (Transaction)
     const cleanPayload = {
         transMode: transMode,
         note: note || '-',
@@ -35,20 +34,11 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
         }))
     };
 
-    console.log("🚀 Sending Payload to API:", cleanPayload);
-
-    // ยิงไปที่ API
-    const res = await fetch('/api/notify', {
+    await fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cleanPayload)
     });
-
-    if (!res.ok) {
-        console.error("❌ API Error:", res.status);
-    } else {
-        console.log("✅ API Success");
-    }
 
     return { success: true };
 
@@ -56,4 +46,23 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
     console.error("Service Error:", error);
     throw error;
   }
+};
+
+// --- [ฟังก์ชันใหม่] ส่งรายงานสต็อกเข้า LINE ---
+export const sendStockReportService = async ({ categories, products, user }) => {
+    const dateStr = new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
+    
+    try {
+        const res = await fetch('/api/stock-report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ categories, products, user, dateStr })
+        });
+
+        if (!res.ok) throw new Error('API Failed');
+        return { success: true };
+    } catch (error) {
+        console.error("Stock Report Error:", error);
+        throw error;
+    }
 };
