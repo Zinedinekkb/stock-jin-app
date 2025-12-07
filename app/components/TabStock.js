@@ -1,7 +1,6 @@
 // app/components/TabStock.js
 import React, { useState } from 'react';
-import { Layers, Edit2, Plus, ChevronRight, ChevronDown, Trash2, Palette, X, Minus, Save, Pipette, ArrowUp, ArrowDown } from 'lucide-react';
-
+import { Layers, Edit2, Plus, ChevronRight, ChevronDown, Trash2, Palette, X, Minus, Save, Pipette, ArrowUp, ArrowDown, AlertTriangle } from 'lucide-react';
 const AVAILABLE_COLORS = [
     'bg-green-600', 'bg-green-800', 'bg-yellow-500', 'bg-yellow-600', 
     'bg-red-600', 'bg-orange-600', 'bg-gray-500', 'bg-gray-700',
@@ -271,6 +270,33 @@ export default function TabStock({
             </div>
           </div>
         )}
+      {/* --- [เพิ่มใหม่] ส่วนกู้คืนสินค้าที่ไม่มีหมวดหมู่ --- */}
+        {products.filter(p => !p.category).length > 0 && (
+          <div className="mt-8 border-t-4 border-red-100 pt-4 animate-bounce-in">
+            <div className="flex items-center gap-2 mb-3 bg-red-50 p-3 rounded-xl border border-red-200">
+               <div className="p-2 rounded-full bg-white text-red-600 shadow-sm"><AlertTriangle size={20} /></div>
+               <div>
+                 <h3 className="font-bold text-red-800 text-sm">สินค้าตกหล่น (ไม่มีหมวดหมู่)</h3>
+                 <p className="text-[10px] text-red-600">พบ {products.filter(p => !p.category).length} รายการ - โปรดกดแก้ไขเพื่อระบุหมวดหมู่</p>
+               </div>
+            </div>
+            
+            <div className="space-y-3">
+               {products.filter(p => !p.category).map((p) => (
+                  <div key={p.id} className="bg-white p-3.5 rounded-2xl shadow-sm border-2 border-red-100 flex justify-between items-center relative overflow-hidden" onClick={() => openEditModal(p)}>
+                     <div className="pl-2 flex-1">
+                         <h3 className="font-bold text-gray-800 text-sm">{p.name}</h3>
+                         <p className="text-[10px] text-gray-400 bg-gray-100 inline-block px-1.5 rounded mt-1">STOCK: {p.stock}</p>
+                     </div>
+                     <button onClick={() => openEditModal(p)} className="bg-red-100 p-2 rounded-full text-red-600 cursor-pointer active:scale-90 hover:bg-red-200">
+                        <Edit2 size={16} /> แก้ไข
+                     </button>
+                  </div>
+               ))}
+            </div>
+          </div>
+        )}
+        {/* ------------------------------------------------ */}
       </div>
   );
 }

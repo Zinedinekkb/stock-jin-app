@@ -19,7 +19,7 @@ import { submitTransactionService } from '@/app/services/transactionService';
 // --- FIREBASE IMPORTS ---
 import { db, auth } from '@/lib/firebase';
 import { 
-  collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc,
+  collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, getDocs, // [NEW] เพิ่ม getDocs
   serverTimestamp, query, orderBy, where, writeBatch
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
@@ -179,9 +179,7 @@ export default function StockJinApp() {
        setVerifyingTx(null); showNotification('ยกเลิกบิลและคืนค่าสต็อกแล้ว');
     }, 'danger');
   };
-  // [NEW] Admin Only: ลบประวัติถาวร (ไม่คืนสต็อก ลบแค่ดาต้าเบส)
   const handleDeleteHistory = (tx) => {
-    // กันเหนียว: เช็คอีกรอบว่าเป็น Admin ไหม
     if (user?.role !== 'admin') {
         return showNotification('เฉพาะผู้ดูแลระบบเท่านั้น!');
     }
@@ -191,7 +189,7 @@ export default function StockJinApp() {
         'รายการนี้จะหายไปจากระบบทันที (ไม่มีผลกับสต็อก)', 
         async () => {
             await deleteDoc(doc(db, 'transactions', tx.id));
-            setVerifyingTx(null); // ปิดหน้าต่าง
+            setVerifyingTx(null); 
             showNotification('ลบรายการเรียบร้อย');
         }, 
         'danger'
@@ -224,7 +222,7 @@ export default function StockJinApp() {
     }
   };
 
-  // --- ACTIONS: Request Transaction (ใช้ Service แยกไฟล์ เพื่อให้โค้ดสะอาดและส่งไลน์ได้) ---
+  // --- ACTIONS: Request Transaction ---
   const handleRequestTransaction = async () => {
     if (cart.length === 0) return;
     
@@ -233,7 +231,6 @@ export default function StockJinApp() {
       `รายการจะถูกส่งไปที่หน้า "สถานะ" เพื่อรอการตรวจสอบและยืนยันยอดจริงอีกครั้ง`,
       async () => {
         try {
-            // เรียกใช้ Service ที่เราเพิ่งสร้าง
             await submitTransactionService({
                 cart,
                 transMode,
@@ -241,7 +238,6 @@ export default function StockJinApp() {
                 user
             });
 
-            // ถ้าสำเร็จ ก็เคลียร์หน้าจอ
             setCart([]);
             setNote('');
             showNotification('ส่งคำขอเรียบร้อย! (แจ้งเตือนไลน์แล้ว)');
@@ -262,14 +258,18 @@ export default function StockJinApp() {
     setActualQty(initialActual);
   };
 
-  const handleVerifyAndSave = async () => {
+  // [UPDATED] รองรับ extraItems
+  const handleVerifyAndSave = async (extraItems = []) => {
     if (!verifyingTx) return;
     showConfirm(
       'ยืนยันยอดจริงถูกต้อง?', 'สต็อกจะถูกอัปเดตตามยอดนี้ และสถานะจะเปลี่ยนเป็นสำเร็จ',
       async () => {
+        // 1. รวมรายการเดิม + รายการมาเกิน (Extra)
+        const finalItems = [...(verifyingTx.items || []), ...extraItems];
+
+        // 2. อัปเดตสต็อก (วนลูปเช็คจากสินค้าทั้งหมด)
         const updatePromises = products.map(async (p) => {
-          const isTargetItem = (verifyingTx.items || []).some(item => item.id === p.id);
-          if (isTargetItem) {
+          if (actualQty[p.id] !== undefined) {
              const finalQty = parseInt(actualQty[p.id]) || 0;
              if (finalQty > 0) {
                const newStock = verifyingTx.type === 'IN' ? p.stock + finalQty : p.stock - finalQty;
@@ -279,8 +279,16 @@ export default function StockJinApp() {
           }
         });
         await Promise.all(updatePromises);
+
+        // 3. บันทึกบิล
         const txRef = doc(db, 'transactions', verifyingTx.id);
-        await updateDoc(txRef, { status: 'completed', actualItems: actualQty, verifiedBy: user ? user.name : 'Admin', verifiedAt: new Date().toLocaleString('th-TH') });
+        await updateDoc(txRef, { 
+            status: 'completed', 
+            items: finalItems, 
+            actualItems: actualQty, 
+            verifiedBy: user ? user.name : 'Admin', 
+            verifiedAt: new Date().toLocaleString('th-TH') 
+        });
         setVerifyingTx(null); showNotification('อัปเดตสต็อกเรียบร้อย!');
       }, 'info'
     );
@@ -288,10 +296,14 @@ export default function StockJinApp() {
 
   // CRUD Functions
   const handleAddProduct = async () => {
-    if (!newProdData.name) return showNotification('ข้อมูลไม่ครบ!');
+    // [UPDATED] เช็คหมวดหมู่
+    if (!newProdData.name || !newProdData.category) {
+        return showNotification('กรุณากรอกชื่อและเลือกหมวดหมู่!');
+    }
     await addDoc(collection(db, 'products'), { ...newProdData, stock: parseInt(newProdData.stock)||0, order: 9999, createdAt: serverTimestamp() });
     setNewProductMode(false); setNewProdData({ name: '', sku: '', unit: '', stock: 0, category: '' }); showNotification('เพิ่มสินค้าแล้ว');
   };
+
   const openEditModal = (p) => { setEditingProduct(p); setEditFormData({ ...p }); };
   const handleSaveEdit = async () => {
     if (!editFormData.name) return showNotification('ห้ามเว้นว่าง!');
@@ -299,12 +311,32 @@ export default function StockJinApp() {
     setEditingProduct(null); showNotification('แก้ไขแล้ว');
   };
   const handleDeleteProduct = async () => { await deleteDoc(doc(db, 'products', editingProduct.id)); setEditingProduct(null); showNotification('ลบแล้ว'); };
+  
   const handleSaveCategory = async () => {
     if(!newCatData.name) return showNotification('ใส่ชื่อหมวดด้วย!');
-    if (editingCategory) await updateDoc(doc(db, 'categories', editingCategory.id), newCatData);
-    else await addDoc(collection(db, 'categories'), newCatData);
+    
+    // [UPDATED] Logic เปลี่ยนชื่อหมวดหมู่แล้วสินค้าตามไปด้วย
+    if (editingCategory) {
+        const batch = writeBatch(db);
+        const catRef = doc(db, 'categories', editingCategory.id);
+        batch.update(catRef, newCatData);
+
+        if (editingCategory.name !== newCatData.name) {
+            const q = query(collection(db, 'products'), where('category', '==', editingCategory.name));
+            const querySnapshot = await getDocs(q);
+            querySnapshot.forEach((docSnap) => {
+                const prodRef = doc(db, 'products', docSnap.id);
+                batch.update(prodRef, { category: newCatData.name });
+            });
+        }
+        await batch.commit();
+    } 
+    else {
+        await addDoc(collection(db, 'categories'), newCatData);
+    }
     setNewCatData({name:'',color:'bg-green-600'}); setEditingCategory(null); showNotification('บันทึกหมวดหมู่เรียบร้อย');
   };
+
   const handleEditCategory = (c) => { setEditingCategory(c); setNewCatData({ name: c.name, color: c.color }); };
   const handleDeleteCategory = async (id, name) => {
     if(products.some(p => p.category === name)) return showNotification('มีของอยู่ ลบไม่ได้!');
@@ -422,6 +454,7 @@ export default function StockJinApp() {
               handleEditCompletedTx={handleEditCompletedTx}
               user={user}
               handleDeleteHistory={handleDeleteHistory}
+              products={products} // [UPDATED] ส่ง props สินค้าไปให้ TabStatus
           />}
           {activeTab === 'menu' && <TabMenu 
               user={user} loginForm={loginForm} setLoginForm={setLoginForm} handleLogin={handleLogin} handleLogout={handleLogout} loginError={loginError}

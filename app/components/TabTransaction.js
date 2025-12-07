@@ -1,6 +1,6 @@
 // app/components/TabTransaction.js
-import React from 'react';
-import { Package, ShoppingCart, Utensils, Minus, Plus, Trash2, Copy, Save } from 'lucide-react';
+import React, { useState } from 'react'; // <--- เพิ่ม useState
+import { Package, ShoppingCart, Utensils, Minus, Plus, Trash2, Copy, Save, Search, X } from 'lucide-react'; // <--- เพิ่ม Search, X
 
 export default function TabTransaction({
   products, categories,
@@ -11,16 +11,48 @@ export default function TabTransaction({
   handleAddToCart, handleAdjustQty, handleRemoveItem, handleCartQtyChange,
   handleRequestTransaction, copyToClipboard, generateSummaryText
 }) {
+    const [searchTerm, setSearchTerm] = useState(''); // <--- State สำหรับค้นหา
+
     const isModeIn = transMode === 'IN';
-    const filteredProducts = selectedCategory === 'ทั้งหมด' ? products : products.filter(p => p.category === selectedCategory);
+    
+    // Logic กรองสินค้า (เพิ่มส่วน matchSearch)
+    const filteredProducts = products.filter(p => {
+        const matchCat = selectedCategory === 'ทั้งหมด' ? true : p.category === selectedCategory;
+        const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                            (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
+        return matchCat && matchSearch;
+    });
 
   return (
       <div className="pb-24 animate-fade-in-slide min-h-full flex flex-col relative">
         <div className="sticky top-0 z-30 bg-gray-50/95 backdrop-blur-md pb-2 -mx-4 px-4 pt-1 shadow-sm">
+            {/* ปุ่มเลือกโหมด IN / OUT */}
             <div className={`flex justify-between items-center p-1.5 rounded-2xl mb-3 border shadow-sm ${isModeIn ? 'border-green-200 bg-green-100/50' : 'border-red-200 bg-red-100/50'}`}>
               <button onClick={() => {setTransMode('IN'); setCart([]);}} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${isModeIn ? 'bg-green-600 text-white shadow-lg' : 'text-gray-500'}`}>รับเข้า (IN)</button>
               <button onClick={() => {setTransMode('OUT'); setCart([]);}} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${!isModeIn ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500'}`}>เบิกออก (OUT)</button>
             </div>
+
+            {/* --- [เพิ่มใหม่] ช่องค้นหาสินค้า --- */}
+            <div className="relative mb-3">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <Search size={18} />
+                </div>
+                <input 
+                    type="text" 
+                    placeholder="ค้นหาสินค้า / SKU..." 
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 bg-white shadow-sm text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {searchTerm && (
+                    <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 bg-gray-100 rounded-full p-0.5">
+                        <X size={14} />
+                    </button>
+                )}
+            </div>
+            {/* ---------------------------------- */}
+
+            {/* หมวดหมู่ */}
             <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
               <button onClick={() => setSelectedCategory('ทั้งหมด')} className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shadow-sm ${selectedCategory === 'ทั้งหมด' ? 'bg-green-900 text-yellow-400 border-green-900' : 'bg-white text-gray-600 border-gray-200'}`}>ทั้งหมด</button>
               {categories.map(cat => (
@@ -28,6 +60,8 @@ export default function TabTransaction({
               ))}
             </div>
         </div>
+
+        {/* Grid แสดงสินค้า (ใช้ filteredProducts ตัวใหม่) */}
         <div className="grid grid-rows-2 grid-flow-col gap-3 pb-4 mb-4 pt-2 overflow-x-auto auto-cols-[140px] no-scrollbar snap-x snap-mandatory">
           {filteredProducts.length === 0 ? <div className="col-span-full w-full flex items-center justify-center py-8 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-2xl min-h-[120px]">ไม่พบสินค้า</div> : 
             filteredProducts.map(p => {
@@ -43,6 +77,8 @@ export default function TabTransaction({
             })
           }
         </div>
+
+        {/* ส่วนตะกร้า (เหมือนเดิม) */}
         <div className="flex-1 bg-white rounded-t-3xl shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] border-t border-gray-200 p-5 flex flex-col z-20">
           <div className="flex justify-between items-center mb-4"><span className="font-bold text-green-900 flex gap-2 items-center text-lg"><ShoppingCart size={22} className="text-yellow-500"/> ตะกร้า ({cart.length})</span>{cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-red-500 font-bold bg-red-50 px-2 py-1 rounded-lg hover:bg-red-100">ลบหมด</button>}</div>
           <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1">
