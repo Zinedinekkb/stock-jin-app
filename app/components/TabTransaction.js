@@ -1,6 +1,7 @@
 // app/components/TabTransaction.js
-import React, { useState } from 'react'; // <--- เพิ่ม useState
-import { Package, ShoppingCart, Utensils, Minus, Plus, Trash2, Copy, Save, Search, X } from 'lucide-react'; // <--- เพิ่ม Search, X
+import React, { useState } from 'react';
+// ลบ Copy ออกจาก import แล้ว
+import { Package, ShoppingCart, Utensils, Minus, Plus, Trash2, Save, Search, X } from 'lucide-react';
 
 export default function TabTransaction({
   products, categories,
@@ -11,11 +12,11 @@ export default function TabTransaction({
   handleAddToCart, handleAdjustQty, handleRemoveItem, handleCartQtyChange,
   handleRequestTransaction, copyToClipboard, generateSummaryText
 }) {
-    const [searchTerm, setSearchTerm] = useState(''); // <--- State สำหรับค้นหา
+    const [searchTerm, setSearchTerm] = useState('');
 
     const isModeIn = transMode === 'IN';
     
-    // Logic กรองสินค้า (เพิ่มส่วน matchSearch)
+    // Logic กรองสินค้า
     const filteredProducts = products.filter(p => {
         const matchCat = selectedCategory === 'ทั้งหมด' ? true : p.category === selectedCategory;
         const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -32,7 +33,7 @@ export default function TabTransaction({
               <button onClick={() => {setTransMode('OUT'); setCart([]);}} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${!isModeIn ? 'bg-red-600 text-white shadow-lg' : 'text-gray-500'}`}>เบิกออก (OUT)</button>
             </div>
 
-            {/* --- [เพิ่มใหม่] ช่องค้นหาสินค้า --- */}
+            {/* ช่องค้นหาสินค้า */}
             <div className="relative mb-3">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                     <Search size={18} />
@@ -50,7 +51,6 @@ export default function TabTransaction({
                     </button>
                 )}
             </div>
-            {/* ---------------------------------- */}
 
             {/* หมวดหมู่ */}
             <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
@@ -61,7 +61,7 @@ export default function TabTransaction({
             </div>
         </div>
 
-        {/* Grid แสดงสินค้า (ใช้ filteredProducts ตัวใหม่) */}
+        {/* Grid แสดงสินค้า */}
         <div className="grid grid-rows-2 grid-flow-col gap-3 pb-4 mb-4 pt-2 overflow-x-auto auto-cols-[140px] no-scrollbar snap-x snap-mandatory">
           {filteredProducts.length === 0 ? <div className="col-span-full w-full flex items-center justify-center py-8 text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-2xl min-h-[120px]">ไม่พบสินค้า</div> : 
             filteredProducts.map(p => {
@@ -78,7 +78,7 @@ export default function TabTransaction({
           }
         </div>
 
-        {/* ส่วนตะกร้า (เหมือนเดิม) */}
+        {/* ส่วนตะกร้า */}
         <div className="flex-1 bg-white rounded-t-3xl shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] border-t border-gray-200 p-5 flex flex-col z-20">
           <div className="flex justify-between items-center mb-4"><span className="font-bold text-green-900 flex gap-2 items-center text-lg"><ShoppingCart size={22} className="text-yellow-500"/> ตะกร้า ({cart.length})</span>{cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-red-500 font-bold bg-red-50 px-2 py-1 rounded-lg hover:bg-red-100">ลบหมด</button>}</div>
           <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1">
@@ -102,10 +102,14 @@ export default function TabTransaction({
              }
           </div>
           <input type="text" placeholder="📝 หมายเหตุ..." className="w-full bg-gray-50 border-0 rounded-2xl px-4 py-3 text-sm mb-4 focus:ring-2 focus:ring-yellow-100 outline-none text-gray-700" value={note} onChange={e => setNote(e.target.value)} />
-          <div className="grid grid-cols-4 gap-3">
-             <button onClick={() => copyToClipboard(generateSummaryText(null))} disabled={cart.length === 0} className="col-span-1 bg-gray-800 text-white rounded-2xl py-4 flex flex-col items-center justify-center gap-1 active:scale-95 disabled:opacity-50 shadow-lg"><Copy size={20} /> <span className="text-[10px] font-bold">COPY</span></button>
-             <button onClick={handleRequestTransaction} disabled={cart.length === 0} className={`col-span-3 text-white rounded-2xl py-4 font-bold flex items-center justify-center gap-2 shadow-xl active:scale-95 disabled:opacity-50 transition-all ${isModeIn ? 'bg-green-600' : 'bg-red-600'}`}><Save size={20} /> ส่งคำขอ (ยังไม่ตัดสต็อก)</button>
+          
+          {/* --- [แก้ไข] ลบปุ่ม Copy ออก เหลือแค่ปุ่มส่งคำขอเต็มจอ --- */}
+          <div className="mt-2">
+             <button onClick={handleRequestTransaction} disabled={cart.length === 0} className={`w-full text-white rounded-2xl py-4 font-bold flex items-center justify-center gap-2 shadow-xl active:scale-95 disabled:opacity-50 transition-all ${isModeIn ? 'bg-green-600' : 'bg-red-600'}`}>
+                <Save size={20} /> ส่งคำขอ (ยังไม่ตัดสต็อก)
+             </button>
           </div>
+          {/* ---------------------------------------------------- */}
         </div>
       </div>
   );
