@@ -4,9 +4,16 @@ export async function POST(request) {
   try {
     const { categories, products, user, dateStr } = await request.json();
     const CHANNEL_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
-    const USER_ID = process.env.LINE_USER_ID;
+    
+    // --- [แก้ไขจุดสำคัญ] ---
+    // ให้เช็คว่ามี Group ID ไหม? ถ้ามีให้ใช้ Group ก่อน ถ้าไม่มีให้ใช้ User ID
+    const TARGET_ID = process.env.LINE_GROUP_ID || process.env.LINE_USER_ID;
 
-    if (!CHANNEL_ACCESS_TOKEN || !USER_ID) return NextResponse.json({ error: 'Config missing' }, { status: 500 });
+    // เช็คว่าค่า Config มาครบไหม
+    if (!CHANNEL_ACCESS_TOKEN || !TARGET_ID) {
+        console.error("Missing Config: Token or Target ID not found");
+        return NextResponse.json({ error: 'Config missing' }, { status: 500 });
+    }
 
     // --- สร้าง Flex Message ---
     const contents = [];
@@ -81,21 +88,29 @@ export async function POST(request) {
         }
     };
 
-    // ส่งไป LINE
+    // ส่งไป LINE (ใช้ TARGET_ID)
     const response = await fetch('https://api.line.me/v2/bot/message/push', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
       },
-      body: JSON.stringify({ to: USER_ID, messages: [flexMessage] }),
+      body: JSON.stringify({ 
+          to: TARGET_ID, // <--- ใช้ตัวแปรนี้แทน USER_ID
+          messages: [flexMessage] 
+      }),
     });
 
-    if (!response.ok) return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("LINE API Error:", errorText); // ดู log Error จาก LINE
+        return NextResponse.json({ error: 'Failed to send to LINE' }, { status: 500 });
+    }
+    
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: 'Error' }, { status: 500 });
+    console.error("Server Error:", error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

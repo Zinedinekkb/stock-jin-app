@@ -185,11 +185,14 @@ export default function StockJinApp() {
         return showNotification('เฉพาะผู้ดูแลระบบเท่านั้น!');
     }
     showConfirm(
-        'ลบประวัติถาวร?', 'รายการนี้จะหายไปจากระบบทันที (ไม่มีผลกับสต็อก)', 
+        'ลบประวัติถาวร?', 
+        'รายการนี้จะหายไปจากระบบทันที (ไม่มีผลกับสต็อก)', 
         async () => {
             await deleteDoc(doc(db, 'transactions', tx.id));
-            setVerifyingTx(null); showNotification('ลบรายการเรียบร้อย');
-        }, 'danger'
+            setVerifyingTx(null);
+            showNotification('ลบรายการเรียบร้อย');
+        }, 
+        'danger'
     );
   };
 
@@ -229,11 +232,13 @@ export default function StockJinApp() {
       async () => {
         try {
             await submitTransactionService({ cart, transMode, note, user });
-            setCart([]); setNote('');
+            setCart([]);
+            setNote('');
             showNotification('ส่งคำขอเรียบร้อย! (แจ้งเตือนไลน์แล้ว)');
             setActiveTab('status');
         } catch (error) {
-            console.error(error); showNotification('เกิดข้อผิดพลาด กรุณาลองใหม่');
+            console.error(error);
+            showNotification('เกิดข้อผิดพลาด กรุณาลองใหม่');
         }
       }, 'info'
     );
@@ -264,28 +269,30 @@ export default function StockJinApp() {
         });
         await Promise.all(updatePromises);
         const txRef = doc(db, 'transactions', verifyingTx.id);
-        await updateDoc(txRef, { 
-            status: 'completed', 
-            items: finalItems,
-            actualItems: actualQty, 
-            verifiedBy: user ? user.name : 'Admin', 
-            verifiedAt: new Date().toLocaleString('th-TH') 
-        });
+        await updateDoc(txRef, { status: 'completed', items: finalItems, actualItems: actualQty, verifiedBy: user ? user.name : 'Admin', verifiedAt: new Date().toLocaleString('th-TH') });
         setVerifyingTx(null); showNotification('อัปเดตสต็อกเรียบร้อย!');
       }, 'info'
     );
   };
 
-  // --- [ฟังก์ชันใหม่] ส่งสต็อกเข้า LINE ---
-  const handleSendStockToLine = async () => {
-    showConfirm('ส่งรายงานเข้า LINE?', 'รายการสต็อกทั้งหมดจะถูกส่งเข้ากลุ่ม LINE ในรูปแบบ Flex Message สวยงาม', async () => {
-        try {
-            await sendStockReportService({ categories, products, user });
-            showNotification('ส่งรายงานเรียบร้อย! ✅');
-        } catch (error) {
-            showNotification('ส่งไม่สำเร็จ ❌');
-        }
-    }, 'info');
+  // --- [ฟังก์ชันใหม่] ส่งสต็อกเข้า LINE แบบเลือกหมวดหมู่ได้ ---
+  const handleSendStockToLine = async (targetCategories = null, targetProducts = null) => {
+    const catsToSend = targetCategories || categories;
+    const prodsToSend = targetProducts || products;
+
+    showNotification('กำลังส่งรายงาน... ⏳');
+
+    try {
+        await sendStockReportService({ 
+            categories: catsToSend, 
+            products: prodsToSend, 
+            user 
+        });
+        showNotification('ส่งรายงานเรียบร้อย! ✅');
+    } catch (error) {
+        console.error(error);
+        showNotification('ส่งไม่สำเร็จ ❌');
+    }
   };
 
   // CRUD Functions
@@ -317,12 +324,13 @@ export default function StockJinApp() {
             });
         }
         await batch.commit();
-    } else {
+    } 
+    else {
         await addDoc(collection(db, 'categories'), newCatData);
     }
     setNewCatData({name:'',color:'bg-green-600'}); setEditingCategory(null); showNotification('บันทึกหมวดหมู่เรียบร้อย');
   };
-  
+
   const handleEditCategory = (c) => { setEditingCategory(c); setNewCatData({ name: c.name, color: c.color }); };
   const handleDeleteCategory = async (id, name) => {
     if(products.some(p => p.category === name)) return showNotification('มีของอยู่ ลบไม่ได้!');
@@ -340,9 +348,7 @@ export default function StockJinApp() {
   const handleLogin = async () => {
     if (!loginForm.username || !loginForm.password) { setLoginError('กรุณากรอกข้อมูลให้ครบ'); return; }
     setLoginError('');
-    try { 
-      await signInWithEmailAndPassword(auth, loginForm.username, loginForm.password); 
-    } 
+    try { await signInWithEmailAndPassword(auth, loginForm.username, loginForm.password); } 
     catch (error) { console.error("Login Error:", error); setLoginError('อีเมลหรือรหัสผ่านไม่ถูกต้อง'); }
   };
 
@@ -389,7 +395,6 @@ export default function StockJinApp() {
     }, 'danger');
   };
 
-  // --- RENDER MAIN ---
   if (isLoadingAuth) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-center space-y-3"><Loader2 size={40} className="animate-spin text-green-700 mx-auto"/><p className="text-green-800 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p></div></div>;
   }

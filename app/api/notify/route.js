@@ -6,9 +6,9 @@ export async function POST(request) {
     const { cart, transMode, note, user, dateStr } = await request.json();
 
     const CHANNEL_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
-    const USER_ID = process.env.LINE_USER_ID;
+    const TARGET_ID = process.env.LINE_GROUP_ID || process.env.LINE_USER_ID; 
 
-    if (!CHANNEL_ACCESS_TOKEN || !USER_ID) return NextResponse.json({ error: 'Config missing' }, { status: 500 });
+    if (!CHANNEL_ACCESS_TOKEN || !TARGET_ID) return NextResponse.json({ error: 'Config missing' }, { status: 500 });
 
     // --- สร้างรายการสินค้า (Dynamic Rows) ---
     // วนลูปสร้างแถวสินค้า ตามจำนวนที่มีในตะกร้า
@@ -125,7 +125,7 @@ export async function POST(request) {
         'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
       },
       body: JSON.stringify({
-        to: USER_ID,
+        to: TARGET_ID,
         messages: [flexMessage] // ส่งแบบ Flex
       }),
     });

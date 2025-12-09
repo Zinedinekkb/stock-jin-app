@@ -1,6 +1,6 @@
 // app/components/TabStock.js
-import React, { useState } from 'react';
-import { Layers, Edit2, Plus, ChevronRight, ChevronDown, Trash2, Palette, X, Minus, Save, Pipette, ArrowUp, ArrowDown, AlertTriangle, Clipboard, Share2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Layers, Edit2, Plus, ChevronRight, ChevronDown, Trash2, Palette, X, Minus, Save, ArrowUp, ArrowDown, AlertTriangle, Clipboard, Share2, CheckSquare, Square } from 'lucide-react';
 
 const AVAILABLE_COLORS = [
     'bg-green-600', 'bg-green-800', 'bg-yellow-500', 'bg-yellow-600', 
@@ -24,13 +24,52 @@ export default function TabStock({
   handleAddProduct, handleSaveEdit, handleDeleteProduct,
   handleSaveCategory, handleEditCategory, handleDeleteCategory,
   handleReorderStock,
-  // New Props
   copyToClipboard,
   handleSendStockToLine
 }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
+  
+  // --- [เพิ่มใหม่] State สำหรับ Modal เลือกหมวดหมู่ ---
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedReportCats, setSelectedReportCats] = useState([]); // เก็บชื่อหมวดที่เลือก
+  const [includeNoCat, setIncludeNoCat] = useState(true); // เลือกสินค้าไม่มีหมวดไหม?
 
-  // ฟังก์ชันช่วยแสดงวงกลมสี
+  // เมื่อเปิด Modal ให้ติ๊กเลือกทั้งหมดไว้ก่อน
+  useEffect(() => {
+    if(showReportModal) {
+        setSelectedReportCats(categories.map(c => c.name));
+        setIncludeNoCat(true);
+    }
+  }, [showReportModal, categories]);
+
+  const toggleReportCat = (catName) => {
+    if (selectedReportCats.includes(catName)) {
+        setSelectedReportCats(prev => prev.filter(c => c !== catName));
+    } else {
+        setSelectedReportCats(prev => [...prev, catName]);
+    }
+  };
+
+  const handleConfirmSendReport = () => {
+    // 1. กรองหมวดหมู่
+    const targetCats = categories.filter(c => selectedReportCats.includes(c.name));
+    
+    // 2. กรองสินค้า
+    const targetProducts = products.filter(p => {
+        if (!p.category) return includeNoCat; // ถ้าไม่มีหมวด เช็คว่าติ๊กเลือกไหม
+        return selectedReportCats.includes(p.category); // ถ้ามีหมวด เช็คว่าหมวดนั้นถูกเลือกไหม
+    });
+
+    if (targetCats.length === 0 && (!includeNoCat || products.filter(p=>!p.category).length === 0)) {
+        return alert("กรุณาเลือกอย่างน้อย 1 หมวดหมู่");
+    }
+    
+    // 3. ส่งข้อมูลที่กรองแล้วกลับไปที่ page.js
+    handleSendStockToLine(targetCats, targetProducts);
+    setShowReportModal(false);
+  };
+  // ----------------------------------------------------
+
   const renderColorCircle = (colorCode, sizeClass = "w-6 h-6") => {
     const safeColor = colorCode || 'bg-gray-200';
     const isHex = safeColor.startsWith('#');
@@ -42,7 +81,6 @@ export default function TabStock({
     );
   };
 
-  // ฟังก์ชันเลื่อนลำดับสินค้า
   const moveItem = (e, itemList, index, direction) => {
     e.stopPropagation();
     if (!handleReorderStock) return;
@@ -53,54 +91,38 @@ export default function TabStock({
     handleReorderStock(newItems);
   };
 
-  // ฟังก์ชันสร้างข้อความสรุปสต็อก (Text)
   const handleCopyStockReport = () => {
     const now = new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
-    let report = `📦 สต็อกคงเหลือ (อัปเดต ${now})\n`;
-    report += `--------------------------------\n`;
-
+    let report = `📦 สต็อกคงเหลือ (อัปเดต ${now})\n--------------------------------\n`;
     categories.forEach(cat => {
-        const catProducts = products
-            .filter(p => p.category === cat.name)
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-
+        const catProducts = products.filter(p => p.category === cat.name).sort((a, b) => (a.order || 0) - (b.order || 0));
         if (catProducts.length > 0) {
             report += `\n🔹 ${cat.name}\n`;
-            catProducts.forEach(p => {
-                const stockStatus = p.stock === 0 ? '❌ หมด' : `${p.stock} ${p.unit}`;
-                report += `- ${p.name} : ${stockStatus}\n`;
-            });
+            catProducts.forEach(p => { report += `- ${p.name} : ${p.stock === 0 ? '❌ หมด' : p.stock + ' ' + p.unit}\n`; });
         }
     });
-
-    // สินค้าไม่มีหมวด
     const noCatProducts = products.filter(p => !p.category);
     if (noCatProducts.length > 0) {
         report += `\n⚠️ อื่นๆ (ไม่ระบุหมวด)\n`;
-        noCatProducts.forEach(p => {
-            report += `- ${p.name} : ${p.stock} ${p.unit}\n`;
-        });
+        noCatProducts.forEach(p => { report += `- ${p.name} : ${p.stock} ${p.unit}\n`; });
     }
-
-    report += `\n--------------------------------\n`;
-    report += `เช็คยอดโดย: Stock Jin App`;
-
+    report += `\n--------------------------------\nเช็คยอดโดย: Stock Jin App`;
     copyToClipboard(report);
   };
 
   return (
       <div className="space-y-4 pb-20 animate-fade-in-slide relative">
-        {/* --- Header & Buttons --- */}
         <div className="flex justify-between items-center sticky top-0 bg-gray-50/95 py-2 z-10 backdrop-blur-md transition-all">
           <h2 className="text-2xl font-bold text-green-900">คลังสินค้า</h2>
           <div className="flex gap-2">
-             {/* โซนปุ่มรายงาน (Copy / LINE) */}
+             {/* --- โซนปุ่มรายงาน --- */}
              <div className="flex bg-white rounded-full shadow-sm border border-gray-200 p-0.5">
                  <button onClick={handleCopyStockReport} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 active:scale-90 transition-all" title="คัดลอกข้อความ">
                     <Clipboard size={18} />
                  </button>
                  <div className="w-[1px] bg-gray-200 my-1"></div>
-                 <button onClick={handleSendStockToLine} className="p-2 rounded-full text-green-600 hover:bg-green-50 active:scale-90 transition-all" title="ส่งเข้า LINE">
+                 {/* เปลี่ยนให้ปุ่มนี้เปิด Modal แทนการส่งทันที */}
+                 <button onClick={() => setShowReportModal(true)} className="p-2 rounded-full text-green-600 hover:bg-green-50 active:scale-90 transition-all" title="เลือกส่งเข้า LINE">
                     <Share2 size={18} />
                  </button>
              </div>
@@ -111,7 +133,61 @@ export default function TabStock({
           </div>
         </div>
         
-        {/* --- Category Manager Modal --- */}
+        {/* --- [เพิ่มใหม่] Modal เลือกหมวดหมู่เพื่อส่งไลน์ --- */}
+        {showReportModal && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+                <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] animate-scale-in">
+                    <div className="p-4 bg-green-50 border-b border-green-100 flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-green-800 flex items-center gap-2"><Share2 size={20}/> เลือกหมวดหมู่ที่จะส่ง</h3>
+                        <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+                    </div>
+                    <div className="p-4 overflow-y-auto flex-1 space-y-2">
+                        {/* ปุ่มเลือกทั้งหมด */}
+                        <div className="flex justify-end gap-2 mb-2">
+                            <button onClick={() => { setSelectedReportCats(categories.map(c=>c.name)); setIncludeNoCat(true); }} className="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded hover:bg-green-100">เลือกทั้งหมด</button>
+                            <button onClick={() => { setSelectedReportCats([]); setIncludeNoCat(false); }} className="text-xs text-gray-500 font-bold bg-gray-100 px-2 py-1 rounded hover:bg-gray-200">ล้าง</button>
+                        </div>
+
+                        {/* รายการหมวดหมู่ */}
+                        {categories.map(cat => (
+                            <label key={cat.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 cursor-pointer active:scale-[0.98] transition-all">
+                                <input 
+                                    type="checkbox" 
+                                    className="w-5 h-5 accent-green-600 rounded" 
+                                    checked={selectedReportCats.includes(cat.name)}
+                                    onChange={() => toggleReportCat(cat.name)}
+                                />
+                                {renderColorCircle(cat.color, "w-4 h-4")}
+                                <span className="text-sm font-bold text-gray-700 flex-1">{cat.name}</span>
+                                <span className="text-xs text-gray-400">({products.filter(p => p.category === cat.name).length})</span>
+                            </label>
+                        ))}
+
+                        {/* สินค้าไม่มีหมวด (ถ้ามี) */}
+                        {products.some(p => !p.category) && (
+                            <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 cursor-pointer active:scale-[0.98] transition-all">
+                                <input 
+                                    type="checkbox" 
+                                    className="w-5 h-5 accent-gray-500 rounded" 
+                                    checked={includeNoCat}
+                                    onChange={() => setIncludeNoCat(!includeNoCat)}
+                                />
+                                <div className="w-4 h-4 rounded-full bg-gray-300"></div>
+                                <span className="text-sm font-bold text-gray-700 flex-1">อื่นๆ (ไม่มีหมวด)</span>
+                                <span className="text-xs text-gray-400">({products.filter(p => !p.category).length})</span>
+                            </label>
+                        )}
+                    </div>
+                    <div className="p-4 border-t bg-gray-50">
+                        <button onClick={handleConfirmSendReport} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg active:scale-95 transition-transform flex justify-center gap-2">
+                            ยืนยันส่งเข้า LINE ({selectedReportCats.length + (includeNoCat && products.some(p=>!p.category) ? 1 : 0)})
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+        {/* ------------------------------------------------ */}
+
         {showCatManager && (
           <div className="bg-white p-5 rounded-2xl shadow-xl border border-gray-200 mb-4 animate-scale-in">
              <div className="flex justify-between items-center mb-4 pb-2 border-b">
@@ -150,7 +226,6 @@ export default function TabStock({
           </div>
         )}
 
-        {/* --- Add New Product Modal --- */}
         {newProductMode && !isEditingStock && (
           <div className="bg-white p-5 rounded-2xl shadow-xl border border-green-100 mb-4 animate-scale-in">
             <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-green-800 text-lg">เพิ่มสินค้าใหม่</h3><button onClick={() => setNewProductMode(false)}><X size={24} className="text-gray-400"/></button></div>
@@ -164,14 +239,10 @@ export default function TabStock({
           </div>
         )}
 
-        {/* --- Product List (By Category) --- */}
         <div className="space-y-4">
           {categories.map(cat => {
-            const catProducts = products
-                .filter(p => (p.category || 'ไม่ระบุ') === cat.name)
-                .sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name));
+            const catProducts = products.filter(p => (p.category || 'ไม่ระบุ') === cat.name).sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name));
             const isCollapsed = collapsedCats[cat.name];
-            
             return (
               <div key={cat.id} className="space-y-2">
                 <div onClick={() => toggleCollapse(cat.name)} className="flex items-center gap-2 cursor-pointer select-none py-2 px-1 active:scale-[0.99] transition-transform group">
@@ -188,7 +259,6 @@ export default function TabStock({
                              <h3 className="font-bold text-gray-800 text-sm">{p.name}</h3>
                              <p className="text-[10px] text-gray-500 bg-gray-50 inline-block px-1.5 rounded mt-1 font-mono">#{p.sku}</p>
                           </div>
-                          
                           <div className="flex items-center gap-3">
                              {isEditingStock ? (
                                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 mr-1">
@@ -212,35 +282,23 @@ export default function TabStock({
           })}
         </div>
 
-        {/* --- [ส่วนที่หายไป] โซนสินค้าตกหล่น (ไม่มีหมวดหมู่) --- */}
         {products.filter(p => !p.category).length > 0 && (
           <div className="mt-8 border-t-4 border-red-100 pt-4 animate-bounce-in">
             <div className="flex items-center gap-2 mb-3 bg-red-50 p-3 rounded-xl border border-red-200">
                <div className="p-2 rounded-full bg-white text-red-600 shadow-sm"><AlertTriangle size={20} /></div>
-               <div>
-                 <h3 className="font-bold text-red-800 text-sm">สินค้าตกหล่น (ไม่มีหมวดหมู่)</h3>
-                 <p className="text-[10px] text-red-600">พบ {products.filter(p => !p.category).length} รายการ - โปรดกดแก้ไขเพื่อระบุหมวดหมู่</p>
-               </div>
+               <div><h3 className="font-bold text-red-800 text-sm">สินค้าตกหล่น (ไม่มีหมวดหมู่)</h3><p className="text-[10px] text-red-600">พบ {products.filter(p => !p.category).length} รายการ - โปรดกดแก้ไขเพื่อระบุหมวดหมู่</p></div>
             </div>
-            
             <div className="space-y-3">
                {products.filter(p => !p.category).map((p) => (
                   <div key={p.id} className="bg-white p-3.5 rounded-2xl shadow-sm border-2 border-red-100 flex justify-between items-center relative overflow-hidden" onClick={() => openEditModal(p)}>
-                     <div className="pl-2 flex-1">
-                         <h3 className="font-bold text-gray-800 text-sm">{p.name}</h3>
-                         <p className="text-[10px] text-gray-400 bg-gray-100 inline-block px-1.5 rounded mt-1">STOCK: {p.stock}</p>
-                     </div>
-                     <button onClick={() => openEditModal(p)} className="bg-red-100 p-2 rounded-full text-red-600 cursor-pointer active:scale-90 hover:bg-red-200">
-                        <Edit2 size={16} /> แก้ไข
-                     </button>
+                     <div className="pl-2 flex-1"><h3 className="font-bold text-gray-800 text-sm">{p.name}</h3><p className="text-[10px] text-gray-400 bg-gray-100 inline-block px-1.5 rounded mt-1">STOCK: {p.stock}</p></div>
+                     <button onClick={() => openEditModal(p)} className="bg-red-100 p-2 rounded-full text-red-600 cursor-pointer active:scale-90 hover:bg-red-200"><Edit2 size={16} /> แก้ไข</button>
                   </div>
                ))}
             </div>
           </div>
         )}
-        {/* ------------------------------------------------ */}
 
-        {/* --- Edit Product Modal --- */}
         {editingProduct && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
             <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 transform transition-all animate-scale-in border-4 border-yellow-100">
@@ -249,31 +307,20 @@ export default function TabStock({
                 <input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 focus:ring-2 focus:ring-yellow-200 outline-none" value={editFormData.name} onChange={e => setEditFormData({...editFormData, name: e.target.value})}/>
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-gray-500 ml-1">หมวดหมู่</label>
-                  <select 
-                    className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 focus:bg-white outline-none" 
-                    value={editFormData.category} 
-                    onChange={(e) => setEditFormData({...editFormData, category: e.target.value})}
-                  >
+                  <select className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 focus:bg-white outline-none" value={editFormData.category} onChange={(e) => setEditFormData({...editFormData, category: e.target.value})}>
                     <option value="">-- เลือกหมวด --</option>
                     {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="flex gap-3"><input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3" value={editFormData.sku} onChange={e => setEditFormData({...editFormData, sku: e.target.value})}/><input className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3" value={editFormData.unit} onChange={e => setEditFormData({...editFormData, unit: e.target.value})}/></div>
-                
                 <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100">
                   <label className="text-xs font-bold text-yellow-800 uppercase tracking-wider">Stock</label>
                   <div className="flex items-center justify-center gap-4 mt-2">
                     <button onClick={() => setEditFormData({...editFormData, stock: Math.max(0, parseInt(editFormData.stock) - 1)})} className="w-10 h-10 bg-white border border-yellow-200 rounded-xl flex items-center justify-center shadow-sm text-yellow-600"><Minus size={20}/></button>
-                    <input 
-                      type="number" 
-                      className="w-24 text-center bg-transparent font-black text-3xl text-gray-800 outline-none"
-                      value={editFormData.stock} 
-                      onChange={e => setEditFormData({...editFormData, stock: e.target.value})}
-                    />
+                    <input type="number" className="w-24 text-center bg-transparent font-black text-3xl text-gray-800 outline-none" value={editFormData.stock} onChange={e => setEditFormData({...editFormData, stock: e.target.value})}/>
                     <button onClick={() => setEditFormData({...editFormData, stock: parseInt(editFormData.stock) + 1})} className="w-10 h-10 bg-white border border-yellow-200 rounded-xl flex items-center justify-center shadow-sm text-yellow-600"><Plus size={20}/></button>
                   </div>
                 </div>
-
                 <div className="flex gap-3 pt-4"><button onClick={handleDeleteProduct} className="flex-1 bg-red-50 text-red-600 py-3.5 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-red-100"><Trash2 size={20} /> ลบ</button><button onClick={handleSaveEdit} className="flex-[2] bg-green-700 text-white py-3.5 rounded-xl font-bold shadow-lg hover:bg-green-800 flex justify-center items-center gap-2"><Save size={20} /> บันทึก</button></div>
               </div>
             </div>
