@@ -5,7 +5,7 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
   const now = new Date();
   const dateStr = now.toLocaleString('th-TH');
 
-  // 1. บันทึก Firebase
+  // 1. บันทึก Firebase (บันทึกทุกกรณี ทั้ง IN และ OUT)
   const newTx = {
     type: transMode,
     date: dateStr,
@@ -21,25 +21,28 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
   try {
     await addDoc(collection(db, 'transactions'), newTx);
 
-    // 2. ส่ง LINE (Transaction)
-    const cleanPayload = {
-        transMode: transMode,
-        note: note || '-',
-        user: { name: user ? user.name : 'Staff' },
-        dateStr: dateStr,
-        cart: cart.map(item => ({
-            name: item.name,
-            qty: item.qty,
-            unit: item.unit,
-            currentStock: item.stock || 0 // <--- [เพิ่มบรรทัดนี้] ส่งยอดสต็อกปัจจุบันไปด้วย
-        }))
-    };
+    // 2. ส่ง LINE (*** แก้ไข: ส่งเฉพาะตอน IN เท่านั้น ***)
+    if (transMode === 'IN') { 
+        const cleanPayload = {
+            transMode: transMode,
+            note: note || '-',
+            user: { name: user ? user.name : 'Staff' },
+            dateStr: dateStr,
+            cart: cart.map(item => ({
+                name: item.name,
+                qty: item.qty,
+                unit: item.unit,
+                currentStock: item.stock || 0
+            }))
+        };
 
-    await fetch('/api/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanPayload)
-    });
+        await fetch('/api/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cleanPayload)
+        });
+    }
+    // (ถ้าเป็น OUT บรรทัดข้างบนจะไม่ทำงาน คือไม่ส่งไลน์ แต่บันทึกลง database ปกติ)
 
     return { success: true };
 
@@ -49,7 +52,7 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
   }
 };
 
-// --- [ฟังก์ชันใหม่] ส่งรายงานสต็อกเข้า LINE ---
+// --- บริการส่งรายงานสต็อก (คงเดิม) ---
 export const sendStockReportService = async ({ categories, products, user }) => {
     const dateStr = new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
     
@@ -67,6 +70,8 @@ export const sendStockReportService = async ({ categories, products, user }) => 
         throw error;
     }
 };
+
+// --- บริการส่งสรุปยอดประจำวัน (คงเดิม) ---
 export const sendDailyReportService = async (payload) => {
     try {
         const res = await fetch('/api/daily-report', {
