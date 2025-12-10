@@ -30,7 +30,8 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
         cart: cart.map(item => ({
             name: item.name,
             qty: item.qty,
-            unit: item.unit
+            unit: item.unit,
+            currentStock: item.stock || 0 // <--- [เพิ่มบรรทัดนี้] ส่งยอดสต็อกปัจจุบันไปด้วย
         }))
     };
 
@@ -63,6 +64,20 @@ export const sendStockReportService = async ({ categories, products, user }) => 
         return { success: true };
     } catch (error) {
         console.error("Stock Report Error:", error);
+        throw error;
+    }
+};
+export const sendDailyReportService = async (payload) => {
+    try {
+        const res = await fetch('/api/daily-report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('API Failed');
+        return { success: true };
+    } catch (error) {
+        console.error("Daily Report Error:", error);
         throw error;
     }
 };

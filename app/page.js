@@ -14,7 +14,7 @@ import TabStatus from './components/TabStatus';
 import TabMenu from './components/TabMenu';
 
 // --- IMPORT SERVICES ---
-import { submitTransactionService, sendStockReportService } from '@/app/services/transactionService';
+import { submitTransactionService, sendStockReportService, sendDailyReportService } from '@/app/services/transactionService';
 
 // --- FIREBASE IMPORTS ---
 import { db, auth } from '@/lib/firebase';
@@ -185,14 +185,11 @@ export default function StockJinApp() {
         return showNotification('เฉพาะผู้ดูแลระบบเท่านั้น!');
     }
     showConfirm(
-        'ลบประวัติถาวร?', 
-        'รายการนี้จะหายไปจากระบบทันที (ไม่มีผลกับสต็อก)', 
+        'ลบประวัติถาวร?', 'รายการนี้จะหายไปจากระบบทันที (ไม่มีผลกับสต็อก)', 
         async () => {
             await deleteDoc(doc(db, 'transactions', tx.id));
-            setVerifyingTx(null);
-            showNotification('ลบรายการเรียบร้อย');
-        }, 
-        'danger'
+            setVerifyingTx(null); showNotification('ลบรายการเรียบร้อย');
+        }, 'danger'
     );
   };
 
@@ -232,13 +229,11 @@ export default function StockJinApp() {
       async () => {
         try {
             await submitTransactionService({ cart, transMode, note, user });
-            setCart([]);
-            setNote('');
+            setCart([]); setNote('');
             showNotification('ส่งคำขอเรียบร้อย! (แจ้งเตือนไลน์แล้ว)');
             setActiveTab('status');
         } catch (error) {
-            console.error(error);
-            showNotification('เกิดข้อผิดพลาด กรุณาลองใหม่');
+            console.error(error); showNotification('เกิดข้อผิดพลาด กรุณาลองใหม่');
         }
       }, 'info'
     );
@@ -269,14 +264,21 @@ export default function StockJinApp() {
         });
         await Promise.all(updatePromises);
         const txRef = doc(db, 'transactions', verifyingTx.id);
-        await updateDoc(txRef, { status: 'completed', items: finalItems, actualItems: actualQty, verifiedBy: user ? user.name : 'Admin', verifiedAt: new Date().toLocaleString('th-TH') });
+        await updateDoc(txRef, { 
+            status: 'completed', 
+            items: finalItems,
+            actualItems: actualQty, 
+            verifiedBy: user ? user.name : 'Admin', 
+            verifiedAt: new Date().toLocaleString('th-TH') 
+        });
         setVerifyingTx(null); showNotification('อัปเดตสต็อกเรียบร้อย!');
       }, 'info'
     );
   };
 
-  // --- [ฟังก์ชันใหม่] ส่งสต็อกเข้า LINE แบบเลือกหมวดหมู่ได้ ---
+  // --- [ฟังก์ชันใหม่] ส่งสต็อกเข้า LINE (รองรับการเลือกหมวดหมู่) ---
   const handleSendStockToLine = async (targetCategories = null, targetProducts = null) => {
+    // ถ้าไม่มีค่าส่งมา ให้ใช้ทั้งหมด
     const catsToSend = targetCategories || categories;
     const prodsToSend = targetProducts || products;
 
@@ -293,6 +295,67 @@ export default function StockJinApp() {
         console.error(error);
         showNotification('ส่งไม่สำเร็จ ❌');
     }
+  };
+
+  // --- [ฟังก์ชันใหม่] ส่งสรุปยอดประจำวัน ---
+  const handleSendDailyReport = async (reportType) => {
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const todayEnd = new Date(); todayEnd.setHours(23,59,59,999);
+    
+    const todayTx = transactions.filter(tx => 
+        tx.status === 'completed' && 
+        tx.timestamp >= todayStart.getTime() && 
+        tx.timestamp <= todayEnd.getTime()
+    );
+
+    if (todayTx.length === 0) return showNotification('วันนี้ยังไม่มีรายการสำเร็จ');
+
+    const aggregateItems = (type) => {
+        const itemsMap = {};
+        todayTx.filter(tx => tx.type === type).forEach(tx => {
+            const items = tx.items || [];
+            items.forEach(item => {
+                const qty = (tx.actualItems && tx.actualItems[item.id] !== undefined) 
+                            ? parseInt(tx.actualItems[item.id]) 
+                            : item.qty;
+                
+                if (itemsMap[item.name]) {
+                    itemsMap[item.name].totalQty += qty;
+                } else {
+                    itemsMap[item.name] = { ...item, totalQty: qty };
+                }
+            });
+        });
+        
+        // เพิ่มการดึง Current Stock
+        return Object.values(itemsMap)
+            .filter(i => i.totalQty > 0)
+            .map(item => {
+                const realProduct = products.find(p => p.name === item.name); 
+                return { 
+                    ...item, 
+                    currentStock: realProduct ? realProduct.stock : 0 
+                };
+            });
+    };
+
+    const summaryIn = aggregateItems('IN');
+    const summaryOut = aggregateItems('OUT');
+
+    showConfirm('ยืนยันส่งสรุปยอด?', `จะส่งสรุปยอดของ "วันนี้" เข้ากลุ่ม LINE`, async () => {
+        try {
+            await sendDailyReportService({ 
+                reportType, 
+                summaryIn, 
+                summaryOut, 
+                dateStr: new Date().toLocaleString('th-TH', { dateStyle: 'short' }), 
+                user 
+            });
+            showNotification('ส่งสรุปเรียบร้อย! ✅');
+        } catch (error) {
+            showNotification('ส่งไม่สำเร็จ ❌');
+        }
+    }, 'info');
   };
 
   // CRUD Functions
@@ -324,13 +387,12 @@ export default function StockJinApp() {
             });
         }
         await batch.commit();
-    } 
-    else {
+    } else {
         await addDoc(collection(db, 'categories'), newCatData);
     }
     setNewCatData({name:'',color:'bg-green-600'}); setEditingCategory(null); showNotification('บันทึกหมวดหมู่เรียบร้อย');
   };
-
+  
   const handleEditCategory = (c) => { setEditingCategory(c); setNewCatData({ name: c.name, color: c.color }); };
   const handleDeleteCategory = async (id, name) => {
     if(products.some(p => p.category === name)) return showNotification('มีของอยู่ ลบไม่ได้!');
@@ -348,7 +410,9 @@ export default function StockJinApp() {
   const handleLogin = async () => {
     if (!loginForm.username || !loginForm.password) { setLoginError('กรุณากรอกข้อมูลให้ครบ'); return; }
     setLoginError('');
-    try { await signInWithEmailAndPassword(auth, loginForm.username, loginForm.password); } 
+    try { 
+      await signInWithEmailAndPassword(auth, loginForm.username, loginForm.password); 
+    } 
     catch (error) { console.error("Login Error:", error); setLoginError('อีเมลหรือรหัสผ่านไม่ถูกต้อง'); }
   };
 
@@ -395,6 +459,7 @@ export default function StockJinApp() {
     }, 'danger');
   };
 
+  // --- RENDER MAIN ---
   if (isLoadingAuth) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-center space-y-3"><Loader2 size={40} className="animate-spin text-green-700 mx-auto"/><p className="text-green-800 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p></div></div>;
   }
@@ -411,7 +476,14 @@ export default function StockJinApp() {
 
         {/* Content */}
         <div className="p-4 flex-1 overflow-y-auto scrollbar-hide pb-24 bg-gray-50">
-          {activeTab === 'dashboard' && user && <TabDashboard transactions={transactions} dateFilterType={dateFilterType} setDateFilterType={setDateFilterType} setCustomStartDate={setCustomStartDate} setCustomEndDate={setCustomEndDate} />}
+          {activeTab === 'dashboard' && user && <TabDashboard 
+              transactions={transactions} 
+              dateFilterType={dateFilterType} 
+              setDateFilterType={setDateFilterType} 
+              setCustomStartDate={setCustomStartDate} 
+              setCustomEndDate={setCustomEndDate}
+              handleSendDailyReport={handleSendDailyReport}
+          />}
           {activeTab === 'stock' && user && <TabStock 
               products={products} categories={categories}
               isEditingStock={isEditingStock} setIsEditingStock={setIsEditingStock}

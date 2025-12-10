@@ -12,15 +12,32 @@ export async function POST(request) {
 
     // --- สร้างรายการสินค้า (Dynamic Rows) ---
     // วนลูปสร้างแถวสินค้า ตามจำนวนที่มีในตะกร้า
-    const itemRows = cart.map((item) => ({
-        type: "box",
-        layout: "horizontal",
-        contents: [
-            { type: "text", text: item.name, size: "sm", color: "#555555", flex: 4, wrap: true },
-            { type: "text", text: `${item.qty} ${item.unit}`, size: "sm", color: "#111111", align: "end", flex: 2 }
-        ],
-        margin: "sm"
-    }));
+    const itemRows = cart.map((item) => {
+        // [เพิ่มใหม่] คำนวณยอดคงเหลือหลังทำรายการ
+        const current = item.currentStock || 0;
+        const change = item.qty || 0;
+        const remaining = transMode === 'IN' 
+            ? current + change  // ถ้ารับเข้า = ของเดิม + ของใหม่
+            : current - change; // ถ้าเบิกออก = ของเดิม - ของที่เบิก
+
+        return {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+                { type: "text", text: item.name, size: "sm", color: "#555555", flex: 4, wrap: true },
+                { 
+                    type: "box", 
+                    layout: "vertical", 
+                    flex: 2, 
+                    contents: [
+                        { type: "text", text: `${item.qty} ${item.unit}`, size: "sm", color: "#111111", align: "end", weight: "bold" },
+                        { type: "text", text: `(คงเหลือ ${remaining})`, size: "xxs", color: "#888888", align: "end" } // <--- [เพิ่ม] บรรทัดแสดงยอดคงเหลือ
+                    ]
+                }
+            ],
+            margin: "sm"
+        };
+    });
 
     // --- สีธีม (เขียวรับเข้า / แดงเบิกออก) ---
     const themeColor = transMode === 'IN' ? "#06C755" : "#FF334B"; // เขียว LINE หรือ แดง
