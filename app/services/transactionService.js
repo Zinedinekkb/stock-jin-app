@@ -2,27 +2,26 @@ import { addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export const submitTransactionService = async ({ cart, transMode, note, user }) => {
-  const now = new Date();
-  const dateStr = now.toLocaleString('th-TH');
+    const now = new Date();
+    const dateStr = now.toLocaleString('th-TH');
 
-  // 1. บันทึก Firebase (บันทึกทุกกรณี ทั้ง IN และ OUT)
-  const newTx = {
-    type: transMode,
-    date: dateStr,
-    timestamp: now.getTime(),
-    items: cart,
-    note: note || '',
-    recorder: user ? user.name : 'Staff',
-    recorderEmail: user ? user.email : 'Unknown',
-    status: 'pending',
-    actualItems: null
-  };
+    // 1. บันทึก Firebase (บันทึกทุกกรณี ทั้ง IN และ OUT)
+    const newTx = {
+        type: transMode,
+        date: dateStr,
+        timestamp: now.getTime(),
+        items: cart,
+        note: note || '',
+        recorder: user ? user.name : 'Staff',
+        recorderEmail: user ? user.email : 'Unknown',
+        status: 'pending',
+        actualItems: null
+    };
 
-  try {
-    await addDoc(collection(db, 'transactions'), newTx);
+    try {
+        await addDoc(collection(db, 'transactions'), newTx);
 
-    // 2. ส่ง LINE (*** แก้ไข: ส่งเฉพาะตอน IN เท่านั้น ***)
-    if (transMode === 'IN') { 
+        // 2. ส่ง LINE (แจ้งเตือนทั้ง IN และ OUT)
         const cleanPayload = {
             transMode: transMode,
             note: note || '-',
@@ -36,26 +35,26 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
             }))
         };
 
-        await fetch('/api/notify', {
+        const res = await fetch('/api/notify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cleanPayload)
         });
+        if (!res.ok) console.error("Notify failed:", await res.text());
+
+
+        return { success: true };
+
+    } catch (error) {
+        console.error("Service Error:", error);
+        throw error;
     }
-    // (ถ้าเป็น OUT บรรทัดข้างบนจะไม่ทำงาน คือไม่ส่งไลน์ แต่บันทึกลง database ปกติ)
-
-    return { success: true };
-
-  } catch (error) {
-    console.error("Service Error:", error);
-    throw error;
-  }
 };
 
 // --- บริการส่งรายงานสต็อก (คงเดิม) ---
 export const sendStockReportService = async ({ categories, products, user }) => {
     const dateStr = new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' });
-    
+
     try {
         const res = await fetch('/api/stock-report', {
             method: 'POST',
