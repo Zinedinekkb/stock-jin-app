@@ -49,27 +49,49 @@ export default function TabHR({ user }) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthStartMs = monthStart.getTime();
 
+    // Fix index error: query by userId only, filter & sort client-side
     const qAtt = query(
       collection(db, 'attendance'),
-      where('userId', '==', user.uid),
-      where('dateTimestamp', '>=', Timestamp.fromDate(monthStart)),
-      orderBy('dateTimestamp', 'desc')
+      where('userId', '==', user.uid)
     );
     const unsub1 = onSnapshot(qAtt, (snap) => {
-      const records = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const records = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(r => {
+          if (!r.dateTimestamp) return true;
+          const ts = r.dateTimestamp.toDate ? r.dateTimestamp.toDate().getTime() : new Date(r.dateTimestamp).getTime();
+          return ts >= monthStartMs;
+        })
+        .sort((a, b) => {
+          const ta = a.dateTimestamp?.toDate ? a.dateTimestamp.toDate().getTime() : (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0);
+          const tb = b.dateTimestamp?.toDate ? b.dateTimestamp.toDate().getTime() : (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0);
+          return tb - ta;
+        });
       setAttendance(records);
       const todayStr = getTodayStr();
       setTodayRecord(records.find(r => r.dateStr === todayStr) || null);
+    }, (error) => {
+      console.error("Attendance listener error:", error);
     });
 
+    // Fix index error: query by userId only, sort client-side
     const qLeave = query(
       collection(db, 'leaves'),
-      where('userId', '==', user.uid),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', user.uid)
     );
     const unsub2 = onSnapshot(qLeave, (snap) => {
-      setLeaves(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const records = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return tb - ta;
+        });
+      setLeaves(records);
+    }, (error) => {
+      console.error("Leaves listener error:", error);
     });
 
     return () => { unsub1(); unsub2(); };
@@ -79,9 +101,18 @@ export default function TabHR({ user }) {
   const [teamLeaves, setTeamLeaves] = useState([]);
   useEffect(() => {
     if (user?.role !== 'admin') return;
-    const q = query(collection(db, 'leaves'), orderBy('createdAt', 'desc'));
+    const q = collection(db, 'leaves');
     const unsub = onSnapshot(q, (snap) => {
-      setTeamLeaves(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const records = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return tb - ta;
+        });
+      setTeamLeaves(records);
+    }, (error) => {
+      console.error("Team leaves listener error:", error);
     });
     return () => unsub();
   }, [user]);

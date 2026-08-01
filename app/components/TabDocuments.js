@@ -46,9 +46,18 @@ export default function TabDocuments({ user }) {
   const showNote = (msg) => { setNotification(msg); setTimeout(() => setNotification(''), 2500); };
 
   useEffect(() => {
-    const q = query(collection(db, 'documents'), orderBy('createdAt', 'desc'));
+    const q = collection(db, 'documents');
     const unsub = onSnapshot(q, (snap) => {
-      setDocs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const list = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => {
+          const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return tb - ta;
+        });
+      setDocs(list);
+    }, (error) => {
+      console.error("Documents listener error:", error);
     });
     return () => unsub();
   }, []);
@@ -206,7 +215,7 @@ export default function TabDocuments({ user }) {
         <div className="docs-empty">
           <FolderOpen size={40} className="text-gray-300" />
           <p>ยังไม่มีเอกสาร</p>
-          <span>กด "+ เพิ่ม" เพื่อเพิ่มเอกสารใหม่</span>
+          <span>กด &quot;+ เพิ่ม&quot; เพื่อเพิ่มเอกสารใหม่</span>
         </div>
       ) : (
         <div className="docs-grid">

@@ -1,6 +1,7 @@
 // app/components/TabStatus.js
 import React, { useState, useEffect } from 'react'; // เพิ่ม useEffect
 import { Clock, CheckCircle2, ChevronRight, ClipboardList, FileText, X, Minus, Plus, Copy, RotateCcw, Trash2, Ban, Search, PackagePlus } from 'lucide-react'; // เพิ่ม PackagePlus
+import { hasPermission } from '../utils/permissions';
 
 export default function TabStatus({
   transactions, statusFilter, setStatusFilter,
@@ -20,13 +21,16 @@ export default function TabStatus({
     const [addSearch, setAddSearch] = useState(''); // คำค้นหาตอนเพิ่มของ
 
     // Reset extraItems เมื่อเปิดบิลใหม่
-    useEffect(() => {
+    const [prevTxId, setPrevTxId] = useState(null);
+    const currentTxId = verifyingTx ? (verifyingTx.id || verifyingTx.timestamp) : null;
+    if (currentTxId !== prevTxId) {
+        setPrevTxId(currentTxId);
         if (verifyingTx) {
             setExtraItems([]);
             setIsAddingMode(false);
             setAddSearch('');
         }
-    }, [verifyingTx]);
+    }
 
     // Logic กรองสินค้าตอนกดเพิ่ม
     const filteredAddProducts = products.filter(p => 
@@ -193,7 +197,7 @@ export default function TabStatus({
 
               <div className="p-4 bg-gray-50 border-t border-gray-100 space-y-3">
                 {/* ปุ่มสำหรับรายการ Pending */}
-                {verifyingTx.status === 'pending' && (
+                {verifyingTx.status === 'pending' && hasPermission(user, 'VERIFY_TX') && (
                   <div className="flex gap-2">
                       {/* --- [เพิ่มใหม่] ปุ่ม Copy ตอน Pending --- */}
                       <button onClick={() => copyToClipboard(generateSummaryText(verifyingTx))} className="flex-1 py-3.5 rounded-xl bg-gray-800 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
@@ -206,6 +210,16 @@ export default function TabStatus({
                       </button>
                   </div>
                 )}
+                {verifyingTx.status === 'pending' && !hasPermission(user, 'VERIFY_TX') && (
+                  <div className="flex gap-2">
+                      <button onClick={() => copyToClipboard(generateSummaryText(verifyingTx))} className="flex-1 py-3.5 rounded-xl bg-gray-800 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+                        <Copy size={18}/> คัดลอก
+                      </button>
+                      <div className="flex-[2] py-3.5 rounded-xl bg-gray-100 text-gray-400 font-bold text-sm flex items-center justify-center gap-2 border border-gray-200">
+                        เฉพาะผู้ดูแลระบบยืนยันได้
+                      </div>
+                  </div>
+                )}
 
                 {/* ปุ่มสำหรับรายการ Completed */}
                 {verifyingTx.status === 'completed' && (
@@ -213,6 +227,7 @@ export default function TabStatus({
                      <button onClick={() => copyToClipboard(generateSummaryText(verifyingTx))} className="w-full py-3 rounded-xl bg-gray-800 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
                        <Copy size={18}/> คัดลอกประวัติ
                      </button>
+                     {hasPermission(user, 'EDIT_COMPLETED_TX') && (
                      <div className="flex gap-2">
                         <button onClick={() => handleEditCompletedTx(verifyingTx)} className="flex-1 py-3 rounded-xl bg-yellow-100 text-yellow-700 font-bold border border-yellow-200 active:scale-95 transition-transform flex items-center justify-center gap-2">
                            <RotateCcw size={18}/> แก้ไข
@@ -221,6 +236,7 @@ export default function TabStatus({
                            <Ban size={18}/> ยกเลิก
                         </button>
                      </div>
+                     )}
                   </>
                 )}
 

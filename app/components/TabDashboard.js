@@ -2,15 +2,17 @@ import React, { useState, useMemo } from 'react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid
 } from 'recharts';
-import { Calendar, Send, FileText, TrendingUp, TrendingDown, Package, AlertCircle, Filter, Copy, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Calendar, Send, FileText, TrendingUp, TrendingDown, Package, AlertCircle, Filter, Copy, CheckCircle2, ArrowRight, Download, FileSpreadsheet } from 'lucide-react';
+import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
-export default function TabDashboard({ transactions, dateFilterType, setDateFilterType, setCustomStartDate, setCustomEndDate }) {
+export default function TabDashboard({ transactions, products, categories, dateFilterType, setDateFilterType, setCustomStartDate, setCustomEndDate }) {
 
   // --- ส่วนของรายงานย้อนหลัง (อัปเกรด: เลือกช่วงเวลาได้) ---
   const [reportStartDate, setReportStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportEndDate, setReportEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [reportType, setReportType] = useState('ALL'); // ALL, IN, OUT
   const [isSending, setIsSending] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // ฟังก์ชันช่วย: สร้างข้อความรายงาน (รองรับช่วงเวลา)
   const generateReportMessage = () => {
@@ -133,6 +135,32 @@ export default function TabDashboard({ transactions, dateFilterType, setDateFilt
       .catch(() => alert('❌ คัดลอกไม่สำเร็จ'));
   };
 
+  // ฟังก์ชัน 3: Export Excel
+  const handleExportExcel = () => {
+    setIsExporting(true);
+    try {
+      exportToExcel(transactions, reportStartDate, reportEndDate, reportType, products, categories);
+    } catch (error) {
+      console.error(error);
+      alert('❌ เกิดข้อผิดพลาดในการสร้างไฟล์ Excel');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // ฟังก์ชัน 4: Export PDF
+  const handleExportPDF = () => {
+    setIsExporting(true);
+    try {
+      exportToPDF(transactions, reportStartDate, reportEndDate, reportType, products, categories);
+    } catch (error) {
+      console.error(error);
+      alert('❌ เกิดข้อผิดพลาดในการสร้างไฟล์ PDF');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // --- LOGIC กราฟ (เหมือนเดิม) ---
   const stats = useMemo(() => {
     let filtered = transactions;
@@ -250,6 +278,32 @@ export default function TabDashboard({ transactions, dateFilterType, setDateFilt
             >
               <Copy size={16} /> คัดลอก
             </button>
+          </div>
+
+          {/* --- ปุ่ม Export Excel & PDF --- */}
+          <div className="export-section">
+            <p className="text-[10px] text-gray-500 font-bold mb-2 flex items-center gap-1">
+              <Download size={12} /> ดาวน์โหลดรายงาน
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleExportExcel}
+                disabled={isExporting}
+                className="export-btn export-btn-excel"
+              >
+                <FileSpreadsheet size={16} />
+                <span>Export Excel</span>
+              </button>
+              <button
+                onClick={handleExportPDF}
+                disabled={isExporting}
+                className="export-btn export-btn-pdf"
+              >
+                <FileText size={16} />
+                <span>Export PDF</span>
+              </button>
+            </div>
+            <p className="text-[9px] text-gray-400 text-center mt-1.5">Excel = ตารางแก้ไขได้ | PDF = รายงานทางการ</p>
           </div>
 
           <p className="text-[10px] text-gray-400 text-center">* เลือกช่วงเวลาที่ต้องการสรุปยอดได้เลย</p>

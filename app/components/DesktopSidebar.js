@@ -1,19 +1,20 @@
 // app/components/DesktopSidebar.js
 'use client';
 import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, LogOut, Utensils, Clock, FolderOpen } from 'lucide-react';
+import { LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, LogOut, Utensils, Clock, FolderOpen, Bell } from 'lucide-react';
 
 const menuItems = [
   { key: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
   { key: 'stock', label: 'คลังสินค้า', icon: Package },
   { key: 'transaction', label: 'เบิก/รับสินค้า', icon: ArrowRightLeft },
   { key: 'status', label: 'สถานะรายการ', icon: ClipboardList },
+  { key: 'notifications', label: 'แจ้งเตือน', icon: Bell },
   { key: 'hr', label: 'เข้า-ออกงาน / ลา', icon: Clock },
   { key: 'documents', label: 'เอกสาร', icon: FolderOpen },
   { key: 'menu', label: 'ตั้งค่า', icon: Menu },
 ];
 
-export default function DesktopSidebar({ activeTab, setActiveTab, user, handleLogout }) {
+export default function DesktopSidebar({ activeTab, setActiveTab, user, handleLogout, unreadNotifCount = 0 }) {
   return (
     <aside className="desktop-sidebar">
       {/* Logo */}
@@ -32,13 +33,21 @@ export default function DesktopSidebar({ activeTab, setActiveTab, user, handleLo
         {menuItems.map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.key;
+          const showBadge = item.key === 'notifications' && unreadNotifCount > 0;
           return (
             <button
               key={item.key}
               onClick={() => setActiveTab(item.key)}
               className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
             >
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              <div className="relative">
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                {showBadge && (
+                  <span className="sidebar-notif-badge">
+                    {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                  </span>
+                )}
+              </div>
               <span>{item.label}</span>
               {isActive && <div className="sidebar-active-indicator" />}
             </button>
@@ -51,12 +60,17 @@ export default function DesktopSidebar({ activeTab, setActiveTab, user, handleLo
         <div className="sidebar-footer">
           <div className="sidebar-user-info">
             <div className="sidebar-user-avatar">
-              {user.name?.charAt(0) || 'U'}
+              {user.photoURL ? (
+                <img src={user.photoURL} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              ) : (
+                user.name?.charAt(0) || 'U'
+              )}
             </div>
             <div className="sidebar-user-details">
               <span className="sidebar-user-name">{user.name}</span>
               <span className="sidebar-user-role">
                 {user.role === 'admin' ? '👑 ผู้ดูแลระบบ' : '✅ พนักงาน'}
+                {user.position ? ` (${user.position})` : ''}
               </span>
             </div>
           </div>

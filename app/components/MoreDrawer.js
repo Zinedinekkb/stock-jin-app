@@ -1,9 +1,10 @@
 // app/components/MoreDrawer.js
 'use client';
 import React, { useEffect } from 'react';
-import { Clock, FolderOpen, Settings, X } from 'lucide-react';
+import { Clock, FolderOpen, Settings, X, Bell } from 'lucide-react';
 
 const drawerItems = [
+  { key: 'notifications', label: 'แจ้งเตือน', icon: Bell, emoji: '🔔', desc: 'สินค้าหมด / รายการรอ' },
   { key: 'hr', label: 'เข้า-ออกงาน / ลา', icon: Clock, emoji: '🕐', desc: 'บันทึกเวลาและใบลา' },
   { key: 'documents', label: 'เอกสาร', icon: FolderOpen, emoji: '📁', desc: 'เก็บและเรียกดูเอกสาร' },
   { key: 'menu', label: 'ตั้งค่า', icon: Settings, emoji: '⚙️', desc: 'บัญชีและการตั้งค่า' },
