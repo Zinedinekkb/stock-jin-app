@@ -1,7 +1,7 @@
 // app/components/DesktopSidebar.js
 'use client';
 import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, LogOut, Utensils, Clock, FolderOpen, Bell } from 'lucide-react';
+import { LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, LogOut, Clock, FolderOpen, Bell, Users } from 'lucide-react';
 
 const menuItems = [
   { key: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
@@ -11,6 +11,7 @@ const menuItems = [
   { key: 'notifications', label: 'แจ้งเตือน', icon: Bell },
   { key: 'hr', label: 'เข้า-ออกงาน / ลา', icon: Clock },
   { key: 'documents', label: 'เอกสาร', icon: FolderOpen },
+  { key: 'users', label: 'จัดการบัญชี', icon: Users, adminOnly: true },
   { key: 'menu', label: 'ตั้งค่า', icon: Menu },
 ];
 
@@ -20,17 +21,17 @@ export default function DesktopSidebar({ activeTab, setActiveTab, user, handleLo
       {/* Logo */}
       <div className="sidebar-logo-section">
         <div className="sidebar-logo-circle">
-          <Utensils size={28} strokeWidth={2.5} />
+          <Package size={28} strokeWidth={2.5} />
         </div>
         <div className="sidebar-logo-text">
-          <h1>STOCK JIN</h1>
-          <p>ข้าวมันไก่สไตล์สิงคโปร์</p>
+          <h1>StockPro</h1>
+          <p>Inventory & Workforce Platform</p>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="sidebar-nav">
-        {menuItems.map(item => {
+        {menuItems.filter(item => !item.adminOnly || user?.role === 'admin').map(item => {
           const Icon = item.icon;
           const isActive = activeTab === item.key;
           const showBadge = item.key === 'notifications' && unreadNotifCount > 0;

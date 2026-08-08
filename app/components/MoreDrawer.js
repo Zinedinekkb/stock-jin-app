@@ -1,16 +1,17 @@
 // app/components/MoreDrawer.js
 'use client';
 import React, { useEffect } from 'react';
-import { Clock, FolderOpen, Settings, X, Bell } from 'lucide-react';
+import { Clock, FolderOpen, Settings, X, Bell, Users } from 'lucide-react';
 
 const drawerItems = [
   { key: 'notifications', label: 'แจ้งเตือน', icon: Bell, emoji: '🔔', desc: 'สินค้าหมด / รายการรอ' },
   { key: 'hr', label: 'เข้า-ออกงาน / ลา', icon: Clock, emoji: '🕐', desc: 'บันทึกเวลาและใบลา' },
   { key: 'documents', label: 'เอกสาร', icon: FolderOpen, emoji: '📁', desc: 'เก็บและเรียกดูเอกสาร' },
+  { key: 'users', label: 'จัดการบัญชี', icon: Users, emoji: '👥', desc: 'ดูบัญชีผู้ใช้ทั้งหมด', adminOnly: true },
   { key: 'menu', label: 'ตั้งค่า', icon: Settings, emoji: '⚙️', desc: 'บัญชีและการตั้งค่า' },
 ];
 
-export default function MoreDrawer({ isOpen, onClose, activeTab, setActiveTab }) {
+export default function MoreDrawer({ isOpen, onClose, activeTab, setActiveTab, user }) {
   // Lock scroll when open
   useEffect(() => {
     if (isOpen) {
@@ -49,7 +50,7 @@ export default function MoreDrawer({ isOpen, onClose, activeTab, setActiveTab })
 
         {/* Items grid */}
         <div className="more-drawer-grid">
-          {drawerItems.map(item => {
+          {drawerItems.filter(item => !item.adminOnly || user?.role === 'admin').map(item => {
             const isActive = activeTab === item.key;
             return (
               <button

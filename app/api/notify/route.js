@@ -77,7 +77,7 @@ export async function POST(request) {
                         backgroundColor: themeColor,
                         paddingAll: "lg",
                         contents: [
-                            { type: "text", text: "STOCK JIN UPDATE", color: "#ffffff", weight: "bold", size: "xs" },
+                            { type: "text", text: "StockPro UPDATE", color: "#ffffff", weight: "bold", size: "xs" },
                             { type: "text", text: headerTitle, color: "#ffffff", weight: "bold", size: "xl", margin: "sm" }
                         ]
                     },

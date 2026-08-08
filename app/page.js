@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
-  LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, Check, Utensils, Loader2, Bell, ShieldAlert
+  LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, Check, Loader2, Bell, ShieldAlert, Users
 } from 'lucide-react';
 
 // --- IMPORT COMPONENTS ---
@@ -15,6 +15,7 @@ import TabMenu from './components/TabMenu';
 import TabHR from './components/TabHR';
 import TabDocuments from './components/TabDocuments';
 import TabNotifications from './components/TabNotifications';
+import TabUserDirectory from './components/TabUserDirectory';
 import MoreDrawer from './components/MoreDrawer';
 import DesktopSidebar from './components/DesktopSidebar';
 import { hasPermission, isAdmin } from './utils/permissions';
@@ -119,10 +120,10 @@ export default function StockJinApp() {
               role: uObj.role,
             });
           } else {
-            const uObj = { uid: currentUser.uid, email: currentUser.email, name: 'เฮียจิน (Owner)', role: 'admin', position: 'เจ้าของร้าน / ผู้ดูแลระบบ', status: 'approved' };
+            const uObj = { uid: currentUser.uid, email: currentUser.email, name: 'ผู้ดูแลระบบ (Owner)', role: 'admin', position: 'ผู้ดูแลระบบ', status: 'approved' };
             setUser(uObj);
             Sentry.setUser({ id: currentUser.uid, email: currentUser.email, username: uObj.name, role: uObj.role });
-            await setDoc(userRef, { name: 'เฮียจิน (Owner)', email: currentUser.email, role: 'admin', position: 'เจ้าของร้าน / ผู้ดูแลระบบ', status: 'approved', createdAt: serverTimestamp() });
+            await setDoc(userRef, { name: 'ผู้ดูแลระบบ (Owner)', email: currentUser.email, role: 'admin', position: 'ผู้ดูแลระบบ', status: 'approved', createdAt: serverTimestamp() });
           }
         } else {
           setUser(null);
@@ -197,7 +198,7 @@ export default function StockJinApp() {
       const qtyLabel = isPending ? item.qty : `${item.qty} → ${qtyShow}`; 
       return `${idx + 1}. ${item.name} : ${qtyLabel} ${item.unit}`;
     }).join('\n');
-    return `ร้านจิน ข้าวมันไก่\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
+    return `StockPro\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
   };
 
   // --- LOGIC: Void/Edit/Reorder ---
@@ -741,6 +742,7 @@ export default function StockJinApp() {
     hr: { title: 'เข้า-ออกงาน / ลาหยุด', desc: 'บันทึกเวลาทำงาน ยื่นใบลาหยุด และดูสถิติทีมงาน' },
     documents: { title: 'เอกสาร', desc: 'เก็บและจัดการเอกสารสำคัญต่างๆ เช่น ใบสั่งซื้อ ใบเสร็จ สัญญา' },
     menu: { title: 'ตั้งค่าและบัญชีผู้ใช้', desc: 'จัดการบัญชี สิทธิ์การเข้าถึง และการตั้งค่าระบบ' },
+    users: { title: 'จัดการบัญชีผู้ใช้', desc: 'ตรวจสอบจำนวนบัญชี ดูพนักงานแต่ละหน่วยงาน และจัดการสิทธิ์' },
   };
 
   // --- SHARED TAB CONTENT ---
@@ -812,25 +814,26 @@ export default function StockJinApp() {
           pendingUsers={pendingUsers} approvalHistory={approvalHistory} handleApproveUser={handleApproveUser} handleRejectUser={handleRejectUser}
           handleUpdateProfile={handleUpdateProfile}
       />}
+      {activeTab === 'users' && user && isAdmin(user) && <TabUserDirectory user={user} />}
     </>
   );
 
   // --- RENDER MAIN ---
   if (isLoadingAuth) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-center space-y-3"><Loader2 size={40} className="animate-spin text-green-700 mx-auto"/><p className="text-green-800 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p></div></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-center space-y-3"><Loader2 size={40} className="animate-spin text-indigo-600 mx-auto"/><p className="text-slate-700 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p></div></div>;
   }
 
   // หน้ารอการอนุมัติ
   if (user && user.status === 'pending') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-green-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-indigo-50 p-4">
         <div className="pending-approval-card">
           <div className="pending-approval-icon">
             <ShieldAlert size={48} className="text-yellow-600" />
           </div>
           <h2 className="text-xl font-bold text-gray-800 mt-4">รอการอนุมัติ</h2>
           <p className="text-sm text-gray-500 mt-2 text-center leading-relaxed">
-            บัญชี <strong className="text-green-700">{user.email}</strong> ของคุณ<br/>
+            บัญชี <strong className="text-indigo-600">{user.email}</strong> ของคุณ<br/>
             อยู่ระหว่างรอการอนุมัติจากผู้ดูแลระบบ
           </p>
           <div className="pending-approval-status">
@@ -852,7 +855,7 @@ export default function StockJinApp() {
   // ========================
   if (isDesktop && user) {
     return (
-      <div className="desktop-layout font-sans text-gray-800 selection:bg-green-200">
+      <div className="desktop-layout font-sans text-gray-800 selection:bg-indigo-100">
         <DesktopSidebar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
@@ -864,7 +867,7 @@ export default function StockJinApp() {
           {/* Desktop Top Header */}
           <div className="desktop-top-header">
             <div>
-              <h2>{tabTitles[activeTab]?.title || 'Stock Jin'}</h2>
+              <h2>{tabTitles[activeTab]?.title || 'StockPro'}</h2>
               <p>{tabTitles[activeTab]?.desc || ''}</p>
             </div>
             <div className="flex items-center gap-3">
@@ -872,7 +875,7 @@ export default function StockJinApp() {
                 <Bell size={20} className="text-gray-500" />
                 {unreadNotifCount > 0 && <span className="notif-badge-header">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
               </button>
-              <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center text-green-800 font-bold text-sm border border-green-200 overflow-hidden">{user.photoURL ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" /> : user.name?.charAt(0)}</div>
+              <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold text-sm border border-indigo-200 overflow-hidden">{user.photoURL ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" /> : user.name?.charAt(0)}</div>
             </div>
           </div>
 
@@ -883,7 +886,7 @@ export default function StockJinApp() {
         </div>
 
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
-        {showToast && <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-green-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-yellow-500 rounded-full p-0.5 text-green-900"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
+        {showToast && <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-indigo-500 rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
       </div>
     );
   }
@@ -892,17 +895,17 @@ export default function StockJinApp() {
   // MOBILE LAYOUT (<1024px)
   // ========================
   return (
-    <div className="bg-gray-50 min-h-screen font-sans text-gray-800 flex justify-center selection:bg-green-200">
+    <div className="bg-gray-50 min-h-screen font-sans text-gray-800 flex justify-center selection:bg-indigo-100">
       <div className="w-full max-w-md bg-gray-50 h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
         {/* Navbar */}
-        <div className="bg-green-900 px-6 py-4 sticky top-0 z-40 flex justify-between items-center shadow-lg border-b-4 border-yellow-500">
-          <div className="flex items-center gap-3"><div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg border-2 border-green-800 text-green-900"><Utensils size={20} strokeWidth={2.5}/></div><div><h1 className="text-lg font-black text-yellow-400 tracking-wide leading-none">STOCK JIN</h1><p className="text-[10px] text-green-200 opacity-80">ข้าวมันไก่สไตล์สิงคโปร์</p></div></div>
+        <div className="bg-slate-900 px-6 py-4 sticky top-0 z-40 flex justify-between items-center shadow-lg border-b-4 border-indigo-500">
+          <div className="flex items-center gap-3"><div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-700 text-white"><Package size={20} strokeWidth={2.5}/></div><div><h1 className="text-lg font-black text-indigo-300 tracking-wide leading-none">StockPro</h1><p className="text-[10px] text-slate-400 opacity-80">Inventory & Workforce Platform</p></div></div>
           {user && <div className="flex items-center gap-2">
-            <button onClick={() => setActiveTab('notifications')} className="relative p-1.5 rounded-full hover:bg-green-800 transition-colors">
-              <Bell size={18} className="text-green-200" />
+            <button onClick={() => setActiveTab('notifications')} className="relative p-1.5 rounded-full hover:bg-slate-800 transition-colors">
+              <Bell size={18} className="text-slate-300" />
               {unreadNotifCount > 0 && <span className="notif-badge-mobile">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
             </button>
-            <div className="w-8 h-8 bg-green-800 rounded-full flex items-center justify-center text-yellow-400 font-bold text-xs border border-green-700 overflow-hidden">{user.photoURL ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" /> : user.name.charAt(0)}</div>
+            <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-indigo-300 font-bold text-xs border border-slate-700 overflow-hidden">{user.photoURL ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" /> : user.name.charAt(0)}</div>
           </div>}
         </div>
 
@@ -914,18 +917,18 @@ export default function StockJinApp() {
         {/* Bottom Nav */}
         {user && (
           <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200 px-6 py-2 flex justify-between items-center z-50 pb-8 safe-area-pb shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-            <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dashboard' ? 'text-green-700 scale-110' : 'text-gray-400'}`}><LayoutDashboard size={22} strokeWidth={activeTab==='dashboard'?2.5:2}/><span className="text-[9px] font-bold">ภาพรวม</span></button>
-            <button onClick={() => setActiveTab('stock')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'stock' ? 'text-green-700 scale-110' : 'text-gray-400'}`}><Package size={22} strokeWidth={activeTab==='stock'?2.5:2}/><span className="text-[9px] font-bold">คลัง</span></button>
-            <div className="relative -top-8 group"><div className={`absolute inset-0 bg-yellow-400 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity ${activeTab === 'transaction' ? 'block' : 'hidden'}`}></div><button onClick={() => setActiveTab('transaction')} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-green-900/30 border-[6px] border-gray-50 transition-all active:scale-90 ${activeTab === 'transaction' ? 'bg-gradient-to-br from-green-600 to-green-800 text-yellow-400 scale-110' : 'bg-gray-800 text-white'}`}><ArrowRightLeft size={28} strokeWidth={2.5} /></button></div>
-            <button onClick={() => setActiveTab('status')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'status' ? 'text-green-700 scale-110' : 'text-gray-400'}`}><ClipboardList size={22} strokeWidth={activeTab==='status'?2.5:2}/><span className="text-[9px] font-bold">สถานะ</span></button>
+            <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dashboard' ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}><LayoutDashboard size={22} strokeWidth={activeTab==='dashboard'?2.5:2}/><span className="text-[9px] font-bold">ภาพรวม</span></button>
+            <button onClick={() => setActiveTab('stock')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'stock' ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}><Package size={22} strokeWidth={activeTab==='stock'?2.5:2}/><span className="text-[9px] font-bold">คลัง</span></button>
+            <div className="relative -top-8 group"><div className={`absolute inset-0 bg-indigo-400 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity ${activeTab === 'transaction' ? 'block' : 'hidden'}`}></div><button onClick={() => setActiveTab('transaction')} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-slate-900/30 border-[6px] border-gray-50 transition-all active:scale-90 ${activeTab === 'transaction' ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 text-white scale-110' : 'bg-gray-800 text-white'}`}><ArrowRightLeft size={28} strokeWidth={2.5} /></button></div>
+            <button onClick={() => setActiveTab('status')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'status' ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}><ClipboardList size={22} strokeWidth={activeTab==='status'?2.5:2}/><span className="text-[9px] font-bold">สถานะ</span></button>
             <button
               onClick={() => setShowMoreDrawer(true)}
-              className={`flex flex-col items-center gap-1 transition-all ${ ['hr','documents','menu','notifications'].includes(activeTab) ? 'text-green-700 scale-110' : 'text-gray-400'}`}
+              className={`flex flex-col items-center gap-1 transition-all ${ ['hr','documents','menu','notifications'].includes(activeTab) ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}
             >
               <div className="relative">
                 <Menu size={22} strokeWidth={['hr','documents','menu','notifications'].includes(activeTab)?2.5:2}/>
                 {(['hr','documents','menu','notifications'].includes(activeTab) || unreadNotifCount > 0) && (
-                  <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${unreadNotifCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-green-600'}`} />
+                  <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${unreadNotifCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-indigo-500'}`} />
                 )}
               </div>
               <span className="text-[9px] font-bold">อื่นๆ</span>
@@ -939,10 +942,11 @@ export default function StockJinApp() {
           onClose={() => setShowMoreDrawer(false)}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          user={user}
         />
         
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
-        {showToast && <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-green-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-yellow-500 rounded-full p-0.5 text-green-900"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
+        {showToast && <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-indigo-500 rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
       </div>
     </div>
   );

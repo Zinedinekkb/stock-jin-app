@@ -5,8 +5,8 @@ import { Inter } from 'next/font/google'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Stock Jin App',
-  description: 'ระบบจัดการสต็อกร้านข้าวมันไก่',
+  title: 'StockPro — ระบบจัดการสต็อกและบุคลากร',
+  description: 'ระบบจัดการคลังสินค้าและบุคลากรสำหรับทุกธุรกิจ',
 }
 
 export default function RootLayout({ children }) {

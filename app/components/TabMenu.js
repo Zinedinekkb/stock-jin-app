@@ -265,23 +265,23 @@ export default function TabMenu({
           </div>
         ) : (
           /* --- ส่วน Login / Register --- */
-          <div className="bg-gradient-to-br from-green-800 to-gray-900 p-6 rounded-3xl shadow-xl text-white animate-scale-in border-t-4 border-yellow-500">
-            <div className="flex items-center gap-3 mb-4"><div className="bg-white/10 p-3 rounded-2xl"><User size={28} className="text-yellow-400"/></div><div><h3 className="font-bold text-xl text-yellow-400">STOCK JIN</h3><p className="text-xs text-green-200">ระบบจัดการสต็อกร้านข้าวมันไก่</p></div></div>
+          <div className="bg-gradient-to-br from-slate-800 to-gray-900 p-6 rounded-3xl shadow-xl text-white animate-scale-in border-t-4 border-indigo-500">
+            <div className="flex items-center gap-3 mb-4"><div className="bg-white/10 p-3 rounded-2xl"><User size={28} className="text-indigo-400"/></div><div><h3 className="font-bold text-xl text-indigo-300">StockPro</h3><p className="text-xs text-slate-400">ระบบจัดการคลังสินค้าและบุคลากร</p></div></div>
             
             <div className="space-y-3 bg-black/20 p-4 rounded-2xl backdrop-blur-sm border border-white/5">
               {/* Toggle Login/Register */}
               <div className="flex bg-black/30 p-1 rounded-xl mb-4">
-                 <button onClick={() => setIsRegisterMode(false)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${!isRegisterMode ? 'bg-yellow-500 text-green-900 shadow' : 'text-gray-400 hover:text-white'}`}>เข้าสู่ระบบ</button>
-                 <button onClick={() => setIsRegisterMode(true)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${isRegisterMode ? 'bg-yellow-500 text-green-900 shadow' : 'text-gray-400 hover:text-white'}`}>สมัครสมาชิก</button>
+                 <button onClick={() => setIsRegisterMode(false)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${!isRegisterMode ? 'bg-indigo-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}>เข้าสู่ระบบ</button>
+                 <button onClick={() => setIsRegisterMode(true)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${isRegisterMode ? 'bg-indigo-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}>สมัครสมาชิก</button>
               </div>
 
               {!isRegisterMode ? (
                 /* Login Form */
                 <>
-                  <input placeholder="อีเมล (เช่น admin@stockjin.com)" className="w-full bg-white/10 border-0 rounded-xl px-4 py-3 text-sm text-white placeholder-green-200/50 focus:bg-white/20 outline-none transition-all" value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} />
+                  <input placeholder="อีเมล (เช่น admin@stockpro.com)" className="w-full bg-white/10 border-0 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-400/50 focus:bg-white/20 outline-none transition-all" value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} />
                   <input type="password" placeholder="รหัสผ่าน" className="w-full bg-white/10 border-0 rounded-xl px-4 py-3 text-sm text-white placeholder-green-200/50 focus:bg-white/20 outline-none transition-all" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} />
                   {loginError && <p className="text-red-400 text-xs text-center font-bold bg-red-900/30 py-1 rounded">{loginError}</p>}
-                  <button onClick={handleLogin} className="w-full bg-yellow-500 text-green-900 py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-transform hover:bg-yellow-400">เข้าสู่ระบบ</button>
+                  <button onClick={handleLogin} className="w-full bg-indigo-500 text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-transform hover:bg-indigo-400">เข้าสู่ระบบ</button>
                 </>
               ) : (
                 /* Register Form */

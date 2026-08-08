@@ -150,7 +150,7 @@ export function exportToExcel(transactions, startDate, endDate, reportType, prod
 
   // ===== SHEET 1: Executive Dashboard =====
   const dashRows = [
-    ['📊 STOCK JIN — EXECUTIVE DASHBOARD'],
+    ['📊 StockPro — EXECUTIVE DASHBOARD'],
     [''],
     ['ช่วงเวลา:', dateDisplay],
     ['ประเภทรายงาน:', getReportTypeLabel(reportType)],
@@ -347,18 +347,18 @@ export function exportToPDF(transactions, startDate, endDate, reportType, produc
   // ===== HEADER SECTION =====
   const drawHeader = () => {
     // แถบหัว gradient (จำลอง 2 สี)
-    pdf.setFillColor(20, 83, 45); // #14532d
+    pdf.setFillColor(15, 23, 42); // #0f172a
     pdf.rect(0, 0, pageWidth, 42, 'F');
     
-    // แถบเส้นทอง
-    pdf.setFillColor(234, 179, 8); // yellow-500
+    // แถบเส้นสี Indigo
+    pdf.setFillColor(99, 102, 241); // indigo-500
     pdf.rect(0, 42, pageWidth, 2, 'F');
 
     // ชื่อร้าน
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(22);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('STOCK JIN SYSTEM', pageWidth / 2, 16, { align: 'center' });
+    pdf.text('StockPro System', pageWidth / 2, 16, { align: 'center' });
 
     // ชื่อรายงาน
     pdf.setFontSize(12);
