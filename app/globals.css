@@ -1830,3 +1830,902 @@
 .profile-remove-photo:hover {
   background: #fef2f2;
 }
+
+/* ============================================
+   SMART HOME & MODERN DASHBOARD DESIGN SYSTEM
+   ============================================ */
+
+/* Smart Layout Base */
+.smart-layout {
+  display: flex;
+  min-height: 100dvh;
+  background-color: #f4f5fa;
+  color: #1e293b;
+  font-family: inherit;
+}
+
+/* 1. Purple Sidebar with Inverted Rounded Cutout */
+.smart-sidebar {
+  width: 88px;
+  min-width: 88px;
+  height: 100dvh;
+  position: sticky;
+  top: 0;
+  background: #6355d8;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 0 20px;
+  z-index: 50;
+  user-select: none;
+}
+
+.smart-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 6px;
+  align-items: center;
+}
+
+.smart-sidebar-item {
+  width: 100%;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  outline: none;
+}
+
+.smart-sidebar-item:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  margin: 0 8px;
+  width: calc(100% - 16px);
+}
+
+/* Inverted radius notch effect for active tab */
+.smart-sidebar-item.active {
+  background: #f4f5fa;
+  color: #6355d8;
+  border-top-left-radius: 26px;
+  border-bottom-left-radius: 26px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: 0;
+  width: 100%;
+}
+
+.smart-sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border-bottom-right-radius: 20px;
+  box-shadow: 6px 6px 0 6px #f4f5fa;
+  pointer-events: none;
+}
+
+.smart-sidebar-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border-top-right-radius: 20px;
+  box-shadow: 6px -6px 0 6px #f4f5fa;
+  pointer-events: none;
+}
+
+.smart-sidebar-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  border: 2px solid #6355d8;
+}
+
+.smart-sidebar-tooltip {
+  position: absolute;
+  left: 92px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1e1b4b;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  z-index: 60;
+  pointer-events: none;
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+@keyframes tooltipFadeIn {
+  from { opacity: 0; transform: translateY(-50%) translateX(-6px); }
+  to { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+.smart-sidebar-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.smart-sidebar-circle-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #4634ba;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.smart-sidebar-circle-btn:hover {
+  transform: scale(1.08);
+  background: #3928a6;
+}
+
+/* 2. Top Header */
+.smart-top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 36px;
+  background: #f4f5fa;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.smart-search-wrapper {
+  flex: 1;
+  max-width: 420px;
+}
+
+.smart-search-input {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #eef0f8;
+  border-radius: 9999px;
+  padding: 10px 18px 10px 42px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  outline: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.smart-search-input:focus {
+  border-color: #6355d8;
+  box-shadow: 0 0 0 3px rgba(99, 85, 216, 0.12);
+}
+
+.smart-search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.smart-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.smart-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #eef0f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.smart-icon-btn:hover {
+  transform: scale(1.05);
+  background: #f8fafc;
+}
+
+.smart-notif-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: #ef4444;
+  color: white;
+  font-size: 9px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+}
+
+.smart-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  background: #ffffff;
+  border: 1px solid #eef0f8;
+  border-radius: 9999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.smart-user-pill:hover {
+  background: #f8fafc;
+}
+
+.smart-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6355d8, #818cf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.smart-user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.smart-user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 210px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid #f1f5f9;
+  z-index: 50;
+  overflow: hidden;
+  animation: content-fade-in 0.15s ease-out;
+}
+
+.smart-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.smart-dropdown-item:hover {
+  background: #f8fafc;
+}
+
+/* 3. Hero Banner */
+.smart-hero-banner {
+  background: linear-gradient(135deg, #FFF0DB 0%, #FED9BE 100%);
+  border-radius: 28px;
+  padding: 24px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(245, 158, 11, 0.08);
+}
+
+.smart-hero-content {
+  z-index: 10;
+}
+
+.smart-hero-title {
+  font-family: serif;
+  font-weight: 900;
+  font-size: 26px;
+  color: #7c2d12;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+}
+
+.smart-hero-subtitle {
+  font-family: inherit;
+  font-size: 12px;
+  color: #9a3412;
+  opacity: 0.9;
+  max-width: 360px;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.smart-hero-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.smart-hero-art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+/* 4. Quick Cards & Toggles */
+.smart-quick-card {
+  border-radius: 22px;
+  padding: 16px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 116px;
+  cursor: pointer;
+}
+
+.smart-quick-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+}
+
+.smart-toggle-switch {
+  width: 36px;
+  height: 20px;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  position: relative;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease;
+  padding: 2px;
+}
+
+.smart-toggle-switch.on {
+  background: #6355d8;
+}
+
+.smart-toggle-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  display: block;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.smart-toggle-switch.on .smart-toggle-thumb {
+  transform: translateX(16px);
+}
+
+/* 5. Central Controller Card */
+.smart-controller-card {
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 24px 28px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  border: 1px solid #f1f5f9;
+}
+
+.smart-dial-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.smart-dial-btn:active {
+  transform: scale(0.92);
+}
+
+/* 6. Right Panel */
+.smart-right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.smart-panel-section {
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 20px 22px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  border: 1px solid #f1f5f9;
+}
+
+.smart-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.smart-panel-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.smart-arrow-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.smart-arrow-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.smart-badge-select {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: #f8fafc;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.smart-device-card {
+  border-radius: 20px;
+  padding: 14px;
+  color: #ffffff;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+.smart-device-card:hover {
+  transform: translateY(-2px);
+}
+
+.smart-device-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* Container & grid layouts */
+.smart-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  padding: 0 32px 32px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1280px) {
+  .smart-content-grid.has-right-panel {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+}
+
+.smart-content-grid > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.smart-tab-container {
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 24px 28px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+  border: 1px solid #f1f5f9;
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.smart-main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  min-width: 0;
+  width: calc(100vw - 88px);
+  max-width: calc(100vw - 88px);
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+/* ==========================================================================
+   CAMERA ATTENDANCE MODAL & PROOF PHOTO VIEWER
+   ========================================================================== */
+
+.cam-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: camFadeIn 0.2s ease-out;
+}
+
+@keyframes camFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.cam-modal-container {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+}
+
+.cam-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+}
+
+.cam-close-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.cam-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.cam-viewfinder-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #090d16;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cam-video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cam-mirror {
+  transform: scaleX(-1);
+}
+
+.cam-preview-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cam-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cam-compress-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(6px);
+  color: #ffffff;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.cam-overlay-state {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.cam-face-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.cam-face-oval {
+  width: 60%;
+  height: 70%;
+  border: 2px dashed rgba(255, 255, 255, 0.65);
+  border-radius: 50%;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.2);
+}
+
+.cam-guide-text {
+  margin-top: 0.75rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+}
+
+.cam-flip-btn {
+  position: absolute;
+  bottom: 2.75rem;
+  right: 0.75rem;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.cam-flip-btn:hover {
+  background: rgba(0, 0, 0, 0.85);
+  transform: rotate(180deg);
+}
+
+.cam-location-badge {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  z-index: 5;
+}
+
+.cam-modal-footer {
+  padding: 1.25rem;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cam-shutter-btn {
+  width: 100%;
+  padding: 0.85rem;
+  border-radius: 1rem;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  box-shadow: 0 10px 20px -5px rgba(22, 163, 74, 0.4);
+  transition: all 0.2s ease;
+}
+
+.cam-shutter-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.cam-shutter-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.cam-shutter-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cam-shutter-inner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cam-confirm-actions {
+  width: 100%;
+  display: flex;
+  gap: 0.75rem;
+}
+
+.cam-retake-btn {
+  flex: 1;
+  padding: 0.85rem;
+  border-radius: 1rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cam-retake-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.cam-submit-btn {
+  flex: 2;
+  padding: 0.85rem;
+  border-radius: 1rem;
+  border: none;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.cam-submit-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.cam-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Attendance list proof button */
+.att-photo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: 0.35rem;
+}
+
+.att-photo-btn:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+
+

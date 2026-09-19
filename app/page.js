@@ -18,6 +18,11 @@ import TabNotifications from './components/TabNotifications';
 import TabUserDirectory from './components/TabUserDirectory';
 import MoreDrawer from './components/MoreDrawer';
 import DesktopSidebar from './components/DesktopSidebar';
+import TopHeader from './components/TopHeader';
+import SmartDashboardView from './components/SmartDashboardView';
+import SmartRightPanel from './components/SmartRightPanel';
+import ModernAuthView from './components/ModernAuthView';
+import ModernPendingApproval from './components/ModernPendingApproval';
 import { hasPermission, isAdmin } from './utils/permissions';
 import * as Sentry from '@sentry/nextjs';
 
@@ -30,13 +35,18 @@ import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, getDocs,
   serverTimestamp, query, orderBy, where, writeBatch
 } from 'firebase/firestore';
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword } from "firebase/auth";
+import { 
+  signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword,
+  GoogleAuthProvider, GithubAuthProvider, signInWithPopup
+} from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 export default function StockJinApp() {
-  const [activeTab, setActiveTab] = useState('transaction'); 
+  const [activeTab, setActiveTab] = useState('dashboard'); 
   const [isDesktop, setIsDesktop] = useState(false);
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dashboardSubTab, setDashboardSubTab] = useState('smart'); // 'smart' | 'analytics'
 
   // --- DESKTOP DETECTION ---
   useEffect(() => {
@@ -83,6 +93,7 @@ export default function StockJinApp() {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [loginError, setLoginError] = useState('');
+  const [socialLoading, setSocialLoading] = useState(false);
   
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
@@ -105,12 +116,14 @@ export default function StockJinApp() {
             const userData = userSnap.data();
             const uObj = {
               uid: currentUser.uid,
-              email: currentUser.email,
-              name: userData.name || currentUser.email.split('@')[0],
+              id: currentUser.uid,
+              email: currentUser.email || userData.email || '',
+              name: userData.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
               role: userData.role || 'staff',
               position: userData.position || (userData.role === 'admin' ? 'ผู้ดูแลระบบ' : 'พนักงานทั่วไป'),
-              photoURL: userData.photoURL || null,
-              status: userData.status || 'approved'
+              photoURL: userData.photoURL || currentUser.photoURL || null,
+              status: userData.status || 'approved',
+              provider: userData.provider || currentUser.providerData?.[0]?.providerId || 'password'
             };
             setUser(uObj);
             Sentry.setUser({
@@ -120,10 +133,36 @@ export default function StockJinApp() {
               role: uObj.role,
             });
           } else {
-            const uObj = { uid: currentUser.uid, email: currentUser.email, name: 'ผู้ดูแลระบบ (Owner)', role: 'admin', position: 'ผู้ดูแลระบบ', status: 'approved' };
+            // New user registered via Google / GitHub or direct OAuth:
+            const usersSnap = await getDocs(query(collection(db, 'users')));
+            const isFirstUser = usersSnap.empty;
+
+            const providerId = currentUser.providerData?.[0]?.providerId || 'password';
+            const initialRole = isFirstUser ? 'admin' : 'staff';
+            const initialStatus = isFirstUser ? 'approved' : 'pending';
+            const initialPos = isFirstUser ? 'ผู้ดูแลระบบ' : 'พนักงานทั่วไป';
+            const initialName = currentUser.displayName || currentUser.email?.split('@')[0] || (isFirstUser ? 'ผู้ดูแลระบบ (Owner)' : 'ผู้ใช้ใหม่');
+
+            const newUserData = {
+              name: initialName,
+              email: currentUser.email || '',
+              role: initialRole,
+              position: initialPos,
+              status: initialStatus,
+              photoURL: currentUser.photoURL || null,
+              provider: providerId,
+              createdAt: serverTimestamp()
+            };
+
+            await setDoc(userRef, newUserData);
+
+            const uObj = {
+              uid: currentUser.uid,
+              id: currentUser.uid,
+              ...newUserData
+            };
             setUser(uObj);
             Sentry.setUser({ id: currentUser.uid, email: currentUser.email, username: uObj.name, role: uObj.role });
-            await setDoc(userRef, { name: 'ผู้ดูแลระบบ (Owner)', email: currentUser.email, role: 'admin', position: 'ผู้ดูแลระบบ', status: 'approved', createdAt: serverTimestamp() });
           }
         } else {
           setUser(null);
@@ -140,6 +179,53 @@ export default function StockJinApp() {
     });
     return () => unsubscribe();
   }, []);
+
+  // --- REAL-TIME STATUS LISTENER FOR PENDING USERS ---
+  useEffect(() => {
+    if (!user?.uid || user?.status !== 'pending') return;
+    const unsubUser = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.status && data.status !== user.status) {
+          setUser(prev => ({
+            ...prev,
+            status: data.status,
+            role: data.role || prev?.role || 'staff',
+            position: data.position || prev?.position || 'พนักงานทั่วไป'
+          }));
+          if (data.status === 'approved') {
+            showNotification('บัญชีของคุณได้รับการอนุมัติเรียบร้อยแล้ว! ยินดีต้อนรับสู่ระบบ 🎉');
+          }
+        }
+      }
+    });
+    return () => unsubUser();
+  }, [user?.uid, user?.status]);
+
+  const handleCheckUserStatus = async () => {
+    if (!user?.uid) return;
+    try {
+      const snap = await getDoc(doc(db, 'users', user.uid));
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.status) {
+          setUser(prev => ({
+            ...prev,
+            status: data.status,
+            role: data.role || prev?.role || 'staff',
+            position: data.position || prev?.position || 'พนักงานทั่วไป'
+          }));
+          if (data.status === 'approved') {
+            showNotification('บัญชีของคุณได้รับการอนุมัติแล้ว! 🎉');
+          } else {
+            showNotification('บัญชียังอยู่ระหว่างรอการอนุมัติ');
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Check status error:', e);
+    }
+  };
 
   // --- FIREBASE LISTENERS ---
   useEffect(() => {
@@ -494,6 +580,52 @@ export default function StockJinApp() {
     }
   };
 
+  // Social Auth Handlers
+  const handleGoogleSignIn = async () => {
+    setSocialLoading(true);
+    setLoginError('');
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        // User closed popup
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setLoginError('ยังไม่ได้เปิดใช้งาน Google Sign-In ใน Firebase Console (Authentication > Sign-in method)');
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        setLoginError('อีเมลนี้เคยลงทะเบียนด้วยวิธีอื่นไว้แล้ว กรุณาเข้าสู่ระบบด้วยวิธีเดิม');
+      } else {
+        setLoginError('เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย Google');
+      }
+    } finally {
+      setSocialLoading(false);
+    }
+  };
+
+  const handleGithubSignIn = async () => {
+    setSocialLoading(true);
+    setLoginError('');
+    try {
+      const provider = new GithubAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("GitHub Sign-In Error:", error);
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        // User closed popup
+      } else if (error.code === 'auth/operation-not-allowed') {
+        setLoginError('ยังไม่ได้เปิดใช้งาน GitHub Sign-In ใน Firebase Console (Authentication > Sign-in method)');
+      } else if (error.code === 'auth/account-exists-with-different-credential') {
+        setLoginError('อีเมลนี้เคยลงทะเบียนด้วยวิธีอื่นไว้แล้ว');
+      } else {
+        setLoginError('เกิดข้อผิดพลาดในการเข้าสู่ระบบด้วย GitHub');
+      }
+    } finally {
+      setSocialLoading(false);
+    }
+  };
+
   const handleRegister = async () => {
     if (!registerForm.name || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
       setRegisterError('กรุณากรอกข้อมูลให้ครบ'); return;
@@ -506,15 +638,22 @@ export default function StockJinApp() {
       const userCredential = await createUserWithEmailAndPassword(auth, registerForm.email, registerForm.password);
       const newUser = userCredential.user;
       // สถานะ pending — ต้องรอ Admin อนุมัติ
-      await setDoc(doc(db, 'users', newUser.uid), {
-        name: registerForm.name, email: registerForm.email, role: 'staff', status: 'pending', createdAt: serverTimestamp()
+      const newUserData = {
+        name: registerForm.name,
+        email: registerForm.email,
+        role: 'staff',
+        position: 'พนักงานทั่วไป',
+        status: 'pending',
+        provider: 'password',
+        createdAt: serverTimestamp()
+      };
+      await setDoc(doc(db, 'users', newUser.uid), newUserData);
+      setUser({
+        uid: newUser.uid,
+        id: newUser.uid,
+        ...newUserData
       });
-      // Sign out ทันที — ให้รอ Admin approve ก่อน
-      await signOut(auth);
-      showConfirm('สมัครสมาชิกสำเร็จ', 'บัญชีของท่านอยู่ระหว่างการรอการอนุมัติจากผู้ดูแลระบบ กรุณารอสักครู่', () => {
-        setIsRegisterMode(false);
-        setRegisterForm({ name: '', email: '', password: '', confirmPassword: '' });
-      }, 'info');
+      showNotification('สมัครสมาชิกสำเร็จ บัญชีของคุณอยู่ระหว่างรอการอนุมัติ');
     } catch (error) {
       console.error("Register Error:", error);
       if (error.code === 'auth/email-already-in-use') setRegisterError('อีเมลนี้ถูกใช้งานแล้ว');
@@ -523,7 +662,17 @@ export default function StockJinApp() {
     }
   };
 
-  const handleLogout = async () => { try { await signOut(auth); setUser(null); setActiveTab('menu'); setLoginForm({ username: '', password: '' }); setNotifications([]); } catch (error) { console.error("Logout Error:", error); } };
+  const handleLogout = async () => { 
+    try { 
+      await signOut(auth); 
+      setUser(null); 
+      setActiveTab('dashboard'); 
+      setLoginForm({ username: '', password: '' }); 
+      setNotifications([]); 
+    } catch (error) { 
+      console.error("Logout Error:", error); 
+    } 
+  };
 
   // --- UPDATE PROFILE (ชื่อ + รูปโปรไฟล์) ---
   const handleUpdateProfile = async (newName, photoFile, shouldRemovePhoto = false) => {
@@ -748,16 +897,28 @@ export default function StockJinApp() {
   // --- SHARED TAB CONTENT ---
   const renderTabContent = () => (
     <>
-      {activeTab === 'dashboard' && user && <TabDashboard 
-          transactions={transactions} 
-          products={products}
-          categories={categories}
-          dateFilterType={dateFilterType} 
-          setDateFilterType={setDateFilterType} 
-          setCustomStartDate={setCustomStartDate} 
-          setCustomEndDate={setCustomEndDate}
-          handleSendDailyReport={handleSendDailyReport}
-      />}
+      {activeTab === 'dashboard' && user && (
+        dashboardSubTab === 'smart' ? (
+          <SmartDashboardView 
+            user={user}
+            products={products}
+            transactions={transactions}
+            categories={categories}
+            setActiveTab={setActiveTab}
+          />
+        ) : (
+          <TabDashboard 
+            transactions={transactions} 
+            products={products}
+            categories={categories}
+            dateFilterType={dateFilterType} 
+            setDateFilterType={setDateFilterType} 
+            setCustomStartDate={setCustomStartDate} 
+            setCustomEndDate={setCustomEndDate}
+            handleSendDailyReport={handleSendDailyReport}
+          />
+        )
+      )}
       {activeTab === 'stock' && user && <TabStock 
           products={products} categories={categories}
           isEditingStock={isEditingStock} setIsEditingStock={setIsEditingStock}
@@ -820,42 +981,54 @@ export default function StockJinApp() {
 
   // --- RENDER MAIN ---
   if (isLoadingAuth) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="text-center space-y-3"><Loader2 size={40} className="animate-spin text-indigo-600 mx-auto"/><p className="text-slate-700 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p></div></div>;
-  }
-
-  // หน้ารอการอนุมัติ
-  if (user && user.status === 'pending') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-indigo-50 p-4">
-        <div className="pending-approval-card">
-          <div className="pending-approval-icon">
-            <ShieldAlert size={48} className="text-yellow-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-800 mt-4">รอการอนุมัติ</h2>
-          <p className="text-sm text-gray-500 mt-2 text-center leading-relaxed">
-            บัญชี <strong className="text-indigo-600">{user.email}</strong> ของคุณ<br/>
-            อยู่ระหว่างรอการอนุมัติจากผู้ดูแลระบบ
-          </p>
-          <div className="pending-approval-status">
-            <div className="pending-dot" />
-            <span>กำลังรอการอนุมัติ...</span>
-          </div>
-          <button onClick={handleLogout} className="pending-logout-btn">
-            ออกจากระบบ
-          </button>
+      <div className="min-h-screen flex items-center justify-center bg-[#f4f5fa]">
+        <div className="text-center space-y-3">
+          <Loader2 size={40} className="animate-spin text-[#6355d8] mx-auto"/>
+          <p className="text-slate-700 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p>
         </div>
       </div>
     );
   }
 
-  if (!user && activeTab !== 'menu') setActiveTab('menu');
+  // หน้ารอการอนุมัติ (Pending Approval)
+  if (user && user.status === 'pending') {
+    return (
+      <ModernPendingApproval 
+        user={user} 
+        handleLogout={handleLogout} 
+        onCheckStatus={handleCheckUserStatus} 
+      />
+    );
+  }
+
+  // ยังไม่ได้เข้าสู่ระบบ (Modern Auth View)
+  if (!user) {
+    return (
+      <ModernAuthView 
+        loginForm={loginForm}
+        setLoginForm={setLoginForm}
+        handleLogin={handleLogin}
+        loginError={loginError}
+        isRegisterMode={isRegisterMode}
+        setIsRegisterMode={setIsRegisterMode}
+        registerForm={registerForm}
+        setRegisterForm={setRegisterForm}
+        handleRegister={handleRegister}
+        registerError={registerError}
+        handleGoogleSignIn={handleGoogleSignIn}
+        handleGithubSignIn={handleGithubSignIn}
+        socialLoading={socialLoading}
+      />
+    );
+  }
 
   // ========================
   // DESKTOP LAYOUT (≥1024px)
   // ========================
   if (isDesktop && user) {
     return (
-      <div className="desktop-layout font-sans text-gray-800 selection:bg-indigo-100">
+      <div className="smart-layout font-sans text-gray-800 selection:bg-purple-100">
         <DesktopSidebar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
@@ -863,30 +1036,108 @@ export default function StockJinApp() {
           handleLogout={handleLogout}
           unreadNotifCount={unreadNotifCount}
         />
-        <div className="desktop-content-wrapper">
-          {/* Desktop Top Header */}
-          <div className="desktop-top-header">
-            <div>
-              <h2>{tabTitles[activeTab]?.title || 'StockPro'}</h2>
-              <p>{tabTitles[activeTab]?.desc || ''}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setActiveTab('notifications')} className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
-                <Bell size={20} className="text-gray-500" />
-                {unreadNotifCount > 0 && <span className="notif-badge-header">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
-              </button>
-              <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold text-sm border border-indigo-200 overflow-hidden">{user.photoURL ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" /> : user.name?.charAt(0)}</div>
-            </div>
-          </div>
+        <div className="smart-main-wrapper flex-1 flex flex-col min-h-screen overflow-x-hidden">
+          {/* Top Header */}
+          <TopHeader 
+            user={user}
+            unreadNotifCount={unreadNotifCount}
+            setActiveTab={setActiveTab}
+            handleLogout={handleLogout}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            onSearchSubmit={(q) => {
+              if (q) setActiveTab('stock');
+            }}
+          />
 
-          {/* Desktop Content Area */}
-          <div className="desktop-content-area">
-            {renderTabContent()}
-          </div>
+          {/* Desktop Content Grid */}
+          <main className={`smart-content-grid flex-1 ${activeTab === 'dashboard' ? 'has-right-panel' : ''}`}>
+            {/* Main Area */}
+            <div className="space-y-6 min-w-0 max-w-full">
+              {activeTab === 'dashboard' ? (
+                <>
+                  {/* Mode Switcher */}
+                  <div className="flex items-center justify-between px-1 -mb-2">
+                    <div className="text-xs font-bold text-gray-500">
+                      ภาพรวมระบบและสถานะคลัง
+                    </div>
+                    <div className="bg-white p-1 rounded-2xl shadow-xs border border-gray-100 flex text-xs font-bold">
+                      <button 
+                        onClick={() => setDashboardSubTab('smart')}
+                        className={`px-4 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'smart' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+                      >
+                        🏡 หน้าจอควบคุม (Smart Controls)
+                      </button>
+                      <button 
+                        onClick={() => setDashboardSubTab('analytics')}
+                        className={`px-4 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'analytics' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+                      >
+                        📊 รายงานและสถิติ (Analytics)
+                      </button>
+                    </div>
+                  </div>
+
+                  {dashboardSubTab === 'smart' ? (
+                    <SmartDashboardView 
+                      user={user}
+                      products={products}
+                      transactions={transactions}
+                      categories={categories}
+                      setActiveTab={setActiveTab}
+                    />
+                  ) : (
+                    <div className="smart-tab-container">
+                      <TabDashboard 
+                        transactions={transactions} 
+                        products={products}
+                        categories={categories}
+                        dateFilterType={dateFilterType} 
+                        setDateFilterType={setDateFilterType} 
+                        setCustomStartDate={setCustomStartDate} 
+                        setCustomEndDate={setCustomEndDate}
+                        handleSendDailyReport={handleSendDailyReport}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="smart-tab-container">
+                  <div className="mb-4 pb-3 border-b border-gray-100 flex justify-between items-center">
+                    <div>
+                      <h2 className="text-xl font-black text-gray-800 tracking-tight">
+                        {tabTitles[activeTab]?.title || 'StockPro'}
+                      </h2>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {tabTitles[activeTab]?.desc || ''}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => setActiveTab('dashboard')}
+                      className="text-xs font-bold text-[#6355d8] hover:underline"
+                    >
+                      ← กลับหน้าหลัก
+                    </button>
+                  </div>
+                  {renderTabContent()}
+                </div>
+              )}
+            </div>
+
+            {/* Right Panel (Shown ONLY on Dashboard tab) */}
+            {activeTab === 'dashboard' && (
+              <div className="hidden xl:block shrink-0">
+                <SmartRightPanel 
+                  user={user}
+                  transactions={transactions}
+                  products={products}
+                />
+              </div>
+            )}
+          </main>
         </div>
 
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
-        {showToast && <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-indigo-500 rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
+        {showToast && <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
       </div>
     );
   }
@@ -895,40 +1146,93 @@ export default function StockJinApp() {
   // MOBILE LAYOUT (<1024px)
   // ========================
   return (
-    <div className="bg-gray-50 min-h-screen font-sans text-gray-800 flex justify-center selection:bg-indigo-100">
-      <div className="w-full max-w-md bg-gray-50 h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
+    <div className="bg-[#f4f5fa] min-h-screen font-sans text-gray-800 flex justify-center selection:bg-purple-100">
+      <div className="w-full max-w-md bg-[#f4f5fa] h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
         {/* Navbar */}
-        <div className="bg-slate-900 px-6 py-4 sticky top-0 z-40 flex justify-between items-center shadow-lg border-b-4 border-indigo-500">
-          <div className="flex items-center gap-3"><div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-700 text-white"><Package size={20} strokeWidth={2.5}/></div><div><h1 className="text-lg font-black text-indigo-300 tracking-wide leading-none">StockPro</h1><p className="text-[10px] text-slate-400 opacity-80">Inventory & Workforce Platform</p></div></div>
-          {user && <div className="flex items-center gap-2">
-            <button onClick={() => setActiveTab('notifications')} className="relative p-1.5 rounded-full hover:bg-slate-800 transition-colors">
-              <Bell size={18} className="text-slate-300" />
-              {unreadNotifCount > 0 && <span className="notif-badge-mobile">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
-            </button>
-            <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-indigo-300 font-bold text-xs border border-slate-700 overflow-hidden">{user.photoURL ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" /> : user.name.charAt(0)}</div>
-          </div>}
+        <div className="bg-[#6355d8] px-5 py-3.5 sticky top-0 z-40 flex justify-between items-center shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-xs">
+              <Package size={20} strokeWidth={2.5}/>
+            </div>
+            <div>
+              <h1 className="text-base font-black text-white tracking-wide leading-none">StockPro</h1>
+              <p className="text-[10px] text-white/80 mt-0.5">Inventory & Workforce Platform</p>
+            </div>
+          </div>
+          {user && (
+            <div className="flex items-center gap-2">
+              <button onClick={() => setActiveTab('notifications')} className="relative p-1.5 rounded-full hover:bg-white/10 transition-colors text-white">
+                <Bell size={18} />
+                {unreadNotifCount > 0 && <span className="smart-notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
+              </button>
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs border border-white/30 overflow-hidden">
+                {user.photoURL ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" /> : user.name.charAt(0)}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content */}
-        <div className="p-4 flex-1 overflow-y-auto scrollbar-hide pb-24 bg-gray-50">
-          {renderTabContent()}
+        <div className="p-4 flex-1 overflow-y-auto scrollbar-hide pb-24 space-y-4">
+          {activeTab === 'dashboard' ? (
+            <>
+              {/* Mobile Sub-tab switch */}
+              <div className="flex bg-white p-1 rounded-2xl shadow-xs border border-gray-100 text-xs font-bold">
+                <button 
+                  onClick={() => setDashboardSubTab('smart')}
+                  className={`flex-1 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'smart' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500'}`}
+                >
+                  🏡 สมาร์ทโฮม
+                </button>
+                <button 
+                  onClick={() => setDashboardSubTab('analytics')}
+                  className={`flex-1 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'analytics' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500'}`}
+                >
+                  📊 สถิติสต็อก
+                </button>
+              </div>
+
+              {dashboardSubTab === 'smart' ? (
+                <>
+                  <SmartDashboardView 
+                    user={user}
+                    products={products}
+                    transactions={transactions}
+                    categories={categories}
+                    setActiveTab={setActiveTab}
+                  />
+                  <div className="mt-4">
+                    <SmartRightPanel 
+                      user={user}
+                      transactions={transactions}
+                      products={products}
+                    />
+                  </div>
+                </>
+              ) : (
+                renderTabContent()
+              )}
+            </>
+          ) : (
+            renderTabContent()
+          )}
         </div>
 
         {/* Bottom Nav */}
         {user && (
           <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200 px-6 py-2 flex justify-between items-center z-50 pb-8 safe-area-pb shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-            <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dashboard' ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}><LayoutDashboard size={22} strokeWidth={activeTab==='dashboard'?2.5:2}/><span className="text-[9px] font-bold">ภาพรวม</span></button>
-            <button onClick={() => setActiveTab('stock')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'stock' ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}><Package size={22} strokeWidth={activeTab==='stock'?2.5:2}/><span className="text-[9px] font-bold">คลัง</span></button>
-            <div className="relative -top-8 group"><div className={`absolute inset-0 bg-indigo-400 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity ${activeTab === 'transaction' ? 'block' : 'hidden'}`}></div><button onClick={() => setActiveTab('transaction')} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-slate-900/30 border-[6px] border-gray-50 transition-all active:scale-90 ${activeTab === 'transaction' ? 'bg-gradient-to-br from-indigo-500 to-indigo-700 text-white scale-110' : 'bg-gray-800 text-white'}`}><ArrowRightLeft size={28} strokeWidth={2.5} /></button></div>
-            <button onClick={() => setActiveTab('status')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'status' ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}><ClipboardList size={22} strokeWidth={activeTab==='status'?2.5:2}/><span className="text-[9px] font-bold">สถานะ</span></button>
+            <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dashboard' ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}><LayoutDashboard size={22} strokeWidth={activeTab==='dashboard'?2.5:2}/><span className="text-[9px] font-bold">ภาพรวม</span></button>
+            <button onClick={() => setActiveTab('stock')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'stock' ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}><Package size={22} strokeWidth={activeTab==='stock'?2.5:2}/><span className="text-[9px] font-bold">คลัง</span></button>
+            <div className="relative -top-8 group"><div className={`absolute inset-0 bg-purple-400 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity ${activeTab === 'transaction' ? 'block' : 'hidden'}`}></div><button onClick={() => setActiveTab('transaction')} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-purple-900/30 border-[6px] border-[#f4f5fa] transition-all active:scale-90 ${activeTab === 'transaction' ? 'bg-[#6355d8] text-white scale-110' : 'bg-gray-800 text-white'}`}><ArrowRightLeft size={28} strokeWidth={2.5} /></button></div>
+            <button onClick={() => setActiveTab('status')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'status' ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}><ClipboardList size={22} strokeWidth={activeTab==='status'?2.5:2}/><span className="text-[9px] font-bold">สถานะ</span></button>
             <button
               onClick={() => setShowMoreDrawer(true)}
-              className={`flex flex-col items-center gap-1 transition-all ${ ['hr','documents','menu','notifications'].includes(activeTab) ? 'text-indigo-600 scale-110' : 'text-gray-400'}`}
+              className={`flex flex-col items-center gap-1 transition-all ${ ['hr','documents','menu','notifications'].includes(activeTab) ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}
             >
               <div className="relative">
                 <Menu size={22} strokeWidth={['hr','documents','menu','notifications'].includes(activeTab)?2.5:2}/>
                 {(['hr','documents','menu','notifications'].includes(activeTab) || unreadNotifCount > 0) && (
-                  <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${unreadNotifCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-indigo-500'}`} />
+                  <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${unreadNotifCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-[#6355d8]'}`} />
                 )}
               </div>
               <span className="text-[9px] font-bold">อื่นๆ</span>
@@ -946,7 +1250,7 @@ export default function StockJinApp() {
         />
         
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
-        {showToast && <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-indigo-500 rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
+        {showToast && <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
       </div>
     </div>
   );

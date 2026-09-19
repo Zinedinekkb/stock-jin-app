@@ -593,7 +593,7 @@ export default function TabUserDirectory({ user }) {
               <AlertTriangle size={28} color="#dc2626" />
             </div>
             <h3 style={{ fontSize: 16, fontWeight: 800, color: '#111827', marginBottom: 8 }}>
-              ระงับบัญชี "{showDeactivateConfirm.name}"?
+              ระงับบัญชี &ldquo;{showDeactivateConfirm.name}&rdquo;?
             </h3>
             <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
               ผู้ใช้คนนี้จะไม่สามารถเข้าสู่ระบบได้จนกว่าจะเปิดใช้งานใหม่

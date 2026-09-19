@@ -1,86 +1,91 @@
 // app/components/DesktopSidebar.js
 'use client';
-import React from 'react';
-import { LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, LogOut, Clock, FolderOpen, Bell, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  Home, Package, ArrowRightLeft, ClipboardList, Bell, 
+  Clock, FolderOpen, Users, Settings, SlidersHorizontal, 
+  QrCode, LogOut, Sparkles
+} from 'lucide-react';
 
 const menuItems = [
-  { key: 'dashboard', label: 'แดชบอร์ด', icon: LayoutDashboard },
+  { key: 'dashboard', label: 'แดชบอร์ด', icon: Home },
   { key: 'stock', label: 'คลังสินค้า', icon: Package },
   { key: 'transaction', label: 'เบิก/รับสินค้า', icon: ArrowRightLeft },
   { key: 'status', label: 'สถานะรายการ', icon: ClipboardList },
-  { key: 'notifications', label: 'แจ้งเตือน', icon: Bell },
   { key: 'hr', label: 'เข้า-ออกงาน / ลา', icon: Clock },
   { key: 'documents', label: 'เอกสาร', icon: FolderOpen },
-  { key: 'users', label: 'จัดการบัญชี', icon: Users, adminOnly: true },
-  { key: 'menu', label: 'ตั้งค่า', icon: Menu },
+  { key: 'users', label: 'จัดการสิทธิ์', icon: Users, adminOnly: true },
+  { key: 'notifications', label: 'แจ้งเตือน', icon: Bell },
+  { key: 'menu', label: 'ตั้งค่า', icon: Settings },
 ];
 
-export default function DesktopSidebar({ activeTab, setActiveTab, user, handleLogout, unreadNotifCount = 0 }) {
-  return (
-    <aside className="desktop-sidebar">
-      {/* Logo */}
-      <div className="sidebar-logo-section">
-        <div className="sidebar-logo-circle">
-          <Package size={28} strokeWidth={2.5} />
-        </div>
-        <div className="sidebar-logo-text">
-          <h1>StockPro</h1>
-          <p>Inventory & Workforce Platform</p>
-        </div>
-      </div>
+export default function DesktopSidebar({ 
+  activeTab, 
+  setActiveTab, 
+  user, 
+  handleLogout, 
+  unreadNotifCount = 0 
+}) {
+  const [hoveredTab, setHoveredTab] = useState(null);
 
-      {/* Navigation */}
-      <nav className="sidebar-nav">
-        {menuItems.filter(item => !item.adminOnly || user?.role === 'admin').map(item => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.key;
-          const showBadge = item.key === 'notifications' && unreadNotifCount > 0;
-          return (
-            <button
-              key={item.key}
-              onClick={() => setActiveTab(item.key)}
-              className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
-            >
-              <div className="relative">
-                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-                {showBadge && (
-                  <span className="sidebar-notif-badge">
-                    {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
-                  </span>
+  return (
+    <aside className="smart-sidebar">
+      {/* Top Brand / Home Icon */}
+      <div className="smart-sidebar-nav">
+        {menuItems
+          .filter(item => !item.adminOnly || user?.role === 'admin')
+          .map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.key;
+            const showBadge = item.key === 'notifications' && unreadNotifCount > 0;
+
+            return (
+              <div 
+                key={item.key} 
+                className="relative flex items-center justify-center w-full"
+                onMouseEnter={() => setHoveredTab(item.key)}
+                onMouseLeave={() => setHoveredTab(null)}
+              >
+                <button
+                  onClick={() => setActiveTab(item.key)}
+                  className={`smart-sidebar-item ${isActive ? 'active' : ''}`}
+                  title={item.label}
+                >
+                  <div className="relative flex items-center justify-center">
+                    <Icon 
+                      size={22} 
+                      strokeWidth={isActive ? 2.5 : 2} 
+                      className={isActive ? 'text-[#6355d8]' : 'text-white/80 group-hover:text-white'}
+                    />
+                    {showBadge && (
+                      <span className="smart-sidebar-badge">
+                        {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                      </span>
+                    )}
+                  </div>
+                </button>
+
+                {/* Floating Tooltip */}
+                {hoveredTab === item.key && (
+                  <div className="smart-sidebar-tooltip">
+                    {item.label}
+                  </div>
                 )}
               </div>
-              <span>{item.label}</span>
-              {isActive && <div className="sidebar-active-indicator" />}
-            </button>
-          );
-        })}
-      </nav>
+            );
+          })}
+      </div>
 
-      {/* User info + Logout */}
-      {user && (
-        <div className="sidebar-footer">
-          <div className="sidebar-user-info">
-            <div className="sidebar-user-avatar">
-              {user.photoURL ? (
-                <img src={user.photoURL} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-              ) : (
-                user.name?.charAt(0) || 'U'
-              )}
-            </div>
-            <div className="sidebar-user-details">
-              <span className="sidebar-user-name">{user.name}</span>
-              <span className="sidebar-user-role">
-                {user.role === 'admin' ? '👑 ผู้ดูแลระบบ' : '✅ พนักงาน'}
-                {user.position ? ` (${user.position})` : ''}
-              </span>
-            </div>
-          </div>
-          <button onClick={handleLogout} className="sidebar-logout-btn">
-            <LogOut size={18} />
-            <span>ออกจากระบบ</span>
-          </button>
-        </div>
-      )}
+      {/* Bottom Circle Action (Scan / Quick Action) */}
+      <div className="smart-sidebar-bottom">
+        <button 
+          onClick={() => setActiveTab('stock')}
+          className="smart-sidebar-circle-btn"
+          title="สแกนหรือจัดการด่วน"
+        >
+          <QrCode size={20} strokeWidth={2.5} className="text-white" />
+        </button>
+      </div>
     </aside>
   );
 }

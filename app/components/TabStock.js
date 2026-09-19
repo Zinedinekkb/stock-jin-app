@@ -479,40 +479,42 @@ export default function TabStock({
                         </DragOverlay>
                       </DndContext>
                     ) : (
-                      /* === VIEW MODE: ปกติ (ไม่มี drag) === */
-                      catProducts.map((p) => {
-                        const pMinStock = p.minStock || 5;
-                        const pIsLowStock = p.stock > 0 && p.stock <= pMinStock;
-                        const pIsOutOfStock = p.stock === 0;
-                        return (
-                        <div key={p.id} className={`p-3.5 rounded-2xl shadow-sm border flex justify-between items-center relative overflow-hidden transition-all duration-300 ${
-                          pIsOutOfStock
-                            ? 'bg-red-50 border-red-300 ring-1 ring-red-200'
-                            : pIsLowStock
-                            ? 'bg-gradient-to-r from-red-50 to-white border-red-200'
-                            : 'bg-white border-gray-200 hover:border-green-300'
-                        }`}>
-                          <div className={`absolute left-0 top-0 bottom-0 w-[5px] ${
-                            pIsOutOfStock || pIsLowStock
-                              ? 'bg-red-500'
-                              : !cat.color.startsWith('#') ? cat.color : ''
-                          }`} style={(!pIsOutOfStock && !pIsLowStock && cat.color.startsWith('#')) ? {backgroundColor: cat.color} : {}}></div>
-                          <div className="pl-3 flex-1">
-                             <div className="flex items-center gap-1.5">
-                               <h3 className={`font-bold text-sm ${pIsOutOfStock ? 'text-red-700' : 'text-gray-800'}`}>{p.name}</h3>
-                               {pIsOutOfStock && <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold animate-pulse">หมด!</span>}
-                               {pIsLowStock && !pIsOutOfStock && <span className="text-[9px] bg-yellow-500 text-white px-1.5 py-0.5 rounded font-bold">ใกล้หมด</span>}
-                             </div>
-                             <p className="text-[10px] text-gray-500 bg-gray-50 inline-block px-1.5 rounded mt-1 font-mono">#{p.sku}</p>
+                      /* === VIEW MODE: ปกติ (ไม่มี drag) - มือถือ 1 คอลัมน์, จอใหญ่ 2-3 คอลัมน์ === */
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                        {catProducts.map((p) => {
+                          const pMinStock = p.minStock || 5;
+                          const pIsLowStock = p.stock > 0 && p.stock <= pMinStock;
+                          const pIsOutOfStock = p.stock === 0;
+                          return (
+                          <div key={p.id} className={`p-3.5 rounded-2xl shadow-xs border flex justify-between items-center relative overflow-hidden transition-all duration-300 ${
+                            pIsOutOfStock
+                              ? 'bg-red-50 border-red-300 ring-1 ring-red-200'
+                              : pIsLowStock
+                              ? 'bg-gradient-to-r from-red-50 to-white border-red-200'
+                              : 'bg-white border-gray-200 hover:border-purple-300 hover:shadow-xs'
+                          }`}>
+                            <div className={`absolute left-0 top-0 bottom-0 w-[5px] ${
+                              pIsOutOfStock || pIsLowStock
+                                ? 'bg-red-500'
+                                : !cat.color.startsWith('#') ? cat.color : ''
+                            }`} style={(!pIsOutOfStock && !pIsLowStock && cat.color.startsWith('#')) ? {backgroundColor: cat.color} : {}}></div>
+                            <div className="pl-3 flex-1 min-w-0">
+                               <div className="flex items-center gap-1.5 flex-wrap">
+                                 <h3 className={`font-bold text-sm truncate ${pIsOutOfStock ? 'text-red-700' : 'text-gray-800'}`}>{p.name}</h3>
+                                 {pIsOutOfStock && <span className="text-[9px] bg-red-500 text-white px-1.5 py-0.5 rounded font-bold animate-pulse">หมด!</span>}
+                                 {pIsLowStock && !pIsOutOfStock && <span className="text-[9px] bg-yellow-500 text-white px-1.5 py-0.5 rounded font-bold">ใกล้หมด</span>}
+                               </div>
+                               <p className="text-[10px] text-gray-500 bg-gray-50 inline-block px-1.5 rounded mt-1 font-mono">#{p.sku}</p>
+                            </div>
+                            <div className="text-right pl-2 shrink-0">
+                                <p className={`text-lg font-black ${pIsOutOfStock ? 'text-red-600' : pIsLowStock ? 'text-orange-600' : 'text-gray-800'}`}>{p.stock}</p>
+                                <p className={`text-[10px] font-medium ${pIsLowStock || pIsOutOfStock ? 'text-red-400' : 'text-gray-500'}`}>
+                                  {pIsLowStock || pIsOutOfStock ? `ขั้นต่ำ: ${pMinStock}` : p.unit}
+                                </p>
+                            </div>
                           </div>
-                          <div className="text-right">
-                              <p className={`text-lg font-black ${pIsOutOfStock ? 'text-red-600' : pIsLowStock ? 'text-orange-600' : 'text-green-800'}`}>{p.stock}</p>
-                              <p className={`text-[10px] font-medium ${pIsLowStock || pIsOutOfStock ? 'text-red-400' : 'text-gray-500'}`}>
-                                {pIsLowStock || pIsOutOfStock ? `ขั้นต่ำ: ${pMinStock}` : p.unit}
-                              </p>
-                          </div>
-                        </div>
-                      );})
+                        );})}
+                      </div>
                     )}
                   </div>
                 )}

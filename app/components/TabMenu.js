@@ -170,10 +170,26 @@ export default function TabMenu({
                     </h3>
                     <div className="space-y-2">
                       {pendingUsers.map(u => (
-                        <div key={u.id} className="bg-white p-3 rounded-xl border border-orange-100 shadow-sm flex justify-between items-center">
-                          <div>
-                            <p className="font-bold text-gray-800 text-sm">{u.name}</p>
-                            <p className="text-xs text-gray-500">{u.email}</p>
+                        <div key={u.id} className="bg-white p-3 rounded-xl border border-orange-100 shadow-sm flex justify-between items-center gap-2">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center overflow-hidden border border-orange-200 shrink-0">
+                              {u.photoURL ? (
+                                <img src={u.photoURL} alt={u.name} className="w-full h-full object-cover" />
+                              ) : (
+                                (u.name?.charAt(0) || 'U').toUpperCase()
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="font-bold text-gray-800 text-sm truncate">{u.name}</p>
+                                {u.provider && (
+                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-purple-100 text-[#6355d8] border border-purple-200">
+                                    {u.provider.includes('google') ? 'Google' : u.provider.includes('github') ? 'GitHub' : 'Email'}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                            </div>
                           </div>
                           <div className="flex gap-2">
                             <button onClick={() => handleRejectUser(u)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 active:scale-95 transition-all" title="ปฏิเสธ">
