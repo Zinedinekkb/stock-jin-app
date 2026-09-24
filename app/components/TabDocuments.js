@@ -13,6 +13,7 @@ import {
 
 const DOC_CATEGORIES = [
   { value: 'all', label: 'ทั้งหมด', icon: '📁' },
+  { value: 'leave', label: 'ใบลา / คำขอ', icon: '📋' },
   { value: 'order', label: 'ใบสั่งของ', icon: '🧾' },
   { value: 'receipt', label: 'ใบเสร็จ', icon: '💰' },
   { value: 'contract', label: 'สัญญา', icon: '📝' },
@@ -20,7 +21,8 @@ const DOC_CATEGORIES = [
   { value: 'other', label: 'อื่นๆ', icon: '📄' },
 ];
 
-const getFileIcon = (url = '', type) => {
+const getFileIcon = (url = '', type, name = '') => {
+  if (type === 'leave' || name?.includes('ใบขอลา') || name?.includes('ใบลา')) return <FileText size={20} className="text-purple-600" />;
   if (type === 'image') return <Image size={20} className="text-blue-500" />;
   if (url.includes('drive.google')) return <File size={20} className="text-yellow-600" />;
   if (url.includes('line') || url.includes('chat')) return <Link2 size={20} className="text-green-600" />;
@@ -224,7 +226,7 @@ export default function TabDocuments({ user }) {
             return (
               <div key={item.id} className="docs-card">
                 <div className="docs-card-top">
-                  <div className="docs-file-icon">{getFileIcon(item.url, item.category)}</div>
+                  <div className="docs-file-icon">{getFileIcon(item.url, item.category, item.name)}</div>
                   <div className="docs-card-actions">
                     <button
                       className={`docs-action-btn ${item.starred ? 'starred' : ''}`}

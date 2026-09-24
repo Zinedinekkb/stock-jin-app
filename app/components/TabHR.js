@@ -16,6 +16,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import CameraAttendanceModal from './CameraAttendanceModal';
 import AttendancePhotoModal from './AttendancePhotoModal';
+import LeaveDocumentModal from './LeaveDocumentModal';
 
 const LEAVE_TYPES = [
   { value: 'sick', label: 'ลาป่วย', color: '#ef4444', bg: '#fef2f2' },
@@ -50,6 +51,10 @@ export default function TabHR({ user }) {
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [selectedRecordForPhoto, setSelectedRecordForPhoto] = useState(null);
 
+  // Leave Document Modal State
+  const [leaveDocModalOpen, setLeaveDocModalOpen] = useState(false);
+  const [selectedLeaveForDoc, setSelectedLeaveForDoc] = useState(null);
+
   // Admin Team States
   const [adminSubTab, setAdminSubTab] = useState('attendance'); // 'attendance' | 'leaves'
   const [teamLeaves, setTeamLeaves] = useState([]);
@@ -58,6 +63,11 @@ export default function TabHR({ user }) {
   const showNote = (msg) => {
     setNotification(msg);
     setTimeout(() => setNotification(''), 2500);
+  };
+
+  const handleOpenLeaveDoc = (leaveItem) => {
+    setSelectedLeaveForDoc(leaveItem);
+    setLeaveDocModalOpen(true);
   };
 
   // 1. Listen to own attendance
@@ -240,18 +250,29 @@ export default function TabHR({ user }) {
     }
     setIsSubmittingLeave(true);
     try {
-      await addDoc(collection(db, 'leaves'), {
+      const newLeave = {
         userId: user.uid,
         userName: user.name,
+        userPosition: user.position || 'เจ้าหน้าที่ปฏิบัติการ',
+        department: user.department || 'ฝ่ายคลังสินค้าและการจัดส่ง',
         ...leaveForm,
         status: 'pending',
         createdAt: serverTimestamp(),
-      });
+      };
+      const docRef = await addDoc(collection(db, 'leaves'), newLeave);
       setLeaveForm({ type: 'sick', startDate: '', endDate: '', reason: '' });
       setShowLeaveForm(false);
-      showNote('✅ ส่งคำขอลาเรียบร้อย!');
+      showNote('✅ ส่งคำขอลาเรียบร้อย! เปิดเอกสารใบลาให้คุณแล้ว');
+
+      // Open Leave Document modal immediately for the new leave request
+      setSelectedLeaveForDoc({
+        id: docRef.id,
+        ...newLeave,
+        createdAt: new Date(),
+      });
+      setLeaveDocModalOpen(true);
     } catch (e) {
-      showNote('เกิดข้อผิดพลาด');
+      showNote('เกิดข้อผิดพลาด: ' + e.message);
     }
     setIsSubmittingLeave(false);
   };
@@ -261,11 +282,11 @@ export default function TabHR({ user }) {
       await updateDoc(doc(db, 'leaves', id), {
         status,
         approvedBy: user.name,
-        approvedAt: new Date().toLocaleString('th-TH'),
+        approvedAt: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
       });
-      showNote(status === 'approved' ? '✅ อนุมัติแล้ว' : '❌ ปฏิเสธแล้ว');
+      showNote(status === 'approved' ? '✅ อนุมัติการลาแล้ว' : '❌ ปฏิเสธแล้ว');
     } catch (e) {
-      showNote('เกิดข้อผิดพลาด');
+      showNote('เกิดข้อผิดพลาด: ' + e.message);
     }
   };
 
@@ -487,7 +508,18 @@ export default function TabHR({ user }) {
                         </p>
                         <p className="hr-leave-reason">{lv.reason}</p>
                       </div>
-                      {statusBadge(lv.status)}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenLeaveDoc(lv)}
+                          className="hr-doc-btn"
+                          title="ดูและพิมพ์ใบลา (PDF)"
+                        >
+                          <FileText size={13} />
+                          <span>ใบลา PDF</span>
+                        </button>
+                        {statusBadge(lv.status)}
+                      </div>
                     </div>
                   );
                 })
@@ -647,26 +679,39 @@ export default function TabHR({ user }) {
                           </p>
                           <p className="hr-leave-reason">{lv.reason}</p>
                         </div>
-                        {lv.status === 'pending' ? (
-                          <div className="hr-admin-actions">
-                            <button
-                              type="button"
-                              className="hr-approve-btn"
-                              onClick={() => handleLeaveAction(lv.id, 'approved')}
-                            >
-                              <CheckCircle size={16} />
-                            </button>
-                            <button
-                              type="button"
-                              className="hr-reject-btn"
-                              onClick={() => handleLeaveAction(lv.id, 'rejected')}
-                            >
-                              <XCircle size={16} />
-                            </button>
-                          </div>
-                        ) : (
-                          statusBadge(lv.status)
-                        )}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenLeaveDoc(lv)}
+                            className="hr-doc-btn"
+                            title="ดูและพิมพ์ใบลา (PDF)"
+                          >
+                            <FileText size={13} />
+                            <span>ใบลา PDF</span>
+                          </button>
+                          {lv.status === 'pending' ? (
+                            <div className="hr-admin-actions">
+                              <button
+                                type="button"
+                                className="hr-approve-btn"
+                                onClick={() => handleLeaveAction(lv.id, 'approved')}
+                                title="อนุมัติ"
+                              >
+                                <CheckCircle size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                className="hr-reject-btn"
+                                onClick={() => handleLeaveAction(lv.id, 'rejected')}
+                                title="ปฏิเสธ"
+                              >
+                                <XCircle size={16} />
+                              </button>
+                            </div>
+                          ) : (
+                            statusBadge(lv.status)
+                          )}
+                        </div>
                       </div>
                     );
                   })
@@ -694,6 +739,18 @@ export default function TabHR({ user }) {
           setSelectedRecordForPhoto(null);
         }}
         record={selectedRecordForPhoto}
+      />
+
+      {/* Official Leave Document A4 & PDF Generator Modal */}
+      <LeaveDocumentModal
+        isOpen={leaveDocModalOpen}
+        onClose={() => {
+          setLeaveDocModalOpen(false);
+          setSelectedLeaveForDoc(null);
+        }}
+        leave={selectedLeaveForDoc}
+        currentUser={user}
+        onSuccessSave={(msg) => showNote(msg)}
       />
     </div>
   );
