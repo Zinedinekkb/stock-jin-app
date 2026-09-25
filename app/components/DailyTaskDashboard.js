@@ -26,6 +26,7 @@ import {
 } from '../services/taskService';
 import { isAdmin } from '../utils/permissions';
 import CreateTaskModal from './CreateTaskModal';
+import LeaveDocumentModal from './LeaveDocumentModal';
 
 const POSITION_TABS = [
   { key: 'my', label: '⭐ งานของฉัน', icon: '⭐' },
@@ -64,6 +65,24 @@ export default function DailyTaskDashboard({
   // Note dialog state
   const [noteModalConfig, setNoteModalConfig] = useState({ isOpen: false, task: null, noteText: '' });
   const [deleteConfirmTask, setDeleteConfirmTask] = useState(null);
+
+  // Leave Document & Review modal states
+  const [leaveDocModalOpen, setLeaveDocModalOpen] = useState(false);
+  const [selectedLeaveForDoc, setSelectedLeaveForDoc] = useState(null);
+  const [pendingLeavesListModalOpen, setPendingLeavesListModalOpen] = useState(false);
+
+  const handlePendingLeavesClick = () => {
+    if (!pendingLeaves || pendingLeaves.length === 0) {
+      showNotification('ไม่มีคำขอลารอการอนุมัติในขณะนี้');
+      return;
+    }
+    if (pendingLeaves.length === 1) {
+      setSelectedLeaveForDoc(pendingLeaves[0]);
+      setLeaveDocModalOpen(true);
+    } else {
+      setPendingLeavesListModalOpen(true);
+    }
+  };
 
   const todayKey = useMemo(() => getTodayKey(), []);
   const isUserAdmin = isAdmin(user);
@@ -399,8 +418,8 @@ export default function DailyTaskDashboard({
 
             {/* Card 2: Pending Leaves */}
             <button
-              onClick={() => setActiveTab('hr')}
-              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group"
+              onClick={handlePendingLeavesClick}
+              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group cursor-pointer"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xl">⏱️</span>
@@ -411,9 +430,11 @@ export default function DailyTaskDashboard({
                 </span>
               </div>
               <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-[#6355d8]">
-                คำขอลารอยืนยัน
+                คำขอลารอพิจารณา
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">เปิดแท็บ HR และเวลา →</div>
+              <div className="text-[10px] text-purple-600 font-semibold mt-0.5">
+                {pendingLeaves.length > 0 ? '📄 คลิกตรวจเอกสาร & อนุมัติ →' : 'ไม่มีคำขอค้าง'}
+              </div>
             </button>
 
             {/* Card 3: Pending Transactions */}
@@ -999,6 +1020,92 @@ export default function DailyTaskDashboard({
           </div>
         </div>
       )}
+
+      {/* Modal: Pending Leaves Quick Review List */}
+      {pendingLeavesListModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-[#6355d8] flex items-center justify-center font-bold text-lg">
+                  📄
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-800">
+                    คำขอลางานรอการพิจารณา ({pendingLeaves.length})
+                  </h3>
+                  <p className="text-xs text-slate-400">เลือกรายการเพื่อเปิดตรวจเอกสาร A4 และลงนาม</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPendingLeavesListModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto space-y-2.5 flex-1 pr-1">
+              {pendingLeaves.map((lv) => (
+                <div
+                  key={lv.id}
+                  className="p-4 rounded-2xl bg-slate-50 hover:bg-purple-50/50 border border-slate-200/80 hover:border-purple-200 transition-all flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-800 truncate">{lv.userName}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">
+                        {lv.type === 'sick' ? 'ลาป่วย' : lv.type === 'personal' ? 'ลากิจ' : 'ลาพักร้อน'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      📅 {lv.startDate} ถึง {lv.endDate} ({lv.department || 'ไม่ระบุแผนก'})
+                    </p>
+                    <p className="text-xs text-slate-600 italic mt-1 truncate">
+                      &ldquo;{lv.reason || '-'}&rdquo;
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedLeaveForDoc(lv);
+                      setLeaveDocModalOpen(true);
+                      setPendingLeavesListModalOpen(false);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-xs transition-all shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
+                  >
+                    <span>📄 ตรวจเอกสาร</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setPendingLeavesListModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official Leave Document A4 & PDF Generator / Signing Modal */}
+      <LeaveDocumentModal
+        isOpen={leaveDocModalOpen}
+        onClose={() => {
+          setLeaveDocModalOpen(false);
+          setSelectedLeaveForDoc(null);
+        }}
+        leave={selectedLeaveForDoc}
+        currentUser={user}
+        onSuccessSave={(msg) => showNotification(msg)}
+        onLeaveUpdated={() => {
+          showNotification('✅ อัปเดตสถานะคำขอลาเรียบร้อยแล้ว');
+        }}
+      />
     </div>
   );
 }

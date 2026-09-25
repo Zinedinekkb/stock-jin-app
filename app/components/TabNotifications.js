@@ -169,7 +169,7 @@ export default function TabNotifications({
               className={`notif-card ${getNotifBorderColor(notif)} ${!notif.read ? 'unread' : ''}`}
               onClick={() => {
                 if (!notif.read) onMarkAsRead?.(notif.id);
-                if (notif.navigateTo) onNavigate?.(notif.navigateTo);
+                if (notif.navigateTo) onNavigate?.(notif.navigateTo, notif);
               }}
             >
               <div className="notif-card-icon">

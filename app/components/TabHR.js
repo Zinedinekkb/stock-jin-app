@@ -32,8 +32,8 @@ function getTimeStr() {
   return new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function TabHR({ user }) {
-  const [view, setView] = useState('my'); // 'my' | 'team' (admin)
+export default function TabHR({ user, initialView = 'my', initialSubTab = 'attendance' }) {
+  const [view, setView] = useState(initialView); // 'my' | 'team' (admin)
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [todayRecord, setTodayRecord] = useState(null);
@@ -56,9 +56,14 @@ export default function TabHR({ user }) {
   const [selectedLeaveForDoc, setSelectedLeaveForDoc] = useState(null);
 
   // Admin Team States
-  const [adminSubTab, setAdminSubTab] = useState('attendance'); // 'attendance' | 'leaves'
+  const [adminSubTab, setAdminSubTab] = useState(initialSubTab); // 'attendance' | 'leaves'
   const [teamLeaves, setTeamLeaves] = useState([]);
   const [teamAttendance, setTeamAttendance] = useState([]);
+
+  useEffect(() => {
+    if (initialView) setView(initialView);
+    if (initialSubTab) setAdminSubTab(initialSubTab);
+  }, [initialView, initialSubTab]);
 
   const showNote = (msg) => {
     setNotification(msg);
@@ -697,34 +702,17 @@ export default function TabHR({ user }) {
                           <button
                             type="button"
                             onClick={() => handleOpenLeaveDoc(lv)}
-                            className="hr-doc-btn"
-                            title="ดูและพิมพ์ใบลา (PDF)"
+                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                              lv.status === 'pending'
+                                ? 'bg-[#6355d8] hover:bg-[#5244c4] text-white hover:scale-105 active:scale-95 shadow-purple-500/20'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
+                            }`}
+                            title="ตรวจสอบเอกสาร A4 และลงนามพิจารณา"
                           >
-                            <FileText size={13} />
-                            <span>ใบลา PDF</span>
+                            <FileText size={14} />
+                            <span>{lv.status === 'pending' ? '📄 ตรวจสอบเอกสาร & พิจารณา' : '📄 ดูใบลา A4'}</span>
                           </button>
-                          {lv.status === 'pending' ? (
-                            <div className="hr-admin-actions">
-                              <button
-                                type="button"
-                                className="hr-approve-btn"
-                                onClick={() => handleLeaveAction(lv.id, 'approved')}
-                                title="อนุมัติ"
-                              >
-                                <CheckCircle size={16} />
-                              </button>
-                              <button
-                                type="button"
-                                className="hr-reject-btn"
-                                onClick={() => handleLeaveAction(lv.id, 'rejected')}
-                                title="ปฏิเสธ"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            </div>
-                          ) : (
-                            statusBadge(lv.status)
-                          )}
+                          {statusBadge(lv.status)}
                         </div>
                       </div>
                     );

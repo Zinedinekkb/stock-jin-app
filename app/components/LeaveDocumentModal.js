@@ -1,15 +1,15 @@
 // app/components/LeaveDocumentModal.js
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X, Download, Printer, Save, CheckCircle, FileText,
-  Sliders, Eye, Loader2
+  Sliders, Eye, Loader2, Check, AlertCircle, Sparkles, Send
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { db, storage } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const THAI_MONTHS = [
@@ -49,11 +49,14 @@ export default function LeaveDocumentModal({
   leave,
   currentUser,
   onSuccessSave,
+  onLeaveUpdated,
 }) {
   const sheetRef = useRef(null);
 
   // Modal mode: 'preview' or 'customize'
   const [activeTab, setActiveTab] = useState('preview');
+
+  const isUserAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
 
   // Customization state
   const [priorityTag, setPriorityTag] = useState('ด่วนที่สุด');
@@ -63,10 +66,33 @@ export default function LeaveDocumentModal({
   const [department, setDepartment] = useState(leave?.department || currentUser?.department || 'ฝ่ายคลังสินค้าและการจัดส่ง');
   const [position, setPosition] = useState(leave?.position || currentUser?.position || 'เจ้าหน้าที่ปฏิบัติการ');
   const [approverName, setApproverName] = useState(
-    leave?.approvedBy || (currentUser?.role === 'admin' || currentUser?.role === 'owner' ? (currentUser?.name || '') : '')
+    leave?.approvedBy || (isUserAdmin ? (currentUser?.name || '') : '')
   );
-  const [approverPosition, setApproverPosition] = useState('ผู้จัดการฝ่าย / ผู้มีอำนาจอนุมัติ');
+  const [approverPosition, setApproverPosition] = useState(
+    leave?.approverPosition || 'ผู้จัดการฝ่าย / ผู้มีอำนาจอนุมัติ'
+  );
   const [organizationName, setOrganizationName] = useState('บริษัท สต็อกโปร จำกัด (StockPro)');
+
+  // Executive Decision state
+  const [currentStatus, setCurrentStatus] = useState(leave?.status || 'pending');
+  const [approverNote, setApproverNote] = useState(
+    leave?.approverNote || leave?.rejectedReason || 'อนุญาตให้ลาหยุดงานตามที่เสนอได้'
+  );
+  const [approvedAtDate, setApprovedAtDate] = useState(leave?.approvedAt || null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Sync state when leave changes
+  useEffect(() => {
+    if (leave) {
+      setCurrentStatus(leave.status || 'pending');
+      setApproverName(leave.approvedBy || (isUserAdmin ? (currentUser?.name || '') : ''));
+      setApproverPosition(leave.approverPosition || 'ผู้จัดการฝ่าย / ผู้มีอำนาจอนุมัติ');
+      setApproverNote(leave.approverNote || leave.rejectedReason || 'อนุญาตให้ลาหยุดงานตามที่เสนอได้');
+      setApprovedAtDate(leave.approvedAt || null);
+      if (leave.department) setDepartment(leave.department);
+      if (leave.position) setPosition(leave.position);
+    }
+  }, [leave, currentUser, isUserAdmin]);
 
   // Processing state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -87,14 +113,74 @@ export default function LeaveDocumentModal({
   const formattedStart = formatThaiDate(leave.startDate, useThaiDigits);
   const formattedEnd = formatThaiDate(leave.endDate, useThaiDigits);
 
-  const isUserAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
   const applicantFullName = leave.userName || currentUser?.name || 'พนักงาน';
 
-  const isApproved = leave.status === 'approved';
-  const isRejected = leave.status === 'rejected';
+  const isApproved = currentStatus === 'approved';
+  const isRejected = currentStatus === 'rejected';
 
   const submittedRawDate = leave.createdAt?.toDate ? leave.createdAt.toDate() : (leave.createdAt ? new Date(leave.createdAt) : new Date());
   const formattedSubmittedDate = formatThaiDate(submittedRawDate, useThaiDigits);
+
+  // Apply Executive Decision (Approve or Reject)
+  const handleApplyDecision = async (decisionType) => {
+    if (!leave?.id || isUpdatingStatus) return;
+    setIsUpdatingStatus(true);
+    const dateFormatted = new Date().toLocaleDateString('th-TH', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+
+    try {
+      const isApprove = decisionType === 'approved';
+      const cleanApprover = approverName.trim() || currentUser?.name || 'ผู้ดูแลระบบ';
+      const cleanPosition = approverPosition.trim() || 'ผู้มีอำนาจอนุมัติ';
+      const cleanNote = approverNote.trim() || (isApprove ? 'อนุญาตให้ลาหยุดงานตามที่เสนอได้' : 'เนื่องจากมีความจำเป็นเร่งด่วนในสายงาน');
+
+      const updatePayload = {
+        status: decisionType,
+        approvedBy: cleanApprover,
+        approverPosition: cleanPosition,
+        approvedAt: dateFormatted,
+        updatedAt: serverTimestamp(),
+      };
+
+      if (isApprove) {
+        updatePayload.approverNote = cleanNote;
+      } else {
+        updatePayload.rejectedReason = cleanNote;
+      }
+
+      await updateDoc(doc(db, 'leaves', leave.id), updatePayload);
+
+      setCurrentStatus(decisionType);
+      setApprovedAtDate(dateFormatted);
+      setStatusMessage(isApprove ? '✅ อนุมัติและลงนามเรียบร้อยแล้ว!' : '❌ บันทึกผลไม่อนุมัติเรียบร้อยแล้ว');
+
+      // LINE Notification
+      fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `📢 ผลการพิจารณาคำขอลา!\nพนักงาน: ${leave.userName}\nประเภท: ${leaveTypeLabel}\nผลการพิจารณา: ${isApprove ? '✅ อนุมัติแล้ว' : '❌ ไม่อนุมัติ'}\nผู้อนุมัติ: ${cleanApprover} (${cleanPosition})\nบันทึก: ${cleanNote}`
+        })
+      }).catch(() => {});
+
+      if (onSuccessSave) {
+        onSuccessSave(isApprove ? '✅ อนุมัติและลงนามคำขอลาเรียบร้อยแล้ว' : '❌ บันทึกผลปฏิเสธคำขอลาเรียบร้อยแล้ว');
+      }
+      if (onLeaveUpdated) {
+        onLeaveUpdated({ id: leave.id, ...updatePayload });
+      }
+
+      setTimeout(() => setStatusMessage(''), 3000);
+    } catch (err) {
+      console.error('Error applying decision:', err);
+      alert('เกิดข้อผิดพลาดในการบันทึกผลการพิจารณา: ' + err.message);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
 
   // 1. Download PDF to computer
   const handleDownloadPdf = async () => {
@@ -284,6 +370,104 @@ export default function LeaveDocumentModal({
             </div>
           )}
         </div>
+
+        {/* Executive Approval & Signing Station (For Admins) */}
+        {isUserAdmin && (
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 mx-4 sm:mx-6 my-2 rounded-2xl shadow-md border border-indigo-900/60 no-print">
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-sm border border-indigo-500/30">
+                  ✍️
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-indigo-200">
+                      ส่วนการพิจารณาและลงนามคำขอลา (Executive Decision)
+                    </h4>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                      currentStatus === 'approved' 
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                        : currentStatus === 'rejected'
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                    }`}>
+                      {currentStatus === 'approved' ? '● อนุมัติแล้ว' : currentStatus === 'rejected' ? '● ไม่อนุมัติ' : '○ รอการอนุมัติ'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 mt-0.5">
+                    ตรวจสอบเนื้อหากระดาษด้านล่าง แล้วเลือกผลการพิจารณาเพื่อลงนามและประทับตรารับรองเอกสารทันที
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleApplyDecision('approved')}
+                  disabled={isUpdatingStatus}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black shadow-md transition-all ${
+                    currentStatus === 'approved'
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-105 active:scale-95'
+                  } disabled:opacity-50`}
+                >
+                  {isUpdatingStatus ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                  <span>{currentStatus === 'approved' ? 'อนุมัติแล้ว (ลงนามซ้ำ)' : '✅ อนุมัติและลงนาม'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyDecision('rejected')}
+                  disabled={isUpdatingStatus}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+                    currentStatus === 'rejected'
+                      ? 'bg-rose-900/60 text-rose-300 border border-rose-500/50'
+                      : 'bg-white/10 hover:bg-rose-600/80 text-white border border-white/10 hover:border-rose-500/50'
+                  } disabled:opacity-50`}
+                >
+                  <span>❌ ไม่อนุมัติ</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Inputs: Approver name, title, and remark */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 text-xs">
+              <div>
+                <label className="text-[10px] text-indigo-300 font-bold block mb-1">ชื่อ-นามสกุล ผู้อนุมัติ</label>
+                <input
+                  type="text"
+                  value={approverName}
+                  onChange={(e) => setApproverName(e.target.value)}
+                  placeholder="ชื่อ-นามสกุล ผู้อนุมัติ"
+                  className="w-full bg-white/10 border border-white/15 rounded-xl px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-indigo-300 font-bold block mb-1">ตำแหน่งผู้อนุมัติ</label>
+                <input
+                  type="text"
+                  value={approverPosition}
+                  onChange={(e) => setApproverPosition(e.target.value)}
+                  placeholder="ตำแหน่งผู้อนุมัติ"
+                  className="w-full bg-white/10 border border-white/15 rounded-xl px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-indigo-300 font-bold block mb-1">ความเห็น/คำสั่งผู้บังคับบัญชา</label>
+                <input
+                  type="text"
+                  value={approverNote}
+                  onChange={(e) => setApproverNote(e.target.value)}
+                  placeholder="เช่น อนุญาตตามที่เสนอ หรือ ระบุเหตุผลที่ไม่อนุมัติ"
+                  className="w-full bg-white/10 border border-white/15 rounded-xl px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal Body */}
         <div className="leave-modal-body">
@@ -544,7 +728,12 @@ export default function LeaveDocumentModal({
                     <span className="w-4 h-4 border border-gray-700 rounded-sm flex items-center justify-center text-xs font-black">
                       {isApproved ? '✓' : ''}
                     </span>
-                    <span>อนุญาตให้ลาหยุดงานตามที่เสนอได้</span>
+                    <span>
+                      อนุญาตให้ลาหยุดงานตามที่เสนอได้{' '}
+                      {isApproved && approverNote && approverNote !== 'อนุญาตให้ลาหยุดงานตามที่เสนอได้' ? (
+                        <span className="text-indigo-900 font-semibold">({approverNote})</span>
+                      ) : ''}
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2.5">
@@ -552,7 +741,11 @@ export default function LeaveDocumentModal({
                       {isRejected ? '✓' : ''}
                     </span>
                     <span>
-                      ไม่อนุญาต {isRejected ? `(เนื่องจากมีความจำเป็นเร่งด่วนในสายงาน)` : 'เนื่องจาก...........................................................................................'}
+                      ไม่อนุญาต {isRejected ? (
+                        <span className="text-red-700 font-semibold">(เนื่องจาก: {approverNote || 'มีความจำเป็นเร่งด่วนในสายงาน'})</span>
+                      ) : (
+                        'เนื่องจาก...........................................................................................'
+                      )}
                     </span>
                   </div>
 
@@ -584,7 +777,7 @@ export default function LeaveDocumentModal({
                       ตำแหน่ง {approverPosition}
                     </div>
                     <div className="text-xs text-gray-500">
-                      วันที่ {leave.approvedAt ? formatThaiDate(leave.approvedAt, useThaiDigits) : (isApproved ? formattedSubmittedDate : '..... / ..... / ..........')}
+                      วันที่ {approvedAtDate ? (useThaiDigits ? toThaiNumerals(approvedAtDate) : approvedAtDate) : (isApproved ? formattedSubmittedDate : '..... / ..... / ..........')}
                     </div>
                   </div>
                 </div>

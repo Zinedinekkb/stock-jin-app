@@ -47,6 +47,8 @@ export default function StockJinApp() {
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dashboardSubTab, setDashboardSubTab] = useState('tasks'); // 'tasks' | 'analytics'
+  const [hrInitialView, setHrInitialView] = useState('my');
+  const [hrInitialSubTab, setHrInitialSubTab] = useState('attendance');
 
   // --- DESKTOP DETECTION ---
   useEffect(() => {
@@ -905,7 +907,13 @@ export default function StockJinApp() {
   const handleDismissNotif = (notifId) => {
     setNotifications(prev => prev.filter(n => n.id !== notifId));
   };
-  const handleNotifNavigate = (tab) => {
+  const handleNotifNavigate = (tab, notif) => {
+    if (tab === 'hr' || notif?.category === 'hr') {
+      setHrInitialView('team');
+      setHrInitialSubTab('leaves');
+      setActiveTab('hr');
+      return;
+    }
     setActiveTab(tab);
   };
 
@@ -996,7 +1004,13 @@ export default function StockJinApp() {
           onDismiss={handleDismissNotif}
           onNavigate={handleNotifNavigate}
       />}
-      {activeTab === 'hr' && user && <TabHR user={user} />}
+      {activeTab === 'hr' && user && (
+        <TabHR 
+          user={user} 
+          initialView={hrInitialView} 
+          initialSubTab={hrInitialSubTab} 
+        />
+      )}
       {activeTab === 'documents' && <TabDocuments user={user} />}
       {activeTab === 'menu' && <TabMenu 
           user={user} loginForm={loginForm} setLoginForm={setLoginForm} handleLogin={handleLogin} handleLogout={handleLogout} loginError={loginError}
