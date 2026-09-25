@@ -249,7 +249,9 @@ export default function ModernAuthView({
             {/* Name (Register only) */}
             {isRegisterMode && (
               <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">ชื่อ-นามสกุล / ชื่อเล่น</label>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                  ชื่อจริง - นามสกุล (ภาษาไทย) <span className="text-red-500">*</span>
+                </label>
                 <div className="relative">
                   <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
                     <User size={16} />
@@ -257,12 +259,15 @@ export default function ModernAuthView({
                   <input
                     type="text"
                     required
-                    placeholder="เช่น สมชาย ใจดี (ต้น)"
+                    placeholder="เช่น สมชาย ใจดี"
                     value={registerForm.name}
                     onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
                     className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#6355d8] focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
                   />
                 </div>
+                <p className="text-[10px] text-gray-500 mt-1 pl-1">
+                  *กรุณากรอกชื่อและนามสกุลจริง เพื่อใช้พิมพ์ลงในเอกสารบริษัทและใบขอลาอย่างเป็นทางการ
+                </p>
               </div>
             )}
 

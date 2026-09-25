@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import {
   Bell, AlertTriangle, Package, BarChart3, UserPlus,
   CheckCircle2, Clock, Filter, CheckCheck, Trash2, X,
-  ChevronRight, ArrowDownCircle, ArrowUpCircle, ShieldAlert
+  ChevronRight, ArrowDownCircle, ArrowUpCircle, ShieldAlert, FileText
 } from 'lucide-react';
 import { hasPermission, isAdmin } from '../utils/permissions';
 
@@ -14,6 +14,7 @@ const NOTIF_CATEGORIES = [
   { key: 'movement', label: 'เคลื่อนไหว', icon: Package, color: 'text-blue-600', bg: 'bg-blue-100' },
   { key: 'dashboard', label: 'รายงาน', icon: BarChart3, color: 'text-purple-600', bg: 'bg-purple-100' },
   { key: 'user', label: 'ผู้ใช้', icon: UserPlus, color: 'text-orange-600', bg: 'bg-orange-100' },
+  { key: 'hr', label: 'บุคลากร/ลา', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-100' },
 ];
 
 export default function TabNotifications({
@@ -26,10 +27,11 @@ export default function TabNotifications({
 }) {
   const [activeFilter, setActiveFilter] = useState('all');
 
-  // กรองตามสิทธิ์ — Staff ไม่เห็นแจ้งเตือนประเภท user
+  // กรองตามสิทธิ์ — Staff ไม่เห็นแจ้งเตือนประเภท user หรือ hr
   const accessibleNotifs = useMemo(() => {
     return notifications.filter(n => {
       if (n.category === 'user' && !isAdmin(user)) return false;
+      if (n.category === 'hr' && !isAdmin(user)) return false;
       return true;
     });
   }, [notifications, user]);
@@ -42,7 +44,7 @@ export default function TabNotifications({
 
   // นับ unread ตามหมวด
   const unreadCounts = useMemo(() => {
-    const counts = { all: 0, stock: 0, movement: 0, dashboard: 0, user: 0 };
+    const counts = { all: 0, stock: 0, movement: 0, dashboard: 0, user: 0, hr: 0 };
     accessibleNotifs.forEach(n => {
       if (!n.read) {
         counts.all++;
@@ -66,6 +68,8 @@ export default function TabNotifications({
         return <BarChart3 size={20} className="text-purple-500" />;
       case 'user':
         return <UserPlus size={20} className="text-orange-500" />;
+      case 'hr':
+        return <FileText size={20} className="text-indigo-500" />;
       default:
         return <Bell size={20} className="text-gray-500" />;
     }
@@ -77,6 +81,7 @@ export default function TabNotifications({
       case 'movement': return notif.subType === 'IN' ? 'border-l-green-500' : 'border-l-blue-500';
       case 'dashboard': return 'border-l-purple-500';
       case 'user': return 'border-l-orange-500';
+      case 'hr': return 'border-l-indigo-500';
       default: return 'border-l-gray-300';
     }
   };
@@ -97,6 +102,7 @@ export default function TabNotifications({
   // Filter tabs ที่ Staff เข้าถึงได้
   const availableCategories = NOTIF_CATEGORIES.filter(cat => {
     if (cat.key === 'user' && !isAdmin(user)) return false;
+    if (cat.key === 'hr' && !isAdmin(user)) return false;
     return true;
   });
 

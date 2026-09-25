@@ -99,6 +99,7 @@ export default function StockJinApp() {
   const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [registerError, setRegisterError] = useState('');
   const [pendingUsers, setPendingUsers] = useState([]);
+  const [pendingLeaves, setPendingLeaves] = useState([]);
   const [approvalHistory, setApprovalHistory] = useState([]);
 
   // --- NOTIFICATION STATE ---
@@ -239,12 +240,18 @@ export default function StockJinApp() {
     const unsubTx = onSnapshot(qTx, (snapshot) => setTransactions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
 
     let unsubPending = () => {};
+    let unsubLeaves = () => {};
     let unsubHist = () => {};
 
     if (user.role === 'admin') {
       const qPending = query(collection(db, 'users'), where('status', '==', 'pending'));
       unsubPending = onSnapshot(qPending, (snapshot) => {
         setPendingUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      });
+
+      const qLeaves = query(collection(db, 'leaves'), where('status', '==', 'pending'));
+      unsubLeaves = onSnapshot(qLeaves, (snapshot) => {
+        setPendingLeaves(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       });
 
       const qHist = collection(db, 'approval_history');
@@ -260,7 +267,7 @@ export default function StockJinApp() {
       });
     }
 
-    return () => { unsubProd(); unsubCat(); unsubTx(); unsubPending(); unsubHist(); };
+    return () => { unsubProd(); unsubCat(); unsubTx(); unsubPending(); unsubLeaves(); unsubHist(); };
   }, [user]);
 
   // --- HELPER FUNCTIONS ---
@@ -627,8 +634,13 @@ export default function StockJinApp() {
   };
 
   const handleRegister = async () => {
-    if (!registerForm.name || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
-      setRegisterError('กรุณากรอกข้อมูลให้ครบ'); return;
+    const trimmedName = (registerForm.name || '').trim();
+    if (!trimmedName || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
+      setRegisterError('กรุณากรอกข้อมูลให้ครบถ้วน'); return;
+    }
+    const nameParts = trimmedName.split(/\s+/);
+    if (nameParts.length < 2) {
+      setRegisterError('กรุณากรอกทั้งชื่อจริงและนามสกุล (เว้นวรรคระหว่างชื่อและนามสกุล เช่น สมชาย ใจดี)'); return;
     }
     if (registerForm.password !== registerForm.confirmPassword) {
       setRegisterError('รหัสผ่านไม่ตรงกัน'); return;
@@ -639,7 +651,7 @@ export default function StockJinApp() {
       const newUser = userCredential.user;
       // สถานะ pending — ต้องรอ Admin อนุมัติ
       const newUserData = {
-        name: registerForm.name,
+        name: trimmedName,
         email: registerForm.email,
         role: 'staff',
         position: 'พนักงานทั่วไป',
@@ -674,11 +686,11 @@ export default function StockJinApp() {
     } 
   };
 
-  // --- UPDATE PROFILE (ชื่อ + รูปโปรไฟล์) ---
-  const handleUpdateProfile = async (newName, photoFile, shouldRemovePhoto = false) => {
+  // --- UPDATE PROFILE (ชื่อ + รูปโปรไฟล์ + ข้อมูลส่วนตัว) ---
+  const handleUpdateProfile = async (newName, photoFile, shouldRemovePhoto = false, extraData = {}) => {
     if (!user || !user.uid) throw new Error('User not found');
     const userRef = doc(db, 'users', user.uid);
-    const updateData = { name: newName };
+    const updateData = { name: newName, ...extraData };
 
     // อัปโหลดรูปใหม่
     if (photoFile) {
@@ -704,6 +716,7 @@ export default function StockJinApp() {
     setUser(prev => ({
       ...prev,
       name: newName,
+      ...extraData,
       ...(photoFile ? { photoURL: updateData.photoURL } : {}),
       ...(shouldRemovePhoto ? { photoURL: null } : {})
     }));
@@ -851,8 +864,22 @@ export default function StockJinApp() {
       });
     }
 
+    // 6. คำขอลาหยุดงานรออนุมัติ (เฉพาะ Admin / เจ้าของร้าน)
+    if (isAdmin(user) && pendingLeaves.length > 0) {
+      notifs.push({
+        id: `leave_pending_${Date.now()}`,
+        category: 'hr',
+        title: `📝 คำขอลาใหม่รออนุมัติ ${pendingLeaves.length} รายการ`,
+        message: `มีพนักงานส่งคำขอลางานรอการพิจารณาอนุมัติ`,
+        items: pendingLeaves.map(l => `${l.userName || 'พนักงาน'} ขอ${l.type === 'sick' ? 'ลาป่วย' : l.type === 'personal' ? 'ลากิจ' : 'ลาพักร้อน'} (${l.startDate} ถึง ${l.endDate})`),
+        timestamp: Date.now(),
+        read: false,
+        navigateTo: 'hr'
+      });
+    }
+
     setNotifications(notifs);
-  }, [products, transactions, pendingUsers, user]);
+  }, [products, transactions, pendingUsers, pendingLeaves, user]);
 
   // สร้าง notifications ทุกครั้งที่ข้อมูลเปลี่ยน
   useEffect(() => {
@@ -863,6 +890,7 @@ export default function StockJinApp() {
   const unreadNotifCount = useMemo(() => {
     return notifications.filter(n => {
       if (n.category === 'user' && !isAdmin(user)) return false;
+      if (n.category === 'hr' && !isAdmin(user)) return false;
       return !n.read;
     }).length;
   }, [notifications, user]);

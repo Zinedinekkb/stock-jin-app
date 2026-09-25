@@ -62,7 +62,9 @@ export default function LeaveDocumentModal({
   const [recipient, setRecipient] = useState('หัวหน้างาน / ผู้จัดการฝ่ายปฏิบัติการ');
   const [department, setDepartment] = useState(leave?.department || currentUser?.department || 'ฝ่ายคลังสินค้าและการจัดส่ง');
   const [position, setPosition] = useState(leave?.position || currentUser?.position || 'เจ้าหน้าที่ปฏิบัติการ');
-  const [approverName, setApproverName] = useState(leave?.approvedBy || currentUser?.role === 'admin' ? (currentUser?.name || '') : '');
+  const [approverName, setApproverName] = useState(
+    leave?.approvedBy || (currentUser?.role === 'admin' || currentUser?.role === 'owner' ? (currentUser?.name || '') : '')
+  );
   const [approverPosition, setApproverPosition] = useState('ผู้จัดการฝ่าย / ผู้มีอำนาจอนุมัติ');
   const [organizationName, setOrganizationName] = useState('บริษัท สต็อกโปร จำกัด (StockPro)');
 
@@ -85,11 +87,14 @@ export default function LeaveDocumentModal({
   const formattedStart = formatThaiDate(leave.startDate, useThaiDigits);
   const formattedEnd = formatThaiDate(leave.endDate, useThaiDigits);
 
-  const submittedDate = leave.createdAt?.toDate ? leave.createdAt.toDate() : new Date();
-  const formattedSubmittedDate = formatThaiDate(submittedDate, useThaiDigits);
+  const isUserAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
+  const applicantFullName = leave.userName || currentUser?.name || 'พนักงาน';
 
   const isApproved = leave.status === 'approved';
   const isRejected = leave.status === 'rejected';
+
+  const submittedRawDate = leave.createdAt?.toDate ? leave.createdAt.toDate() : (leave.createdAt ? new Date(leave.createdAt) : new Date());
+  const formattedSubmittedDate = formatThaiDate(submittedRawDate, useThaiDigits);
 
   // 1. Download PDF to computer
   const handleDownloadPdf = async () => {
@@ -381,27 +386,39 @@ export default function LeaveDocumentModal({
                   />
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-gray-600 block mb-1">ชื่อผู้อนุมัติ</label>
-                  <input
-                    type="text"
-                    value={approverName}
-                    onChange={(e) => setApproverName(e.target.value)}
-                    className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5"
-                    placeholder="ชื่อ-นามสกุล ผู้อนุมัติ"
-                  />
-                </div>
+                {isUserAdmin ? (
+                  <>
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 block mb-1">ชื่อผู้อนุมัติ</label>
+                      <input
+                        type="text"
+                        value={approverName}
+                        onChange={(e) => setApproverName(e.target.value)}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="ชื่อ-นามสกุล ผู้อนุมัติ"
+                      />
+                    </div>
 
-                <div>
-                  <label className="text-xs font-bold text-gray-600 block mb-1">ตำแหน่งผู้อนุมัติ</label>
-                  <input
-                    type="text"
-                    value={approverPosition}
-                    onChange={(e) => setApproverPosition(e.target.value)}
-                    className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5"
-                    placeholder="ผู้จัดการฝ่าย / ผู้บังคับบัญชา"
-                  />
-                </div>
+                    <div>
+                      <label className="text-xs font-bold text-gray-600 block mb-1">ตำแหน่งผู้อนุมัติ</label>
+                      <input
+                        type="text"
+                        value={approverPosition}
+                        onChange={(e) => setApproverPosition(e.target.value)}
+                        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="ผู้จัดการฝ่าย / ผู้บังคับบัญชา"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-3 bg-amber-50/80 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                    <span className="text-sm">🔒</span>
+                    <div>
+                      <span className="font-bold block">ส่วนของผู้อนุมัติ (จำกัดสิทธิ์)</span>
+                      <span>เฉพาะผู้ดูแลระบบหรือหัวหน้างานที่มีสิทธิ์เท่านั้นที่สามารถระบุหรือแก้ไขข้อมูลผู้อนุมัติได้</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t flex justify-end">
@@ -496,10 +513,15 @@ export default function LeaveDocumentModal({
               {/* Applicant Signature Section */}
               <div className="mt-8 flex justify-end">
                 <div className="w-64 text-center text-sm text-gray-800 space-y-1">
-                  <div className="mb-6">ด้วยความเคารพอย่างสูง</div>
-                  <div className="text-gray-400">ลงชื่อ ................................................................</div>
+                  <div className="mb-4">ด้วยความเคารพอย่างสูง</div>
+                  <div className="text-gray-700 flex items-center justify-center gap-1.5">
+                    <span>ลงชื่อ</span>
+                    <span className="font-semibold text-gray-900 border-b border-gray-400 min-w-[150px] text-center px-2">
+                      {applicantFullName}
+                    </span>
+                  </div>
                   <div className="font-bold text-gray-900 pt-1">
-                    ({leave.userName || 'พนักงาน'})
+                    ({applicantFullName})
                   </div>
                   <div className="text-xs text-gray-600">ผู้ขออนุญาตลา</div>
                   <div className="text-xs text-gray-500">วันที่ {formattedSubmittedDate}</div>
@@ -543,21 +565,26 @@ export default function LeaveDocumentModal({
 
                 <div className="mt-6 flex justify-end">
                   <div className="w-64 text-center text-sm text-gray-800 space-y-1">
-                    <div className="text-gray-400">
+                    <div className="text-gray-700 flex items-center justify-center gap-1.5">
+                      <span>ลงชื่อ</span>
                       {isApproved && approverName ? (
-                        <div className="font-bold text-indigo-800 pb-1 text-base">{approverName}</div>
+                        <span className="font-semibold text-indigo-900 border-b border-gray-400 min-w-[150px] text-center px-2">
+                          {approverName}
+                        </span>
                       ) : (
-                        'ลงชื่อ ................................................................'
+                        <span className="text-gray-400 border-b border-dotted border-gray-400 min-w-[150px] text-center text-xs pb-0.5">
+                          {isUserAdmin ? '(ลงนาม ณ ที่นี้)' : '........................................'}
+                        </span>
                       )}
                     </div>
-                    <div className="font-bold text-gray-900">
-                      ({approverName || '................................................................'})
+                    <div className="font-bold text-gray-900 pt-1">
+                      ({approverName || (isApproved ? 'ผู้อนุมัติ' : '................................................................')})
                     </div>
                     <div className="text-xs text-gray-600">
                       ตำแหน่ง {approverPosition}
                     </div>
                     <div className="text-xs text-gray-500">
-                      วันที่ {leave.approvedAt ? formatThaiDate(leave.approvedAt, useThaiDigits) : '..... / ..... / ..........'}
+                      วันที่ {leave.approvedAt ? formatThaiDate(leave.approvedAt, useThaiDigits) : (isApproved ? formattedSubmittedDate : '..... / ..... / ..........')}
                     </div>
                   </div>
                 </div>

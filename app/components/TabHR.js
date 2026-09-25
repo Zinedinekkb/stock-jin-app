@@ -248,6 +248,10 @@ export default function TabHR({ user }) {
     if (!leaveForm.startDate || !leaveForm.endDate || !leaveForm.reason.trim()) {
       return showNote('กรุณากรอกข้อมูลให้ครบ');
     }
+    const nameParts = (user?.name || '').trim().split(/\s+/);
+    if (!user?.name || nameParts.length < 2) {
+      return showNote('⚠️ กรุณาระบุชื่อและนามสกุลจริงในหน้า "ตั้งค่า" ให้ครบถ้วนก่อนยื่นใบลา');
+    }
     setIsSubmittingLeave(true);
     try {
       const newLeave = {
@@ -255,6 +259,7 @@ export default function TabHR({ user }) {
         userName: user.name,
         userPosition: user.position || 'เจ้าหน้าที่ปฏิบัติการ',
         department: user.department || 'ฝ่ายคลังสินค้าและการจัดส่ง',
+        phone: user.phone || '',
         ...leaveForm,
         status: 'pending',
         createdAt: serverTimestamp(),
@@ -263,6 +268,15 @@ export default function TabHR({ user }) {
       setLeaveForm({ type: 'sick', startDate: '', endDate: '', reason: '' });
       setShowLeaveForm(false);
       showNote('✅ ส่งคำขอลาเรียบร้อย! เปิดเอกสารใบลาให้คุณแล้ว');
+
+      // LINE / webhook notification to admin
+      fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `📢 มีคำขอลาใหม่รออนุมัติ!\nพนักงาน: ${user.name}\nประเภท: ${leaveTypeInfo(newLeave.type).label}\nวันที่: ${newLeave.startDate} ถึง ${newLeave.endDate}\nเหตุผล: ${newLeave.reason}`
+        })
+      }).catch(() => {});
 
       // Open Leave Document modal immediately for the new leave request
       setSelectedLeaveForDoc({

@@ -38,6 +38,9 @@ export default function TabMenu({
   // --- Profile Edit State ---
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [editName, setEditName] = useState('');
+  const [editNickname, setEditNickname] = useState('');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editPhone, setEditPhone] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -50,6 +53,9 @@ export default function TabMenu({
 
   const openProfileEdit = () => {
     setEditName(user?.name || '');
+    setEditNickname(user?.nickname || '');
+    setEditDepartment(user?.department || 'ฝ่ายคลังสินค้าและการจัดส่ง');
+    setEditPhone(user?.phone || '');
     setPreviewPhoto(null);
     setSelectedFile(null);
     setProfileError('');
@@ -86,18 +92,28 @@ export default function TabMenu({
   };
 
   const handleSaveProfile = async () => {
-    if (!editName.trim()) {
-      setProfileError('กรุณากรอกชื่อ');
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      setProfileError('กรุณากรอกชื่อ-นามสกุล');
+      return;
+    }
+    const nameParts = trimmedName.split(/\s+/);
+    if (nameParts.length < 2) {
+      setProfileError('กรุณาระบุทั้งชื่อจริงและนามสกุล (เช่น สมชาย ใจดี)');
       return;
     }
     setProfileSaving(true);
     setProfileError('');
     try {
-      await handleUpdateProfile(editName.trim(), selectedFile, removePhoto);
+      await handleUpdateProfile(trimmedName, selectedFile, removePhoto, {
+        nickname: editNickname.trim(),
+        department: editDepartment.trim(),
+        phone: editPhone.trim(),
+      });
       setShowProfileEdit(false);
     } catch (err) {
       console.error('Profile update error:', err);
-      setProfileError('เกิดข้อผิดพลาดในการบันทึก');
+      setProfileError('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
     } finally {
       setProfileSaving(false);
     }
@@ -269,6 +285,66 @@ export default function TabMenu({
               </div>
             )}
 
+            {/* --- ข้อมูลส่วนบุคคล ในหน้าการตั้งค่าก่อนออกจากระบบ --- */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between px-2">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">ข้อมูลส่วนบุคคล & บัญชีผู้ใช้</p>
+                <button
+                  type="button"
+                  onClick={openProfileEdit}
+                  className="text-xs font-bold text-[#6355d8] hover:text-[#4f42c2] flex items-center gap-1 transition-colors"
+                >
+                  <Pencil size={12} /> แก้ไขข้อมูล
+                </button>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3">
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                  <div>
+                    <span className="text-[11px] text-gray-400 block">ชื่อ-นามสกุลจริง (สำหรับเอกสาร)</span>
+                    <span className="text-sm font-bold text-gray-800">
+                      {user.name || <span className="text-amber-600 font-normal">ยังไม่ได้ระบุชื่อจริง</span>}
+                    </span>
+                  </div>
+                  {user.nickname && (
+                    <div className="text-right">
+                      <span className="text-[11px] text-gray-400 block">ชื่อเล่น</span>
+                      <span className="text-sm font-semibold text-gray-700">{user.nickname}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5 text-xs">
+                  <div>
+                    <span className="text-gray-400 block text-[11px]">ตำแหน่งงาน</span>
+                    <span className="font-bold text-gray-800">{user.position || 'พนักงานทั่วไป'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[11px]">ฝ่าย / สังกัด</span>
+                    <span className="font-bold text-gray-800">{user.department || 'ฝ่ายคลังสินค้าและการจัดส่ง'}</span>
+                  </div>
+                  <div className="col-span-2 pt-1 border-t border-gray-50">
+                    <span className="text-gray-400 block text-[11px]">อีเมลบัญชี</span>
+                    <span className="font-medium text-gray-600 truncate block">{user.email}</span>
+                  </div>
+                  {user.phone && (
+                    <div className="col-span-2">
+                      <span className="text-gray-400 block text-[11px]">เบอร์โทรศัพท์ติดต่อ</span>
+                      <span className="font-bold text-gray-700">{user.phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={openProfileEdit}
+                  className="w-full mt-1 py-2 px-3 bg-purple-50 hover:bg-purple-100 text-[#6355d8] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-purple-100 cursor-pointer"
+                >
+                  <Pencil size={13} /> แก้ไขชื่อ-นามสกุล / ข้อมูลส่วนตัว
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-3">
               <p className="text-xs font-bold text-gray-400 px-2 uppercase tracking-wider">เมนูหลัก</p>
               <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -277,7 +353,7 @@ export default function TabMenu({
               </div>
             </div>
             
-            <button onClick={handleLogout} className="w-full bg-red-50 text-red-600 py-3.5 rounded-2xl font-bold flex justify-center items-center gap-2 mt-6 active:scale-95 transition-transform border border-red-100"><LogOut size={20} /> ออกจากระบบ</button>
+            <button onClick={handleLogout} className="w-full bg-red-50 text-red-600 py-3.5 rounded-2xl font-bold flex justify-center items-center gap-2 mt-6 active:scale-95 transition-transform border border-red-100 cursor-pointer"><LogOut size={20} /> ออกจากระบบ</button>
           </div>
         ) : (
           /* --- ส่วน Login / Register --- */
@@ -471,15 +547,58 @@ export default function TabMenu({
 
                 <div className="profile-form-group">
                   <label className="profile-form-label">
-                    <User size={14} className="text-green-600" /> ชื่อบัญชี
+                    <User size={14} className="text-green-600" /> ชื่อจริง - นามสกุล (สำหรับพิมพ์ในเอกสาร) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     className="profile-form-input"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    placeholder="กรอกชื่อของคุณ"
+                    placeholder="เช่น สมชาย ใจดี"
+                    maxLength={70}
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">ต้องระบุทั้งชื่อและนามสกุลจริง เพื่อใช้พิมพ์ลงในใบลาและเอกสารราชการ/บริษัท</p>
+                </div>
+
+                <div className="profile-form-group">
+                  <label className="profile-form-label">
+                    <User size={14} className="text-indigo-500" /> ชื่อเล่น
+                  </label>
+                  <input
+                    type="text"
+                    className="profile-form-input"
+                    value={editNickname}
+                    onChange={(e) => setEditNickname(e.target.value)}
+                    placeholder="เช่น ต้น, จิน"
+                    maxLength={30}
+                  />
+                </div>
+
+                <div className="profile-form-group">
+                  <label className="profile-form-label">
+                    <Briefcase size={14} className="text-blue-500" /> แผนก / ฝ่ายสังกัด
+                  </label>
+                  <input
+                    type="text"
+                    className="profile-form-input"
+                    value={editDepartment}
+                    onChange={(e) => setEditDepartment(e.target.value)}
+                    placeholder="เช่น ฝ่ายคลังสินค้าและการจัดส่ง"
                     maxLength={50}
+                  />
+                </div>
+
+                <div className="profile-form-group">
+                  <label className="profile-form-label">
+                    <Smartphone size={14} className="text-emerald-500" /> เบอร์โทรศัพท์ติดต่อ
+                  </label>
+                  <input
+                    type="tel"
+                    className="profile-form-input"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="เช่น 081-234-5678"
+                    maxLength={20}
                   />
                 </div>
 
