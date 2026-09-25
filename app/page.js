@@ -46,7 +46,7 @@ export default function StockJinApp() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [dashboardSubTab, setDashboardSubTab] = useState('smart'); // 'smart' | 'analytics'
+  const [dashboardSubTab, setDashboardSubTab] = useState('tasks'); // 'tasks' | 'analytics'
 
   // --- DESKTOP DETECTION ---
   useEffect(() => {
@@ -911,7 +911,7 @@ export default function StockJinApp() {
 
   // --- TAB TITLES (for desktop header) ---
   const tabTitles = {
-    dashboard: { title: 'ภาพรวม', desc: 'ดูสรุปยอดขาย รายรับ-รายจ่าย และสถิติต่างๆ' },
+    dashboard: { title: 'แดชบอร์ดงานประจำวัน & ภาพรวม', desc: 'รายการงานประจำวันตามตำแหน่งงาน งานที่ได้รับมอบหมาย และสถิติสต็อก' },
     stock: { title: 'จัดการวัตถุดิบและสินค้าคงคลัง', desc: 'ติดตามสต็อกสินค้า เพิ่ม/แก้ไข หมวดหมู่และรายการสินค้า' },
     transaction: { title: 'เบิก / รับสินค้า', desc: 'บันทึกรายการเบิกสินค้าออกหรือรับสินค้าเข้าคลัง' },
     status: { title: 'สถานะรายการ', desc: 'ตรวจสอบและยืนยันรายการที่รอดำเนินการ' },
@@ -926,13 +926,16 @@ export default function StockJinApp() {
   const renderTabContent = () => (
     <>
       {activeTab === 'dashboard' && user && (
-        dashboardSubTab === 'smart' ? (
+        (dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
           <SmartDashboardView 
             user={user}
             products={products}
             transactions={transactions}
             categories={categories}
             setActiveTab={setActiveTab}
+            pendingUsers={pendingUsers}
+            pendingLeaves={pendingLeaves}
+            showNotification={showNotification}
           />
         ) : (
           <TabDashboard 
@@ -1087,31 +1090,34 @@ export default function StockJinApp() {
                   {/* Mode Switcher */}
                   <div className="flex items-center justify-between px-1 -mb-2">
                     <div className="text-xs font-bold text-gray-500">
-                      ภาพรวมระบบและสถานะคลัง
+                      ภาพรวมระบบและภารกิจประจำวัน
                     </div>
                     <div className="bg-white p-1 rounded-2xl shadow-xs border border-gray-100 flex text-xs font-bold">
                       <button 
-                        onClick={() => setDashboardSubTab('smart')}
-                        className={`px-4 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'smart' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+                        onClick={() => setDashboardSubTab('tasks')}
+                        className={`px-4 py-1.5 rounded-xl transition-all ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
                       >
-                        🏡 หน้าจอควบคุม (Smart Controls)
+                        📋 แดชบอร์ดงานประจำวัน (Daily Tasks)
                       </button>
                       <button 
                         onClick={() => setDashboardSubTab('analytics')}
                         className={`px-4 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'analytics' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
                       >
-                        📊 รายงานและสถิติ (Analytics)
+                        📊 สถิติสต็อกและรายงาน (Stock Analytics)
                       </button>
                     </div>
                   </div>
 
-                  {dashboardSubTab === 'smart' ? (
+                  {(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
                     <SmartDashboardView 
                       user={user}
                       products={products}
                       transactions={transactions}
                       categories={categories}
                       setActiveTab={setActiveTab}
+                      pendingUsers={pendingUsers}
+                      pendingLeaves={pendingLeaves}
+                      showNotification={showNotification}
                     />
                   ) : (
                     <div className="smart-tab-container">
@@ -1207,10 +1213,10 @@ export default function StockJinApp() {
               {/* Mobile Sub-tab switch */}
               <div className="flex bg-white p-1 rounded-2xl shadow-xs border border-gray-100 text-xs font-bold">
                 <button 
-                  onClick={() => setDashboardSubTab('smart')}
-                  className={`flex-1 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'smart' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500'}`}
+                  onClick={() => setDashboardSubTab('tasks')}
+                  className={`flex-1 py-1.5 rounded-xl transition-all ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500'}`}
                 >
-                  🏡 สมาร์ทโฮม
+                  📋 งานประจำวัน
                 </button>
                 <button 
                   onClick={() => setDashboardSubTab('analytics')}
@@ -1220,7 +1226,7 @@ export default function StockJinApp() {
                 </button>
               </div>
 
-              {dashboardSubTab === 'smart' ? (
+              {(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
                 <>
                   <SmartDashboardView 
                     user={user}
@@ -1228,6 +1234,9 @@ export default function StockJinApp() {
                     transactions={transactions}
                     categories={categories}
                     setActiveTab={setActiveTab}
+                    pendingUsers={pendingUsers}
+                    pendingLeaves={pendingLeaves}
+                    showNotification={showNotification}
                   />
                   <div className="mt-4">
                     <SmartRightPanel 
