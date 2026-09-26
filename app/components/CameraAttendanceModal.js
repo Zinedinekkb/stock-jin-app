@@ -115,20 +115,30 @@ export default function CameraAttendanceModal({
 
   // Confirm and upload
   const handleConfirmSubmit = async () => {
-    if (!capturedData?.blob || isSubmitting) return;
+    if ((!capturedData?.blob && !capturedData?.dataUrl) || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await onConfirm({
-        blob: capturedData.blob,
-        sizeKb: capturedData.sizeKb,
-        location: location,
-        mimeType: capturedData.mimeType,
-        fileExt: capturedData.fileExt,
-      });
+      // Set a 12-second safety timeout so user is never stuck in infinite loading
+      const submitTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('การเชื่อมต่อใช้เวลานานเกินไป กรุณาลองใหม่อีกครั้ง')), 12000)
+      );
+
+      await Promise.race([
+        onConfirm({
+          blob: capturedData.blob,
+          dataUrl: capturedData.dataUrl,
+          sizeKb: capturedData.sizeKb,
+          location: location,
+          mimeType: capturedData.mimeType,
+          fileExt: capturedData.fileExt,
+        }),
+        submitTimeout,
+      ]);
+
       handleClose();
     } catch (err) {
       console.error('Submit error:', err);
-      alert('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
+      alert('เกิดข้อผิดพลาดในการบันทึก: ' + (err.message || 'โปรดตรวจสอบสัญญาณอินเทอร์เน็ต'));
       setIsSubmitting(false);
     }
   };

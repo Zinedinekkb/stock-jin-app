@@ -28,6 +28,7 @@ import * as Sentry from '@sentry/nextjs';
 
 // --- IMPORT SERVICES ---
 import { submitTransactionService, sendStockReportService, sendDailyReportService } from '@/app/services/transactionService';
+import { compressImageFile, blobToDataUrl } from '@/app/utils/cameraUtils';
 
 // --- FIREBASE IMPORTS ---
 import { db, auth, storage } from '@/lib/firebase';
@@ -696,19 +697,14 @@ export default function StockJinApp() {
 
     // อัปโหลดรูปใหม่
     if (photoFile) {
-      const storageRef = ref(storage, `profile_photos/${user.uid}`);
-      await uploadBytes(storageRef, photoFile);
-      const downloadURL = await getDownloadURL(storageRef);
-      updateData.photoURL = downloadURL;
-    } else if (shouldRemovePhoto) {
-      // ลบรูปเดิม
       try {
-        const storageRef = ref(storage, `profile_photos/${user.uid}`);
-        await deleteObject(storageRef);
-      } catch (e) {
-        // ไม่เป็นไรถ้าไม่มีรูปเดิม
-        console.log('No existing photo to delete');
+        const compressed = await compressImageFile(photoFile, { maxWidth: 320, quality: 0.75 });
+        updateData.photoURL = compressed.dataUrl;
+      } catch (err) {
+        console.warn('Compress profile photo error, fallback to blobToDataUrl:', err);
+        updateData.photoURL = await blobToDataUrl(photoFile);
       }
+    } else if (shouldRemovePhoto) {
       updateData.photoURL = null;
     }
 

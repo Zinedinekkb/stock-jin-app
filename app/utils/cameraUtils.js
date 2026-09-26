@@ -108,16 +108,29 @@ export async function captureAndCompressFrame(videoElement, options = {}) {
   const isWebpSupported = canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
   const mimeType = isWebpSupported ? 'image/webp' : 'image/jpeg';
   const fileExt = isWebpSupported ? 'webp' : 'jpg';
+  const dataUrl = canvas.toDataURL(mimeType, quality);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          return reject(new Error('การบีบอัดรูปภาพล้มเหลว'));
+          // If toBlob fails, construct fallback blob from dataUrl
+          return resolve({
+            blob: null,
+            dataUrl,
+            previewUrl: dataUrl,
+            width: targetWidth,
+            height: targetHeight,
+            sizeBytes: Math.round(dataUrl.length * 0.75),
+            sizeKb: ((dataUrl.length * 0.75) / 1024).toFixed(1),
+            mimeType,
+            fileExt,
+          });
         }
         const previewUrl = URL.createObjectURL(blob);
         resolve({
           blob,
+          dataUrl,
           previewUrl,
           width: targetWidth,
           height: targetHeight,
@@ -130,6 +143,68 @@ export async function captureAndCompressFrame(videoElement, options = {}) {
       mimeType,
       quality
     );
+  });
+}
+
+/**
+ * Convert Blob or File to Base64 Data URL.
+ * @param {Blob|File} blob
+ * @returns {Promise<string>}
+ */
+export function blobToDataUrl(blob) {
+  if (!blob) return Promise.resolve(null);
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Compress an image file to WebP (or JPEG fallback) under target dimension and size.
+ * @param {File|Blob} file
+ * @param {Object} options
+ * @returns {Promise<{ blob: Blob, dataUrl: string, sizeKb: number }>}
+ */
+export async function compressImageFile(file, options = {}) {
+  const { maxWidth = 400, quality = 0.75 } = options;
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const isWebp = canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+        const mimeType = isWebp ? 'image/webp' : 'image/jpeg';
+        const dataUrl = canvas.toDataURL(mimeType, quality);
+        canvas.toBlob(
+          (blob) => {
+            resolve({
+              blob: blob || file,
+              dataUrl,
+              sizeKb: Math.round((dataUrl.length * 0.75) / 1024),
+            });
+          },
+          mimeType,
+          quality
+        );
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 

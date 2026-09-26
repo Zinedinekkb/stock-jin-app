@@ -7,16 +7,16 @@ import {
   ChevronDown, User, Users, ClipboardList, AlertCircle, Plus, X,
   Camera, MapPin, Image as ImageIcon
 } from 'lucide-react';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import {
   collection, addDoc, onSnapshot, query, where, orderBy,
   serverTimestamp, updateDoc, doc, Timestamp
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import CameraAttendanceModal from './CameraAttendanceModal';
 import AttendancePhotoModal from './AttendancePhotoModal';
 import LeaveDocumentModal from './LeaveDocumentModal';
+import { blobToDataUrl } from '@/app/utils/cameraUtils';
 
 const LEAVE_TYPES = [
   { value: 'sick', label: 'ลาป่วย', color: '#ef4444', bg: '#fef2f2' },
@@ -202,17 +202,20 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
   };
 
   // Confirm attendance from Camera Modal (upload compressed WebP image + GPS location)
-  const handleConfirmAttendance = async ({ blob, location, fileExt = 'webp' }) => {
+  const handleConfirmAttendance = async ({ blob, dataUrl, location, fileExt = 'webp' }) => {
     setIsChecking(true);
     try {
-      // 1. Upload compressed image to Firebase Storage
-      const fileName = `${user.uid}_${Date.now()}_${cameraType}.${fileExt}`;
-      const storagePath = `attendance/${user.uid}/${fileName}`;
-      const storageRef = ref(storage, storagePath);
-      await uploadBytes(storageRef, blob, { contentType: `image/${fileExt}` });
-      const photoURL = await getDownloadURL(storageRef);
+      // 1. Get photo as Base64 Data URL (already compressed to ~10-20KB WebP)
+      let photoURL = dataUrl;
+      if (!photoURL && blob) {
+        photoURL = await blobToDataUrl(blob);
+      }
 
-      // 2. Save record to Firestore
+      if (!photoURL) {
+        throw new Error('ไม่พบข้อมูลรูปถ่าย กรุณาลองใหม่อีกครั้ง');
+      }
+
+      // 2. Save record directly to Firestore (atomic & instant in 1 operation, avoids Storage bucket 404/timeouts)
       if (cameraType === 'checkIn') {
         const now = new Date();
         const dateTs = new Date(now);
@@ -225,17 +228,20 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
           dateTimestamp: Timestamp.fromDate(dateTs),
           checkIn: getTimeStr(),
           checkInPhotoURL: photoURL,
-          checkInStoragePath: storagePath,
+          checkInStoragePath: 'inline_base64',
           checkInLocation: location || null,
           checkOut: null,
           createdAt: serverTimestamp(),
         });
         showNote('✅ เช็คอินพร้อมถ่ายรูปเรียบร้อย!');
       } else {
+        if (!todayRecord?.id) {
+          throw new Error('ไม่พบข้อมูลการเช็คอินของวันนี้ กรุณาลองใหม่อีกครั้ง');
+        }
         await updateDoc(doc(db, 'attendance', todayRecord.id), {
           checkOut: getTimeStr(),
           checkOutPhotoURL: photoURL,
-          checkOutStoragePath: storagePath,
+          checkOutStoragePath: 'inline_base64',
           checkOutLocation: location || null,
         });
         showNote('✅ เช็คเอาท์พร้อมถ่ายรูปเรียบร้อย!');

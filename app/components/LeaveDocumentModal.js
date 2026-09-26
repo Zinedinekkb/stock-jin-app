@@ -229,20 +229,33 @@ export default function LeaveDocumentModal({
         logging: false,
         backgroundColor: '#ffffff',
       });
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
 
       const pdfBlob = pdf.output('blob');
+      const pdfDataUri = pdf.output('datauristring');
       const cleanName = (leave.userName || 'พนักงาน').replace(/\s+/g, '_');
       const storageFileName = `ใบขอลา_${cleanName}_${leave.startDate}_${Date.now()}.pdf`;
-      const storageRef = ref(storage, `documents/leaves/${storageFileName}`);
 
-      // Upload to Firebase Storage
-      await uploadBytes(storageRef, pdfBlob, { contentType: 'application/pdf' });
-      const downloadUrl = await getDownloadURL(storageRef);
+      let downloadUrl = pdfDataUri;
+      // Try Firebase Storage with 2.5s timeout, fallback gracefully to data URI if Storage bucket 404
+      try {
+        const storageRef = ref(storage, `documents/leaves/${storageFileName}`);
+        const uploadTask = (async () => {
+          await uploadBytes(storageRef, pdfBlob, { contentType: 'application/pdf' });
+          return await getDownloadURL(storageRef);
+        })();
+        const timeoutTask = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Storage timeout')), 2500)
+        );
+        downloadUrl = await Promise.race([uploadTask, timeoutTask]);
+      } catch (storageErr) {
+        console.warn('Storage unavailable or timed out, using inline PDF Data URI fallback');
+        downloadUrl = pdfDataUri;
+      }
 
       // Save metadata to Firestore collection 'documents'
       await addDoc(collection(db, 'documents'), {
