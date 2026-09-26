@@ -500,143 +500,155 @@ export default function TabMenu({
         {showProfileEdit && user && (
           <div className="profile-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget && !profileSaving) setShowProfileEdit(false); }}>
             <div className="profile-modal-card">
-              {/* Header */}
+              {/* Pinned Header */}
               <div className="profile-modal-header">
-                <h3>✏️ แก้ไขโปรไฟล์</h3>
-                <p>เปลี่ยนชื่อบัญชีหรืออัปโหลดรูปโปรไฟล์</p>
-                <button className="profile-modal-close" onClick={() => !profileSaving && setShowProfileEdit(false)}>
-                  <X size={14} />
+                <div className="profile-modal-header-info">
+                  <h3>✏️ แก้ไขโปรไฟล์</h3>
+                  <p>เปลี่ยนข้อมูลส่วนตัวและอัปโหลดรูปประจำตัว</p>
+                </div>
+                <button
+                  type="button"
+                  className="profile-modal-close"
+                  onClick={() => !profileSaving && setShowProfileEdit(false)}
+                  aria-label="ปิด"
+                >
+                  <X size={16} />
                 </button>
               </div>
 
-              {/* Avatar Upload */}
-              <div className="profile-avatar-section">
-                <div className="profile-avatar-wrapper" onClick={() => fileInputRef.current?.click()}>
-                  <div className="profile-avatar-circle">
-                    {previewPhoto ? (
-                      <img src={previewPhoto} alt="Preview" />
-                    ) : (!removePhoto && user.photoURL) ? (
-                      <img src={user.photoURL} alt={user.name} />
-                    ) : (
-                      <span className="profile-avatar-initial">{editName?.charAt(0) || user.name?.charAt(0) || 'U'}</span>
-                    )}
+              {/* Scrollable Body (Avatar + All Fields) */}
+              <div className="profile-modal-body">
+                {/* Avatar Upload */}
+                <div className="profile-avatar-section">
+                  <div className="profile-avatar-wrapper" onClick={() => fileInputRef.current?.click()}>
+                    <div className="profile-avatar-circle">
+                      {previewPhoto ? (
+                        <img src={previewPhoto} alt="Preview" />
+                      ) : (!removePhoto && user.photoURL) ? (
+                        <img src={user.photoURL} alt={user.name} />
+                      ) : (
+                        <span className="profile-avatar-initial">{editName?.charAt(0) || user.name?.charAt(0) || 'U'}</span>
+                      )}
+                    </div>
+                    <div className="profile-avatar-overlay">
+                      <Camera size={22} className="text-white" />
+                      <span className="profile-avatar-overlay-text">เปลี่ยนรูป</span>
+                    </div>
                   </div>
-                  <div className="profile-avatar-overlay">
-                    <Camera size={22} className="text-white" />
-                    <span className="profile-avatar-overlay-text">เปลี่ยนรูป</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <p className="profile-avatar-hint">คลิกเพื่อเปลี่ยนรูป (JPEG, PNG, WebP — สูงสุด 2MB)</p>
+                  {(previewPhoto || (!removePhoto && user.photoURL)) && (
+                    <button onClick={handleRemoveCurrentPhoto} className="profile-remove-photo mt-1">
+                      <Trash2 size={11} className="inline mr-1" />ลบรูปโปรไฟล์
+                    </button>
+                  )}
+                </div>
+
+                {/* Form Inputs */}
+                <div className="profile-form-section">
+                  {profileError && <div className="profile-file-error">{profileError}</div>}
+
+                  <div className="profile-form-group">
+                    <label className="profile-form-label">
+                      <User size={14} className="text-green-600" /> ชื่อจริง - นามสกุล (สำหรับพิมพ์ในเอกสาร) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="profile-form-input"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      placeholder="เช่น สมชาย ใจดี"
+                      maxLength={70}
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">ต้องระบุทั้งชื่อและนามสกุลจริง เพื่อใช้พิมพ์ลงในใบลาและเอกสารราชการ/บริษัท</p>
+                  </div>
+
+                  <div className="profile-form-group">
+                    <label className="profile-form-label">
+                      <User size={14} className="text-indigo-500" /> ชื่อเล่น
+                    </label>
+                    <input
+                      type="text"
+                      className="profile-form-input"
+                      value={editNickname}
+                      onChange={(e) => setEditNickname(e.target.value)}
+                      placeholder="เช่น ต้น, จิน"
+                      maxLength={30}
+                    />
+                  </div>
+
+                  <div className="profile-form-group">
+                    <label className="profile-form-label">
+                      <Briefcase size={14} className="text-blue-500" /> แผนก / ฝ่ายสังกัด
+                    </label>
+                    <input
+                      type="text"
+                      className="profile-form-input"
+                      value={editDepartment}
+                      onChange={(e) => setEditDepartment(e.target.value)}
+                      placeholder="เช่น ฝ่ายคลังสินค้าและการจัดส่ง"
+                      maxLength={50}
+                    />
+                  </div>
+
+                  <div className="profile-form-group">
+                    <label className="profile-form-label">
+                      <Smartphone size={14} className="text-emerald-500" /> เบอร์โทรศัพท์ติดต่อ
+                    </label>
+                    <input
+                      type="tel"
+                      className="profile-form-input"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="เช่น 081-234-5678"
+                      maxLength={20}
+                    />
+                  </div>
+
+                  <div className="profile-form-group">
+                    <label className="profile-form-label">
+                      <Settings size={14} className="text-gray-400" /> อีเมล (ไม่สามารถแก้ไขได้)
+                    </label>
+                    <div className="profile-form-readonly">{user.email}</div>
+                  </div>
+
+                  <div className="profile-form-group">
+                    <label className="profile-form-label">
+                      <Briefcase size={14} className="text-gray-400" /> ตำแหน่ง (กำหนดโดยผู้ดูแล)
+                    </label>
+                    <div className="profile-form-readonly">{user.position || 'ยังไม่ระบุ'}</div>
                   </div>
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-                <p className="profile-avatar-hint">คลิกเพื่อเปลี่ยนรูป (JPEG, PNG, WebP — สูงสุด 2MB)</p>
-                {(previewPhoto || (!removePhoto && user.photoURL)) && (
-                  <button onClick={handleRemoveCurrentPhoto} className="profile-remove-photo mt-1">
-                    <Trash2 size={11} className="inline mr-1" />ลบรูปโปรไฟล์
-                  </button>
-                )}
               </div>
 
-              {/* Form */}
-              <div className="profile-form-section">
-                {profileError && <div className="profile-file-error">{profileError}</div>}
-
-                <div className="profile-form-group">
-                  <label className="profile-form-label">
-                    <User size={14} className="text-green-600" /> ชื่อจริง - นามสกุล (สำหรับพิมพ์ในเอกสาร) <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    className="profile-form-input"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    placeholder="เช่น สมชาย ใจดี"
-                    maxLength={70}
-                  />
-                  <p className="text-[10px] text-gray-400 mt-1">ต้องระบุทั้งชื่อและนามสกุลจริง เพื่อใช้พิมพ์ลงในใบลาและเอกสารราชการ/บริษัท</p>
-                </div>
-
-                <div className="profile-form-group">
-                  <label className="profile-form-label">
-                    <User size={14} className="text-indigo-500" /> ชื่อเล่น
-                  </label>
-                  <input
-                    type="text"
-                    className="profile-form-input"
-                    value={editNickname}
-                    onChange={(e) => setEditNickname(e.target.value)}
-                    placeholder="เช่น ต้น, จิน"
-                    maxLength={30}
-                  />
-                </div>
-
-                <div className="profile-form-group">
-                  <label className="profile-form-label">
-                    <Briefcase size={14} className="text-blue-500" /> แผนก / ฝ่ายสังกัด
-                  </label>
-                  <input
-                    type="text"
-                    className="profile-form-input"
-                    value={editDepartment}
-                    onChange={(e) => setEditDepartment(e.target.value)}
-                    placeholder="เช่น ฝ่ายคลังสินค้าและการจัดส่ง"
-                    maxLength={50}
-                  />
-                </div>
-
-                <div className="profile-form-group">
-                  <label className="profile-form-label">
-                    <Smartphone size={14} className="text-emerald-500" /> เบอร์โทรศัพท์ติดต่อ
-                  </label>
-                  <input
-                    type="tel"
-                    className="profile-form-input"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    placeholder="เช่น 081-234-5678"
-                    maxLength={20}
-                  />
-                </div>
-
-                <div className="profile-form-group">
-                  <label className="profile-form-label">
-                    <Settings size={14} className="text-gray-400" /> อีเมล (ไม่สามารถแก้ไขได้)
-                  </label>
-                  <div className="profile-form-readonly">{user.email}</div>
-                </div>
-
-                <div className="profile-form-group">
-                  <label className="profile-form-label">
-                    <Briefcase size={14} className="text-gray-400" /> ตำแหน่ง (กำหนดโดยผู้ดูแล)
-                  </label>
-                  <div className="profile-form-readonly">{user.position || 'ยังไม่ระบุ'}</div>
-                </div>
-
-                {/* Actions */}
-                <div className="profile-actions">
-                  <button
-                    className="profile-btn-cancel"
-                    onClick={() => setShowProfileEdit(false)}
-                    disabled={profileSaving}
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    className="profile-btn-save"
-                    onClick={handleSaveProfile}
-                    disabled={profileSaving}
-                  >
-                    {profileSaving ? (
-                      <><div className="profile-upload-spinner" /> กำลังบันทึก...</>
-                    ) : (
-                      <><Save size={16} /> บันทึกการเปลี่ยนแปลง</>
-                    )}
-                  </button>
-                </div>
+              {/* Pinned Footer Actions */}
+              <div className="profile-modal-footer">
+                <button
+                  type="button"
+                  className="profile-btn-cancel"
+                  onClick={() => setShowProfileEdit(false)}
+                  disabled={profileSaving}
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="button"
+                  className="profile-btn-save"
+                  onClick={handleSaveProfile}
+                  disabled={profileSaving}
+                >
+                  {profileSaving ? (
+                    <><div className="profile-upload-spinner" /> กำลังบันทึก...</>
+                  ) : (
+                    <><Save size={16} /> บันทึกการเปลี่ยนแปลง</>
+                  )}
+                </button>
               </div>
             </div>
           </div>
