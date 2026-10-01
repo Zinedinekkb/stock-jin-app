@@ -314,7 +314,7 @@
 .more-drawer {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   bottom: 0;
   width: 100%;
   max-width: 360px;
@@ -322,9 +322,9 @@
   z-index: 101;
   display: flex;
   flex-direction: column;
-  transform: translateX(100%);
+  transform: translateX(-100%);
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 10px 0 40px rgba(0, 0, 0, 0.2);
 }
 
 .more-drawer.open {
@@ -1869,87 +1869,141 @@
 }
 
 /* 1. Purple Sidebar with Inverted Rounded Cutout */
+/* 1. Purple Sidebar with Left Accordion Navigation */
 .smart-sidebar {
-  width: 88px;
-  min-width: 88px;
+  width: 250px;
+  min-width: 250px;
   height: 100dvh;
   position: sticky;
   top: 0;
-  background: #6355d8;
+  background: linear-gradient(180deg, #6355d8 0%, #4e3fc4 100%);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  align-items: center;
-  padding: 24px 0 20px;
+  padding: 16px 12px 14px;
   z-index: 50;
   user-select: none;
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.28s cubic-bezier(0.16, 1, 0.3, 1), padding 0.28s ease;
+  box-shadow: 4px 0 25px rgba(99, 85, 216, 0.18);
+  overflow: hidden;
+}
+
+.smart-sidebar.collapsed {
+  width: 74px;
+  min-width: 74px;
+  padding: 16px 8px 14px;
 }
 
 .smart-sidebar-nav {
   display: flex;
   flex-direction: column;
   width: 100%;
-  gap: 6px;
-  align-items: center;
+  gap: 3px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+
+.smart-sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.smart-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.smart-sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
 .smart-sidebar-item {
   width: 100%;
-  height: 52px;
+  min-height: 42px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 12px;
   position: relative;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   border: none;
   background: transparent;
   outline: none;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: left;
 }
 
 .smart-sidebar-item:hover:not(.active) {
   background: rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  margin: 0 8px;
-  width: calc(100% - 16px);
+  color: #ffffff;
 }
 
-/* Inverted radius notch effect for active tab */
 .smart-sidebar-item.active {
-  background: #f4f5fa;
-  color: #6355d8;
-  border-top-left-radius: 26px;
-  border-bottom-left-radius: 26px;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  margin-right: 0;
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.smart-sidebar.collapsed .smart-sidebar-item {
+  justify-content: center;
+  padding: 10px 0;
+  gap: 0;
+}
+
+/* Sub-items accordion container */
+.smart-sidebar-sub-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.26s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
 }
 
-.smart-sidebar-item.active::before {
-  content: '';
-  position: absolute;
-  top: -20px;
-  right: 0;
-  width: 20px;
-  height: 20px;
-  background: transparent;
-  border-bottom-right-radius: 20px;
-  box-shadow: 6px 6px 0 6px #f4f5fa;
-  pointer-events: none;
+.smart-sidebar-sub-wrapper.expanded {
+  grid-template-rows: 1fr;
 }
 
-.smart-sidebar-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: -20px;
-  right: 0;
-  width: 20px;
-  height: 20px;
+.smart-sidebar-sub-container {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 18px;
+  padding-left: 8px;
+  border-left: 2px solid rgba(255, 255, 255, 0.25);
+  margin-top: 3px;
+  margin-bottom: 5px;
+}
+
+.smart-sidebar-sub-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  transition: all 0.18s ease;
+  border: none;
   background: transparent;
-  border-top-right-radius: 20px;
-  box-shadow: 6px -6px 0 6px #f4f5fa;
-  pointer-events: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.smart-sidebar-sub-item:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.smart-sidebar-sub-item.active {
+  background: #ffffff;
+  color: #4e3fc4;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .smart-sidebar-badge {
@@ -1967,7 +2021,7 @@
 
 .smart-sidebar-tooltip {
   position: absolute;
-  left: 92px;
+  left: 78px;
   top: 50%;
   transform: translateY(-50%);
   background: #1e1b4b;
@@ -1977,7 +2031,7 @@
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   z-index: 60;
   pointer-events: none;
   animation: tooltipFadeIn 0.15s ease-out;

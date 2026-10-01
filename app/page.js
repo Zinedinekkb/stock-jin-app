@@ -1098,6 +1098,9 @@ export default function StockJinApp() {
           user={user} 
           handleLogout={handleLogout}
           unreadNotifCount={unreadNotifCount}
+          onNavigateWithSub={handleNavigateWithSub}
+          dashboardPosTab={dashboardPosTab}
+          dashboardSubTab={dashboardSubTab}
         />
         <div className="smart-main-wrapper flex-1 flex flex-col min-h-screen overflow-x-hidden">
           {/* Top Header */}
@@ -1234,9 +1237,13 @@ export default function StockJinApp() {
         {/* Navbar */}
         <div className="bg-[#6355d8] px-5 py-3.5 sticky top-0 z-40 flex justify-between items-center shadow-md">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-xs">
-              <Package size={20} strokeWidth={2.5}/>
-            </div>
+            <button 
+              onClick={() => setShowMoreDrawer(true)}
+              className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-xs hover:bg-white/30 transition-all active:scale-95"
+              title="เปิดเมนูนำทาง (ซ้าย)"
+            >
+              <Menu size={20} strokeWidth={2.5}/>
+            </button>
             <div>
               <h1 className="text-base font-black text-white tracking-wide leading-none">StockPro</h1>
               <p className="text-[10px] text-white/80 mt-0.5">Inventory & Workforce Platform</p>
