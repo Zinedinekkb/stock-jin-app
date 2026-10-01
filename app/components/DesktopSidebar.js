@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Home, Package, ArrowRightLeft, ClipboardList, Bell, 
   Clock, FolderOpen, Users, Settings, ChevronDown, 
-  ChevronLeft, ChevronRight, LogOut, Sparkles, User, QrCode
+  ChevronLeft, ChevronRight, LogOut, QrCode
 } from 'lucide-react';
 import { isAdmin } from '../utils/permissions';
 
@@ -157,7 +157,7 @@ export default function DesktopSidebar({
   return (
     <aside className={`smart-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       {/* Top Brand / Logo */}
-      <div className="flex items-center justify-between px-1 pb-3 mb-2 border-b border-white/15 shrink-0">
+      <div className="flex items-center justify-between px-3 pb-3 mb-1 shrink-0">
         <div 
           onClick={() => {
             if (isCollapsed) setIsCollapsed(false);
@@ -178,7 +178,7 @@ export default function DesktopSidebar({
         </div>
         <button
           onClick={() => setIsCollapsed(prev => !prev)}
-          className="p-1.5 rounded-xl hover:bg-white/15 text-white/80 hover:text-white transition-colors shrink-0"
+          className="p-1.5 rounded-full hover:bg-white/15 text-white/80 hover:text-white transition-colors shrink-0"
           title={isCollapsed ? 'ขยายแถบเมนู (ซ้าย)' : 'ย่อแถบเมนู (ซ้าย)'}
         >
           {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
@@ -210,9 +210,9 @@ export default function DesktopSidebar({
                 >
                   <div className="relative shrink-0 flex items-center justify-center">
                     <Icon 
-                      size={20} 
+                      size={22} 
                       strokeWidth={isActive ? 2.5 : 2} 
-                      className={isActive ? 'text-white' : 'text-white/85 group-hover:text-white'} 
+                      className={isActive ? 'text-[#6355d8]' : 'text-white/85 group-hover:text-white'} 
                     />
                     {showBadge && (
                       <span className="smart-sidebar-badge">
@@ -223,11 +223,13 @@ export default function DesktopSidebar({
 
                   {!isCollapsed && (
                     <>
-                      <span className="flex-1 text-xs font-semibold truncate tracking-tight">{item.label}</span>
+                      <span className={`flex-1 text-xs truncate tracking-tight ${isActive ? 'text-[#6355d8] font-black' : 'font-semibold text-white/90'}`}>
+                        {item.label}
+                      </span>
                       {hasSub && (
                         <ChevronDown 
                           size={14} 
-                          className={`text-white/60 transition-transform duration-200 shrink-0 ${isExpanded ? 'rotate-180 text-white' : ''}`}
+                          className={`transition-transform duration-200 shrink-0 ${isActive ? 'text-[#6355d8]' : 'text-white/60'} ${isExpanded ? 'rotate-180' : ''}`}
                         />
                       )}
                     </>
@@ -241,7 +243,7 @@ export default function DesktopSidebar({
                   </div>
                 )}
 
-                {/* Accordion Sub-items (Slide Down) */}
+                {/* Accordion Sub-items (Smooth curved pills) */}
                 {!isCollapsed && hasSub && (
                   <div className={`smart-sidebar-sub-wrapper ${isExpanded ? 'expanded' : ''}`}>
                     <div className="smart-sidebar-sub-container">
@@ -276,32 +278,35 @@ export default function DesktopSidebar({
           })}
       </div>
 
-      {/* Bottom User Profile */}
-      <div className="pt-3 mt-2 border-t border-white/15 shrink-0">
-        <div className={`flex items-center gap-2.5 p-2 rounded-xl bg-white/10 ${isCollapsed ? 'justify-center p-1' : ''}`}>
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden border border-white/25">
-            {user?.photoURL ? (
-              <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
-            ) : (
-              (user?.name || 'U').charAt(0)
+      {/* Bottom Circle Action & User */}
+      <div className="smart-sidebar-bottom flex-col gap-2 pt-2 shrink-0">
+        <button 
+          onClick={() => setActiveTab('stock')}
+          className="smart-sidebar-circle-btn"
+          title="สแกนหรือจัดการคลังด่วน"
+        >
+          <QrCode size={20} strokeWidth={2.5} className="text-white" />
+        </button>
+        {user && (
+          <div 
+            onClick={() => setActiveTab('menu')}
+            className={`cursor-pointer transition-transform hover:scale-105 ${isCollapsed ? 'mt-1' : 'flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20'}`}
+            title="โปรไฟล์และตั้งค่า"
+          >
+            <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-xs shrink-0 overflow-hidden border border-white/30">
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                (user?.name || 'U').charAt(0)
+              )}
+            </div>
+            {!isCollapsed && (
+              <span className="text-[11px] font-bold text-white truncate max-w-[120px]">
+                {user?.name?.split(' ')[0] || 'ผู้ใช้งาน'}
+              </span>
             )}
           </div>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white truncate leading-tight">{user?.name || 'ผู้ใช้งาน'}</p>
-              <p className="text-[10px] text-white/70 truncate">{user?.position || (isUserAdmin ? 'ผู้ดูแลระบบ' : 'พนักงาน')}</p>
-            </div>
-          )}
-          {!isCollapsed && handleLogout && (
-            <button
-              onClick={handleLogout}
-              className="p-1.5 rounded-lg hover:bg-white/20 text-white/70 hover:text-red-300 transition-colors"
-              title="ออกจากระบบ"
-            >
-              <LogOut size={16} />
-            </button>
-          )}
-        </div>
+        )}
       </div>
     </aside>
   );

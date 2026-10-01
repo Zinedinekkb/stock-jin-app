@@ -1111,7 +1111,6 @@ export default function StockJinApp() {
             handleLogout={handleLogout}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
-            onOpenMenu={() => setShowMoreDrawer(true)}
             onSearchSubmit={(q) => {
               if (q) setActiveTab('stock');
             }}
@@ -1207,20 +1206,6 @@ export default function StockJinApp() {
             )}
           </main>
         </div>
-
-        {/* More Drawer (Desktop) */}
-        <MoreDrawer
-          isOpen={showMoreDrawer}
-          onClose={() => setShowMoreDrawer(false)}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          onNavigateWithSub={handleNavigateWithSub}
-          dashboardPosTab={dashboardPosTab}
-          dashboardSubTab={dashboardSubTab}
-          user={user}
-          unreadNotifCount={unreadNotifCount}
-          handleLogout={handleLogout}
-        />
 
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
         {showToast && <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}

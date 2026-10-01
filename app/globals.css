@@ -1869,40 +1869,38 @@
 }
 
 /* 1. Purple Sidebar with Inverted Rounded Cutout */
-/* 1. Purple Sidebar with Left Accordion Navigation */
+/* 1. Purple Sidebar with Signature Inverted Cutout Notch & Left Accordion */
 .smart-sidebar {
-  width: 250px;
-  min-width: 250px;
+  width: 230px;
+  min-width: 230px;
   height: 100dvh;
   position: sticky;
   top: 0;
-  background: linear-gradient(180deg, #6355d8 0%, #4e3fc4 100%);
+  background: #6355d8;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 16px 12px 14px;
+  align-items: stretch;
+  padding: 20px 0 16px 0;
   z-index: 50;
   user-select: none;
-  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.28s cubic-bezier(0.16, 1, 0.3, 1), padding 0.28s ease;
-  box-shadow: 4px 0 25px rgba(99, 85, 216, 0.18);
-  overflow: hidden;
+  transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1), min-width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-x: hidden;
 }
 
 .smart-sidebar.collapsed {
-  width: 74px;
-  min-width: 74px;
-  padding: 16px 8px 14px;
+  width: 88px;
+  min-width: 88px;
 }
 
 .smart-sidebar-nav {
   display: flex;
   flex-direction: column;
   width: 100%;
-  gap: 3px;
+  gap: 4px;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 2px;
 }
 
 .smart-sidebar-scroll::-webkit-scrollbar {
@@ -1912,18 +1910,18 @@
   background: transparent;
 }
 .smart-sidebar-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
 }
 
+/* Sidebar Item */
 .smart-sidebar-item {
   width: 100%;
-  min-height: 42px;
+  height: 50px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  border-radius: 12px;
+  padding: 0 16px 0 20px;
   position: relative;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
@@ -1936,23 +1934,59 @@
 
 .smart-sidebar-item:hover:not(.active) {
   background: rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  margin: 0 8px;
+  width: calc(100% - 16px);
   color: #ffffff;
 }
 
+/* Inverted radius notch effect for active tab - "โค้งๆมนๆ" signature design */
 .smart-sidebar-item.active {
-  background: rgba(255, 255, 255, 0.22);
-  color: #ffffff;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  background: #f4f5fa;
+  color: #6355d8;
+  border-top-left-radius: 26px;
+  border-bottom-left-radius: 26px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: 0;
+  width: 100%;
+}
+
+.smart-sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border-bottom-right-radius: 20px;
+  box-shadow: 6px 6px 0 6px #f4f5fa;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.smart-sidebar-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -20px;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border-top-right-radius: 20px;
+  box-shadow: 6px -6px 0 6px #f4f5fa;
+  pointer-events: none;
+  z-index: 10;
 }
 
 .smart-sidebar.collapsed .smart-sidebar-item {
   justify-content: center;
-  padding: 10px 0;
+  padding: 0;
   gap: 0;
 }
 
-/* Sub-items accordion container */
+/* Sub-items accordion container - Curved and Rounded pills ("โค้งๆมนๆ") */
 .smart-sidebar-sub-wrapper {
   display: grid;
   grid-template-rows: 0fr;
@@ -1968,24 +2002,22 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-left: 18px;
-  padding-left: 8px;
-  border-left: 2px solid rgba(255, 255, 255, 0.25);
-  margin-top: 3px;
-  margin-bottom: 5px;
+  gap: 3px;
+  margin: 5px 12px 7px 22px;
+  padding-left: 10px;
+  border-left: 2px dashed rgba(255, 255, 255, 0.35);
 }
 
 .smart-sidebar-sub-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  border-radius: 8px;
+  padding: 6.5px 12px;
+  border-radius: 9999px; /* Ultra-rounded Pill shape */
   font-size: 11.5px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
-  transition: all 0.18s ease;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border: none;
   background: transparent;
   width: 100%;
@@ -1994,16 +2026,18 @@
 }
 
 .smart-sidebar-sub-item:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
-  transform: translateX(2px);
+  transform: translateX(3px);
 }
 
+/* Active sub-item: bright white rounded capsule pill */
 .smart-sidebar-sub-item.active {
   background: #ffffff;
-  color: #4e3fc4;
+  color: #6355d8;
   font-weight: 800;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transform: translateX(2px);
 }
 
 .smart-sidebar-badge {
@@ -2021,7 +2055,7 @@
 
 .smart-sidebar-tooltip {
   position: absolute;
-  left: 78px;
+  left: 92px;
   top: 50%;
   transform: translateY(-50%);
   background: #1e1b4b;
@@ -2035,6 +2069,33 @@
   z-index: 60;
   pointer-events: none;
   animation: tooltipFadeIn 0.15s ease-out;
+}
+
+.smart-sidebar-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding-top: 10px;
+}
+
+.smart-sidebar-circle-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #4634ba;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.smart-sidebar-circle-btn:hover {
+  transform: scale(1.08);
+  background: #3928a6;
 }
 
 @keyframes tooltipFadeIn {
