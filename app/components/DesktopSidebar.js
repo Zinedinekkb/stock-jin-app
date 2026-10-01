@@ -30,55 +30,31 @@ const menuItems = [
     key: 'stock',
     label: 'คลังสินค้า',
     icon: Package,
-    emoji: '📦',
-    subItems: [
-      { key: 'all_stock', label: 'รายการสต็อกทั้งหมด', icon: '📋' },
-      { key: 'low_stock', label: 'สินค้าใกล้หมด / หมด', icon: '⚠️', params: { filter: 'low' } },
-    ]
+    emoji: '📦'
   },
   {
     key: 'transaction',
     label: 'เบิก/รับสินค้า',
     icon: ArrowRightLeft,
-    emoji: '🔄',
-    subItems: [
-      { key: 'out', label: 'เบิกออกสินค้า (OUT)', icon: '📤', params: { mode: 'OUT' } },
-      { key: 'in', label: 'รับเข้าสินค้า (IN)', icon: '📥', params: { mode: 'IN' } },
-    ]
+    emoji: '🔄'
   },
   {
     key: 'status',
     label: 'สถานะรายการ',
     icon: ClipboardList,
-    emoji: '📑',
-    subItems: [
-      { key: 'all_status', label: 'ประวัติทั้งหมด', icon: '📑' },
-      { key: 'in_status', label: 'ประวัติรับเข้า', icon: '📥' },
-      { key: 'out_status', label: 'ประวัติเบิกออก', icon: '📤' },
-    ]
+    emoji: '📑'
   },
   {
     key: 'hr',
     label: 'เข้า-ออกงาน / ลา',
     icon: Clock,
-    emoji: '⏰',
-    subItems: [
-      { key: 'my_att', label: 'ลงเวลาของฉัน', icon: '⏱️', params: { view: 'my', subTab: 'attendance' } },
-      { key: 'my_leave', label: 'ยื่นคำขอลา / ประวัติ', icon: '📝', params: { view: 'my', subTab: 'leaves' } },
-      { key: 'team_att', label: 'ตรวจเวลาทีมงาน', icon: '👥', adminOnly: true, params: { view: 'team', subTab: 'attendance' } },
-      { key: 'team_leave', label: 'ตรวจเอกสารคำขอลา', icon: '📄', adminOnly: true, params: { view: 'team', subTab: 'leaves' } },
-    ]
+    emoji: '⏰'
   },
   {
     key: 'documents',
     label: 'เอกสาร',
     icon: FolderOpen,
-    emoji: '📁',
-    subItems: [
-      { key: 'all_docs', label: 'เอกสารทั้งหมด', icon: '📂' },
-      { key: 'leave_docs', label: 'ใบขอลา / คำขอ', icon: '📋' },
-      { key: 'order_docs', label: 'ใบสั่งของ / ใบเสร็จ', icon: '🧾' },
-    ]
+    emoji: '📁'
   },
   {
     key: 'users',
@@ -94,11 +70,7 @@ const menuItems = [
   {
     key: 'menu',
     label: 'ตั้งค่า & บัญชี',
-    icon: Settings,
-    subItems: [
-      { key: 'profile', label: 'ข้อมูลส่วนบุคคล', icon: '👤' },
-      { key: 'logout', label: 'ออกจากระบบ', icon: '🚪', isLogout: true }
-    ]
+    icon: Settings
   }
 ];
 

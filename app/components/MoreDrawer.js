@@ -81,10 +81,7 @@ export default function MoreDrawer({
       icon: Package,
       emoji: '📦',
       desc: 'จัดการสินค้าและตรวจนับสต็อก',
-      subItems: [
-        { key: 'all_stock', label: 'รายการสต็อกทั้งหมด', icon: '📋' },
-        { key: 'low_stock', label: 'สินค้าใกล้หมด / หมด', icon: '⚠️', params: { filter: 'low' } },
-      ]
+      subItems: null
     },
     {
       key: 'transaction',
@@ -92,10 +89,7 @@ export default function MoreDrawer({
       icon: ArrowRightLeft,
       emoji: '🔄',
       desc: 'เบิกจ่ายและรับสินค้าเข้าคลัง',
-      subItems: [
-        { key: 'out', label: 'เบิกออกสินค้า (OUT)', icon: '📤', params: { mode: 'OUT' } },
-        { key: 'in', label: 'รับเข้าสินค้า (IN)', icon: '📥', params: { mode: 'IN' } },
-      ]
+      subItems: null
     },
     {
       key: 'status',
@@ -103,11 +97,7 @@ export default function MoreDrawer({
       icon: ClipboardList,
       emoji: '📑',
       desc: 'ประวัติและสถานะการทำรายการ',
-      subItems: [
-        { key: 'all_status', label: 'ประวัติทั้งหมด', icon: '📑' },
-        { key: 'in_status', label: 'ประวัติรับเข้า', icon: '📥' },
-        { key: 'out_status', label: 'ประวัติเบิกออก', icon: '📤' },
-      ]
+      subItems: null
     },
     {
       key: 'hr',
@@ -115,12 +105,7 @@ export default function MoreDrawer({
       icon: Clock,
       emoji: '⏰',
       desc: 'บันทึกเวลา เช็คชื่อ และยื่นใบลา',
-      subItems: [
-        { key: 'my_att', label: 'ลงเวลาของฉัน (เช็คอิน/เช็คเอาท์)', icon: '⏱️', params: { view: 'my', subTab: 'attendance' } },
-        { key: 'my_leave', label: 'ยื่นคำขอลา / ดูประวัติลา', icon: '📝', params: { view: 'my', subTab: 'leaves' } },
-        { key: 'team_att', label: 'ตรวจสอบเวลาทีมงาน', icon: '👥', adminOnly: true, params: { view: 'team', subTab: 'attendance' } },
-        { key: 'team_leave', label: 'ตรวจเอกสารคำขอลาทีมงาน', icon: '📄', adminOnly: true, params: { view: 'team', subTab: 'leaves' } },
-      ]
+      subItems: null
     },
     {
       key: 'documents',
@@ -128,11 +113,7 @@ export default function MoreDrawer({
       icon: FolderOpen,
       emoji: '📁',
       desc: 'คลังเอกสาร ใบลา ใบสั่งของ',
-      subItems: [
-        { key: 'all_docs', label: 'เอกสารทั้งหมด', icon: '📂' },
-        { key: 'leave_docs', label: 'ใบขอลา / คำขอ', icon: '📋' },
-        { key: 'order_docs', label: 'ใบสั่งของ / ใบเสร็จ', icon: '🧾' },
-      ]
+      subItems: null
     },
     {
       key: 'notifications',
@@ -141,7 +122,7 @@ export default function MoreDrawer({
       emoji: '🔔',
       desc: 'ข้อความและแจ้งเตือนระบบ',
       badge: unreadNotifCount,
-      subItems: null // Direct navigation
+      subItems: null
     },
     {
       key: 'users',
@@ -150,7 +131,7 @@ export default function MoreDrawer({
       emoji: '👥',
       desc: 'รายชื่อและสิทธิ์ผู้ใช้งาน',
       adminOnly: true,
-      subItems: null // Direct navigation
+      subItems: null
     },
     {
       key: 'menu',
@@ -158,10 +139,7 @@ export default function MoreDrawer({
       icon: Settings,
       emoji: '⚙️',
       desc: 'ข้อมูลส่วนตัว ข้อมูลร้าน',
-      subItems: [
-        { key: 'profile', label: 'แก้ไขข้อมูลโปรไฟล์', icon: '✏️', params: { openProfile: true } },
-        { key: 'logout', label: 'ออกจากระบบ', icon: '🚪', isDanger: true, isAction: true },
-      ]
+      subItems: null
     }
   ];
 
