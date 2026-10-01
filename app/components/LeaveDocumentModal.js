@@ -56,7 +56,17 @@ export default function LeaveDocumentModal({
   // Modal mode: 'preview' or 'customize'
   const [activeTab, setActiveTab] = useState('preview');
 
-  const isUserAdmin = currentUser?.role === 'admin' || currentUser?.role === 'owner';
+  const isUserAdmin = currentUser?.role === 'admin' || 
+    currentUser?.role === 'owner' || 
+    currentUser?.role?.toLowerCase() === 'admin' || 
+    currentUser?.role?.toLowerCase() === 'owner';
+
+  // Enforce preview mode if not admin/owner
+  useEffect(() => {
+    if (!isUserAdmin && activeTab === 'customize') {
+      setActiveTab('preview');
+    }
+  }, [isUserAdmin, activeTab]);
 
   // Customization state
   const [priorityTag, setPriorityTag] = useState('ด่วนที่สุด');
@@ -64,7 +74,7 @@ export default function LeaveDocumentModal({
   const [useThaiDigits, setUseThaiDigits] = useState(false);
   const [recipient, setRecipient] = useState('หัวหน้างาน / ผู้จัดการฝ่ายปฏิบัติการ');
   const [department, setDepartment] = useState(leave?.department || currentUser?.department || 'ฝ่ายคลังสินค้าและการจัดส่ง');
-  const [position, setPosition] = useState(leave?.position || currentUser?.position || 'เจ้าหน้าที่ปฏิบัติการ');
+  const [position, setPosition] = useState(leave?.position || leave?.userPosition || currentUser?.position || 'เจ้าหน้าที่ปฏิบัติการ');
   const [approverName, setApproverName] = useState(
     leave?.approvedBy || (isUserAdmin ? (currentUser?.name || '') : '')
   );
@@ -90,7 +100,8 @@ export default function LeaveDocumentModal({
       setApproverNote(leave.approverNote || leave.rejectedReason || 'อนุญาตให้ลาหยุดงานตามที่เสนอได้');
       setApprovedAtDate(leave.approvedAt || null);
       if (leave.department) setDepartment(leave.department);
-      if (leave.position) setPosition(leave.position);
+      if (leave.position || leave.userPosition) setPosition(leave.position || leave.userPosition);
+      setActiveTab('preview');
     }
   }, [leave, currentUser, isUserAdmin]);
 
@@ -304,27 +315,29 @@ export default function LeaveDocumentModal({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* View/Edit toggle */}
-            <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-semibold">
-              <button
-                type="button"
-                onClick={() => setActiveTab('preview')}
-                className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
-                  activeTab === 'preview' ? 'bg-white text-gray-800 shadow-xs' : 'text-gray-500 hover:text-gray-800'
-                }`}
-              >
-                <Eye size={13} /> หน้ากระดาษ
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('customize')}
-                className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
-                  activeTab === 'customize' ? 'bg-white text-gray-800 shadow-xs' : 'text-gray-500 hover:text-gray-800'
-                }`}
-              >
-                <Sliders size={13} /> ปรับแต่งข้อความ
-              </button>
-            </div>
+            {/* View/Edit toggle - แสดงเฉพาะผู้ดูแลระบบและเจ้าของร้านเท่านั้น */}
+            {isUserAdmin && (
+              <div className="flex bg-gray-100 rounded-lg p-0.5 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('preview')}
+                  className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
+                    activeTab === 'preview' ? 'bg-white text-gray-800 shadow-xs' : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  <Eye size={13} /> หน้ากระดาษ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('customize')}
+                  className={`px-3 py-1.5 rounded-md flex items-center gap-1.5 transition-all ${
+                    activeTab === 'customize' ? 'bg-white text-gray-800 shadow-xs' : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  <Sliders size={13} /> ปรับแต่งข้อความ
+                </button>
+              </div>
+            )}
 
             <button
               type="button"
@@ -484,8 +497,8 @@ export default function LeaveDocumentModal({
 
         {/* Modal Body */}
         <div className="leave-modal-body">
-          {activeTab === 'customize' ? (
-            /* Customization Form */
+          {activeTab === 'customize' && isUserAdmin ? (
+            /* Customization Form (Only for Admin / Owner) */
             <div className="p-6 max-w-xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm space-y-4 my-4 no-print">
               <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 border-b pb-2">
                 <Sliders size={16} className="text-purple-600" /> ปรับแต่งข้อความในโครงร่างเอกสาร
