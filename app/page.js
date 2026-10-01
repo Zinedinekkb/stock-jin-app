@@ -48,8 +48,30 @@ export default function StockJinApp() {
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dashboardSubTab, setDashboardSubTab] = useState('tasks'); // 'tasks' | 'analytics'
+  const [dashboardPosTab, setDashboardPosTab] = useState('my'); // 'my' | 'warehouse' | 'kitchen' | 'finance' | 'service' | 'shipping' | 'management' | 'all'
   const [hrInitialView, setHrInitialView] = useState('my');
   const [hrInitialSubTab, setHrInitialSubTab] = useState('attendance');
+
+  // Handle navigation with sub-topics (from Accordion Drawer)
+  const handleNavigateWithSub = (tabKey, params = {}) => {
+    setActiveTab(tabKey);
+    setShowMoreDrawer(false);
+    if (tabKey === 'dashboard') {
+      if (params.subTab) {
+        setDashboardSubTab(params.subTab);
+      } else {
+        setDashboardSubTab('tasks');
+      }
+      if (params.posTab) {
+        setDashboardPosTab(params.posTab);
+      }
+    } else if (tabKey === 'hr') {
+      if (params.view) setHrInitialView(params.view);
+      if (params.subTab) setHrInitialSubTab(params.subTab);
+    } else if (tabKey === 'transaction') {
+      if (params.mode) setTransMode(params.mode);
+    }
+  };
 
   // --- DESKTOP DETECTION ---
   useEffect(() => {
@@ -1086,6 +1108,7 @@ export default function StockJinApp() {
             handleLogout={handleLogout}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
+            onOpenMenu={() => setShowMoreDrawer(true)}
             onSearchSubmit={(q) => {
               if (q) setActiveTab('stock');
             }}
@@ -1128,6 +1151,8 @@ export default function StockJinApp() {
                       pendingUsers={pendingUsers}
                       pendingLeaves={pendingLeaves}
                       showNotification={showNotification}
+                      initialPosTab={dashboardPosTab}
+                      onPosTabChange={setDashboardPosTab}
                     />
                   ) : (
                     <div className="smart-tab-container">
@@ -1179,6 +1204,20 @@ export default function StockJinApp() {
             )}
           </main>
         </div>
+
+        {/* More Drawer (Desktop) */}
+        <MoreDrawer
+          isOpen={showMoreDrawer}
+          onClose={() => setShowMoreDrawer(false)}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onNavigateWithSub={handleNavigateWithSub}
+          dashboardPosTab={dashboardPosTab}
+          dashboardSubTab={dashboardSubTab}
+          user={user}
+          unreadNotifCount={unreadNotifCount}
+          handleLogout={handleLogout}
+        />
 
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
         {showToast && <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
@@ -1247,6 +1286,8 @@ export default function StockJinApp() {
                     pendingUsers={pendingUsers}
                     pendingLeaves={pendingLeaves}
                     showNotification={showNotification}
+                    initialPosTab={dashboardPosTab}
+                    onPosTabChange={setDashboardPosTab}
                   />
                   <div className="mt-4">
                     <SmartRightPanel 
@@ -1287,13 +1328,18 @@ export default function StockJinApp() {
           </div>
         )}
 
-        {/* More Drawer */}
+        {/* More Drawer (Mobile) */}
         <MoreDrawer
           isOpen={showMoreDrawer}
           onClose={() => setShowMoreDrawer(false)}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          onNavigateWithSub={handleNavigateWithSub}
+          dashboardPosTab={dashboardPosTab}
+          dashboardSubTab={dashboardSubTab}
           user={user}
+          unreadNotifCount={unreadNotifCount}
+          handleLogout={handleLogout}
         />
         
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />

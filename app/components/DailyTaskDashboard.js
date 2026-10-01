@@ -47,12 +47,28 @@ export default function DailyTaskDashboard({
   setActiveTab = () => {},
   pendingUsers = [],
   pendingLeaves = [],
-  showNotification = () => {}
+  showNotification = () => {},
+  initialPosTab = 'my',
+  onPosTabChange = () => {}
 }) {
   const [tasks, setTasks] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPosTab, setSelectedPosTab] = useState('my');
+  const [selectedPosTab, setSelectedPosTab] = useState(initialPosTab);
+
+  useEffect(() => {
+    if (initialPosTab) {
+      setSelectedPosTab(initialPosTab);
+    }
+  }, [initialPosTab]);
+
+  const handleSelectPosTab = (tabKey) => {
+    setSelectedPosTab(tabKey);
+    if (onPosTabChange) {
+      onPosTabChange(tabKey);
+    }
+  };
+
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'routine' | 'assigned' | 'urgent' | 'completed'
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('tasks'); // 'tasks' | 'team'
@@ -531,7 +547,7 @@ export default function DailyTaskDashboard({
           {POSITION_TABS.map(tab => (
             <button
               key={tab.key}
-              onClick={() => setSelectedPosTab(tab.key)}
+              onClick={() => handleSelectPosTab(tab.key)}
               className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
                 selectedPosTab === tab.key
                   ? 'bg-[#6355d8] text-white shadow-md shadow-purple-500/20 scale-[1.02]'

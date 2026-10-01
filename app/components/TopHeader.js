@@ -1,7 +1,7 @@
 // app/components/TopHeader.js
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Settings, ChevronDown, User, LogOut } from 'lucide-react';
+import { Search, Bell, Settings, ChevronDown, User, LogOut, Menu } from 'lucide-react';
 
 export default function TopHeader({ 
   user, 
@@ -10,7 +10,8 @@ export default function TopHeader({
   handleLogout,
   searchQuery = '',
   setSearchQuery = () => {},
-  onSearchSubmit = () => {}
+  onSearchSubmit = () => {},
+  onOpenMenu = () => {}
 }) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const dropdownRef = useRef(null);
@@ -51,6 +52,15 @@ export default function TopHeader({
 
       {/* Right Controls */}
       <div className="smart-header-actions">
+        {/* Menu Navigation Drawer Trigger Button */}
+        <button 
+          onClick={onOpenMenu}
+          title="เปิดเมนูนำทางและหัวข้อรองทั้งหมด"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#6355d8] text-xs font-bold transition-all border border-purple-200 shadow-2xs"
+        >
+          <Menu size={16} strokeWidth={2.5} />
+          <span>เมนูแผนก</span>
+        </button>
         {/* Settings button */}
         <button 
           onClick={() => setActiveTab('menu')}
