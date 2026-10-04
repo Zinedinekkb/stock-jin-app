@@ -289,6 +289,26 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
         })
       }).catch(() => {});
 
+      // Email notification to Admin(s)
+      fetch('/api/notify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'leave_submitted',
+          data: {
+            id: docRef.id,
+            userName: user.name,
+            userEmail: user.email || '',
+            position: user.position || 'พนักงาน',
+            department: user.department || 'คลังสินค้า',
+            leaveType: newLeave.type,
+            startDate: newLeave.startDate,
+            endDate: newLeave.endDate,
+            reason: newLeave.reason,
+          }
+        })
+      }).catch(() => {});
+
       // Open Leave Document modal immediately for the new leave request
       setSelectedLeaveForDoc({
         id: docRef.id,
@@ -304,11 +324,36 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
 
   const handleLeaveAction = async (id, status) => {
     try {
+      const targetLeave = leaves.find((l) => l.id === id);
       await updateDoc(doc(db, 'leaves', id), {
         status,
         approvedBy: user.name,
         approvedAt: new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }),
       });
+
+      // Email Notification to employee
+      if (targetLeave && targetLeave.userEmail) {
+        fetch('/api/notify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'leave_decision',
+            to: targetLeave.userEmail,
+            data: {
+              id,
+              userName: targetLeave.userName,
+              status,
+              approverName: user.name,
+              approverPosition: user.position || 'ผู้ดูแลระบบ',
+              approverNote: status === 'approved' ? 'อนุมัติการลาตามที่เสนอ' : 'ไม่อนุมัติคำขอลา',
+              leaveType: targetLeave.type,
+              startDate: targetLeave.startDate,
+              endDate: targetLeave.endDate,
+            }
+          })
+        }).catch(() => {});
+      }
+
       showNote(status === 'approved' ? '✅ อนุมัติการลาแล้ว' : '❌ ปฏิเสธแล้ว');
     } catch (e) {
       showNote('เกิดข้อผิดพลาด: ' + e.message);

@@ -102,6 +102,7 @@ export default function CreateTaskModal({
       let assignedUserName = null;
       let assignedUserPhoto = null;
       let assignedUserPos = targetPosition;
+      let assignedUserEmail = null;
 
       if (targetType === 'user' && targetUserId) {
         const found = approvedUsers.find(u => u.id === targetUserId || u.uid === targetUserId);
@@ -109,10 +110,12 @@ export default function CreateTaskModal({
           assignedUserName = found.name || 'พนักงาน';
           assignedUserPhoto = found.photoURL || null;
           assignedUserPos = found.position || targetPosition;
+          assignedUserEmail = found.email || null;
         } else if (targetUserId === currentUser?.uid || targetUserId === currentUser?.id) {
           assignedUserName = currentUser?.name || 'พนักงาน';
           assignedUserPhoto = currentUser?.photoURL || null;
           assignedUserPos = currentUser?.position || targetPosition;
+          assignedUserEmail = currentUser?.email || null;
         }
       }
 
@@ -131,6 +134,7 @@ export default function CreateTaskModal({
         targetDepartment: category,
         targetUserId: targetType === 'user' ? targetUserId : null,
         targetUserName: assignedUserName,
+        targetUserEmail: assignedUserEmail,
         targetUserPhoto: assignedUserPhoto,
         priority,
         dueDate: dueDate || getTodayKey(),
@@ -141,9 +145,19 @@ export default function CreateTaskModal({
         await updateTask(editingTask.id, taskPayload, currentUser);
       } else {
         const created = await createTask(taskPayload, currentUser);
-        // Optionally send LINE notify for assigned/urgent tasks
+        // Collect recipient emails for assigned or urgent tasks
+        let recipientEmails = [];
+        if (targetType === 'user' && assignedUserEmail) {
+          recipientEmails = [assignedUserEmail];
+        } else if (targetType === 'position') {
+          recipientEmails = approvedUsers.filter(u => u.position === targetPosition && u.email).map(u => u.email);
+        } else if (targetType === 'all') {
+          recipientEmails = approvedUsers.filter(u => u.email).map(u => u.email);
+        }
+
+        // Send LINE and Email notify for assigned/urgent tasks
         if (taskPayload.type === 'assigned' || taskPayload.priority === 'urgent') {
-          notifyTaskAssigned({ ...created, ...taskPayload }, currentUser);
+          notifyTaskAssigned({ ...created, ...taskPayload }, currentUser, recipientEmails);
         }
       }
 

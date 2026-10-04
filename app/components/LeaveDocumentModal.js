@@ -177,6 +177,29 @@ export default function LeaveDocumentModal({
         })
       }).catch(() => {});
 
+      // Email Notification to employee
+      if (leave.userEmail) {
+        fetch('/api/notify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'leave_decision',
+            to: leave.userEmail,
+            data: {
+              id: leave.id,
+              userName: leave.userName,
+              status: decisionType,
+              approverName: cleanApprover,
+              approverPosition: cleanPosition,
+              approverNote: cleanNote,
+              leaveType: leave.type,
+              startDate: leave.startDate,
+              endDate: leave.endDate,
+            }
+          })
+        }).catch(() => {});
+      }
+
       if (onSuccessSave) {
         onSuccessSave(isApprove ? '✅ อนุมัติและลงนามคำขอลาเรียบร้อยแล้ว' : '❌ บันทึกผลปฏิเสธคำขอลาเรียบร้อยแล้ว');
       }

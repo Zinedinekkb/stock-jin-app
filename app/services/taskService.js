@@ -495,8 +495,8 @@ export const isTaskCompletedToday = (task, todayKey = getTodayKey()) => {
 // ฟังก์ชันจัดการ Firebase Firestore สำหรับ Tasks
 // ============================================
 
-// ส่งแจ้งเตือน LINE สำหรับงานที่มอบหมาย (ถ้ามี LINE Webhook พร้อมใช้งาน)
-export const notifyTaskAssigned = async (task, currentUser) => {
+// ส่งแจ้งเตือน LINE และ อีเมล สำหรับงานที่มอบหมาย
+export const notifyTaskAssigned = async (task, currentUser, targetEmails = []) => {
   try {
     const targetLabel = task.targetType === 'user' 
       ? (task.targetUserName || 'พนักงาน') 
@@ -504,14 +504,32 @@ export const notifyTaskAssigned = async (task, currentUser) => {
     const priorityIcon = task.priority === 'urgent' ? '🔴 [ด่วนมาก]' : task.priority === 'high' ? '🟡 [สำคัญ]' : '📋';
     const message = `${priorityIcon} มอบหมายงาน: ${task.title}\nผู้รับผิดชอบ: ${targetLabel}\nกำหนด: ${task.dueDate || 'วันนี้'} ${task.dueTime ? task.dueTime + ' น.' : ''}\nสั่งโดย: ${currentUser?.name || 'ผู้ดูแลระบบ'}${task.description ? '\nรายละเอียด: ' + task.description : ''}`;
 
-    await fetch('/api/notify', {
+    // 1. ส่ง LINE Notify
+    fetch('/api/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message }),
-    });
+    }).catch(() => {});
+
+    // 2. ส่ง Email Notify
+    const recipientEmails = (targetEmails && targetEmails.length > 0)
+      ? targetEmails
+      : (task.targetUserEmail ? [task.targetUserEmail] : []);
+
+    if (recipientEmails.length > 0) {
+      fetch('/api/notify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'task_assigned',
+          to: recipientEmails,
+          data: { ...task, currentUser: { name: currentUser?.name } }
+        }),
+      }).catch(() => {});
+    }
   } catch (err) {
     // Non-blocking error
-    console.warn('Could not send LINE notification for task:', err);
+    console.warn('Could not send notification for task:', err);
   }
 };
 
@@ -529,6 +547,7 @@ export const createTask = async (taskData, currentUser) => {
     targetDepartment: taskData.targetDepartment || 'general',
     targetUserId: taskData.targetUserId || null,
     targetUserName: taskData.targetUserName || null,
+    targetUserEmail: taskData.targetUserEmail || null,
     targetUserPhoto: taskData.targetUserPhoto || null,
     priority: taskData.priority || 'normal',
     dueDate: taskData.dueDate || getTodayKey(),
