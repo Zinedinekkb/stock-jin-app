@@ -2981,17 +2981,19 @@
   .no-print {
     display: none !important;
   }
-  #leave-document-sheet, #leave-document-sheet * {
+  #leave-document-sheet, #leave-document-sheet *,
+  #transaction-document-sheet, #transaction-document-sheet * {
     visibility: visible !important;
   }
-  #leave-document-sheet {
+  #leave-document-sheet,
+  #transaction-document-sheet {
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     width: 100% !important;
     min-width: 100% !important;
     margin: 0 !important;
-    padding: 20mm !important;
+    padding: 15mm 20mm !important;
     box-shadow: none !important;
     border: none !important;
   }

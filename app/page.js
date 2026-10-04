@@ -16,6 +16,7 @@ import TabHR from './components/TabHR';
 import TabDocuments from './components/TabDocuments';
 import TabNotifications from './components/TabNotifications';
 import TabUserDirectory from './components/TabUserDirectory';
+import TransactionDocumentModal from './components/TransactionDocumentModal';
 import MoreDrawer from './components/MoreDrawer';
 import DesktopSidebar from './components/DesktopSidebar';
 import TopHeader from './components/TopHeader';
@@ -28,6 +29,7 @@ import * as Sentry from '@sentry/nextjs';
 
 // --- IMPORT SERVICES ---
 import { submitTransactionService, sendStockReportService, sendDailyReportService } from '@/app/services/transactionService';
+import { uploadAndSaveTransactionDocument } from '@/app/utils/transactionPdfGenerator';
 import { compressImageFile, blobToDataUrl } from '@/app/utils/cameraUtils';
 
 // --- FIREBASE IMPORTS ---
@@ -112,6 +114,15 @@ export default function StockJinApp() {
   const [dateFilterType, setDateFilterType] = useState('7days'); 
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+
+  // TRANSACTION DOCUMENT MODAL STATE
+  const [selectedTxForDoc, setSelectedTxForDoc] = useState(null);
+  const [isTxDocModalOpen, setIsTxDocModalOpen] = useState(false);
+
+  const handleOpenTransactionDoc = (tx) => {
+    setSelectedTxForDoc(tx);
+    setIsTxDocModalOpen(true);
+  };
 
   // --- AUTH & REGISTER STATE ---
   const [user, setUser] = useState(null); 
@@ -412,12 +423,13 @@ export default function StockJinApp() {
     if (cart.length === 0) return;
     showConfirm(
       `ยืนยันคำขอ ${transMode === 'IN' ? 'รับของ' : 'เบิกของ'}`, 
-      `รายการจะถูกส่งไปที่หน้า "สถานะ" เพื่อรอการตรวจสอบและยืนยันยอดจริงอีกครั้ง`,
+      `ระบบจะออกเอกสารทางการเป็น PDF บันทึกลงคลังเอกสารอัตโนมัติ และส่งไปที่หน้า "สถานะ" เพื่อรอตรวจสอบ`,
       async () => {
         try {
-            await submitTransactionService({ cart, transMode, note, user });
+            const res = await submitTransactionService({ cart, transMode, note, user });
             setCart([]); setNote('');
-            showNotification('ส่งคำขอเรียบร้อย! (แจ้งเตือนไลน์แล้ว)');
+            const docInfo = res?.docNumber ? ` (เลขที่ ${res.docNumber})` : '';
+            showNotification(`ส่งคำขอและออกเอกสาร PDF ทางการ${docInfo} เก็บลงคลังเอกสารเรียบร้อยแล้ว! 📄✨`);
             setActiveTab('status');
         } catch (error) {
             console.error(error); showNotification('เกิดข้อผิดพลาด กรุณาลองใหม่');
@@ -436,7 +448,7 @@ export default function StockJinApp() {
   const handleVerifyAndSave = async (extraItems = []) => {
     if (!verifyingTx) return;
     showConfirm(
-      'ยืนยันยอดจริงถูกต้อง?', 'สต็อกจะถูกอัปเดตตามยอดนี้ และสถานะจะเปลี่ยนเป็นสำเร็จ',
+      'ยืนยันยอดจริงถูกต้อง?', 'สต็อกจะถูกอัปเดตตามยอดนี้ สถานะจะเปลี่ยนเป็นสำเร็จ และระบบจะปรับปรุงเอกสาร PDF ฉบับอนุมัติลงคลังเอกสารอัตโนมัติ',
       async () => {
         const finalItems = [...(verifyingTx.items || []), ...extraItems];
         const updatePromises = products.map(async (p) => {
@@ -451,14 +463,35 @@ export default function StockJinApp() {
         });
         await Promise.all(updatePromises);
         const txRef = doc(db, 'transactions', verifyingTx.id);
+        const verifiedAtDate = new Date().toLocaleString('th-TH');
         await updateDoc(txRef, { 
             status: 'completed', 
             items: finalItems,
             actualItems: actualQty, 
             verifiedBy: user ? user.name : 'Admin', 
-            verifiedAt: new Date().toLocaleString('th-TH') 
+            verifiedAt: verifiedAtDate 
         });
-        setVerifyingTx(null); showNotification('อัปเดตสต็อกเรียบร้อย!');
+
+        // สร้าง/อัปเดตเอกสารทางการฉบับสมบูรณ์ (Approved PDF) เก็บลงคลังเอกสารอัตโนมัติ
+        try {
+          await uploadAndSaveTransactionDocument({
+            transaction: {
+              ...verifyingTx,
+              status: 'completed',
+              items: finalItems,
+              actualItems: actualQty,
+              verifiedBy: user ? user.name : 'Admin',
+              verifiedAt: verifiedAtDate,
+            },
+            user: user,
+            isVerified: true
+          });
+        } catch (pdfErr) {
+          console.error("Auto PDF Generation on Verify Error:", pdfErr);
+        }
+
+        setVerifyingTx(null); 
+        showNotification('อัปเดตสต็อกและบันทึกเอกสาร PDF ฉบับอนุมัติลงคลังเอกสารเรียบร้อย! 📄✅');
       }, 'info'
     );
   };
@@ -1013,6 +1046,7 @@ export default function StockJinApp() {
           user={user}
           handleDeleteHistory={handleDeleteHistory}
           products={products}
+          onOpenTransactionDoc={handleOpenTransactionDoc}
       />}
       {activeTab === 'notifications' && user && <TabNotifications
           user={user}
@@ -1335,6 +1369,19 @@ export default function StockJinApp() {
         />
         
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
+
+        {/* Official Transaction Document Modal (GRN / GIS A4 PDF) */}
+        <TransactionDocumentModal
+          isOpen={isTxDocModalOpen}
+          onClose={() => {
+            setIsTxDocModalOpen(false);
+            setSelectedTxForDoc(null);
+          }}
+          transaction={selectedTxForDoc}
+          currentUser={user}
+          onSuccessSave={(msg) => showNotification(msg)}
+        />
+
         {showToast && <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
       </div>
     </div>

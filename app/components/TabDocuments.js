@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   FolderOpen, Plus, Search, ExternalLink, Trash2, FileText,
-  Image, File, Link2, X, ChevronDown, Download, Copy, Star
+  Image, File, Link2, X, ChevronDown, Download, Copy, Star, Eye
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import {
@@ -13,15 +13,17 @@ import {
 
 const DOC_CATEGORIES = [
   { value: 'all', label: 'ทั้งหมด', icon: '📁' },
+  { value: 'order', label: 'ใบรับเข้า / สั่งของ', icon: '📥' },
+  { value: 'receipt', label: 'ใบเบิก / ใบเสร็จ', icon: '📤' },
   { value: 'leave', label: 'ใบลา / คำขอ', icon: '📋' },
-  { value: 'order', label: 'ใบสั่งของ', icon: '🧾' },
-  { value: 'receipt', label: 'ใบเสร็จ', icon: '💰' },
   { value: 'contract', label: 'สัญญา', icon: '📝' },
   { value: 'image', label: 'รูปภาพ', icon: '🖼️' },
   { value: 'other', label: 'อื่นๆ', icon: '📄' },
 ];
 
 const getFileIcon = (url = '', type, name = '') => {
+  if (type === 'order' || name?.includes('ใบรับสินค้า') || name?.includes('GRN')) return <FileText size={20} className="text-emerald-600" />;
+  if (type === 'receipt' || name?.includes('ใบเบิก') || name?.includes('GIS')) return <FileText size={20} className="text-rose-600" />;
   if (type === 'leave' || name?.includes('ใบขอลา') || name?.includes('ใบลา')) return <FileText size={20} className="text-purple-600" />;
   if (type === 'image') return <Image size={20} className="text-blue-500" />;
   if (url.includes('drive.google')) return <File size={20} className="text-yellow-600" />;
@@ -44,6 +46,7 @@ export default function TabDocuments({ user }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState('');
   const [starredOnly, setStarredOnly] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState(null);
 
   const showNote = (msg) => { setNotification(msg); setTimeout(() => setNotification(''), 2500); };
 
@@ -53,8 +56,8 @@ export default function TabDocuments({ user }) {
       const list = snap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .sort((a, b) => {
-          const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-          const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+          const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
           return tb - ta;
         });
       setDocs(list);
@@ -100,13 +103,51 @@ export default function TabDocuments({ user }) {
     navigator.clipboard.writeText(url).then(() => showNote('คัดลอกลิงก์แล้ว!')).catch(() => showNote('คัดลอกไม่ได้'));
   };
 
+  const handleDownloadDoc = (item) => {
+    if (!item?.url) return showNote('ไม่มีไฟล์เอกสาร');
+    try {
+      const isDataUri = item.url.startsWith('data:');
+      const isBlob = item.url.startsWith('blob:');
+      
+      const link = document.createElement('a');
+      link.href = item.url;
+      link.download = item.name || 'document.pdf';
+      if (!isDataUri && !isBlob) {
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      }
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showNote('กำลังดาวน์โหลดเอกสาร...');
+    } catch (err) {
+      console.error('Download error:', err);
+      window.open(item.url, '_blank');
+    }
+  };
+
+  const handleOpenDoc = (item) => {
+    if (!item?.url) return showNote('ไม่มีลิงก์หรือไฟล์เอกสาร');
+    // If it's a PDF data URI or storage URL, open with in-app viewer modal
+    if (item.url.startsWith('data:application/pdf') || item.url.endsWith('.pdf') || item.name?.toLowerCase().endsWith('.pdf') || item.url.includes('documents/')) {
+      setViewingDoc(item);
+    } else {
+      window.open(item.url, '_blank');
+    }
+  };
+
   // Filter
   let filtered = docs;
   if (activeCategory !== 'all') filtered = filtered.filter(d => d.category === activeCategory);
   if (starredOnly) filtered = filtered.filter(d => d.starred);
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase();
-    filtered = filtered.filter(d => d.name?.toLowerCase().includes(q) || d.note?.toLowerCase().includes(q));
+    filtered = filtered.filter(d => 
+      d.name?.toLowerCase().includes(q) || 
+      d.note?.toLowerCase().includes(q) ||
+      d.docNumber?.toLowerCase().includes(q) ||
+      d.createdBy?.toLowerCase().includes(q)
+    );
   }
 
   const catInfo = (val) => DOC_CATEGORIES.find(c => c.value === val) || DOC_CATEGORIES[DOC_CATEGORIES.length - 1];
@@ -122,7 +163,7 @@ export default function TabDocuments({ user }) {
             <Search size={15} className="docs-search-icon" />
             <input
               type="text"
-              placeholder="ค้นหาเอกสาร..."
+              placeholder="ค้นหาเอกสาร (ชื่อ, เลขที่, หมายเหตุ)..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="docs-search-input"
@@ -217,15 +258,19 @@ export default function TabDocuments({ user }) {
         <div className="docs-empty">
           <FolderOpen size={40} className="text-gray-300" />
           <p>ยังไม่มีเอกสาร</p>
-          <span>กด &quot;+ เพิ่ม&quot; เพื่อเพิ่มเอกสารใหม่</span>
+          <span>เมื่อมีการรับเข้าหรือเบิกออก เอกสาร PDF ทางการจะถูกเก็บลงที่นี่ให้อัตโนมัติ</span>
         </div>
       ) : (
         <div className="docs-grid">
           {filtered.map(item => {
             const cat = catInfo(item.category);
             return (
-              <div key={item.id} className="docs-card">
-                <div className="docs-card-top">
+              <div 
+                key={item.id} 
+                className="docs-card cursor-pointer hover:border-[#6355d8]/50 transition-all"
+                onClick={() => handleOpenDoc(item)}
+              >
+                <div className="docs-card-top" onClick={e => e.stopPropagation()}>
                   <div className="docs-file-icon">{getFileIcon(item.url, item.category, item.name)}</div>
                   <div className="docs-card-actions">
                     <button
@@ -236,14 +281,19 @@ export default function TabDocuments({ user }) {
                       <Star size={14} fill={item.starred ? '#f59e0b' : 'none'} color={item.starred ? '#f59e0b' : '#d1d5db'} />
                     </button>
                     {item.url && (
+                      <button className="docs-action-btn" onClick={() => handleDownloadDoc(item)} title="ดาวน์โหลด">
+                        <Download size={14} className="text-indigo-600" />
+                      </button>
+                    )}
+                    {item.url && (
                       <button className="docs-action-btn" onClick={() => handleCopyLink(item.url)} title="คัดลอกลิงก์">
                         <Copy size={14} />
                       </button>
                     )}
                     {item.url && (
-                      <a href={item.url} target="_blank" rel="noopener noreferrer" className="docs-action-btn" title="เปิดเอกสาร">
-                        <ExternalLink size={14} />
-                      </a>
+                      <button className="docs-action-btn" onClick={() => handleOpenDoc(item)} title="เปิดดูเอกสาร">
+                        <Eye size={14} />
+                      </button>
                     )}
                     {user?.role === 'admin' && (
                       <button className="docs-action-btn docs-delete-btn" onClick={() => handleDelete(item.id)} title="ลบ">
@@ -265,6 +315,52 @@ export default function TabDocuments({ user }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* In-App PDF / Document Viewer Modal */}
+      {viewingDoc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[92vh] flex flex-col overflow-hidden animate-scale-in border border-gray-200">
+            {/* Modal Header */}
+            <div className="p-3.5 sm:p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/90">
+              <div className="flex items-center gap-2.5 min-w-0 pr-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-[#6355d8] flex items-center justify-center shrink-0">
+                  <FileText size={20} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-sm text-gray-800 truncate">{viewingDoc.name}</h3>
+                  <p className="text-[11px] text-gray-500 truncate">{viewingDoc.note || 'เอกสารทางการคลังพัสดุ'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadDoc(viewingDoc)}
+                  className="px-3.5 py-1.5 bg-[#6355d8] hover:bg-[#5244c9] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                >
+                  <Download size={14} /> <span>ดาวน์โหลด</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewingDoc(null)}
+                  className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Document Embed / Iframe */}
+            <div className="flex-1 bg-gray-100 p-2 sm:p-3 relative overflow-hidden flex flex-col">
+              <iframe
+                src={viewingDoc.url}
+                className="w-full h-full rounded-2xl border border-gray-300/80 bg-white shadow-inner"
+                title={viewingDoc.name}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
