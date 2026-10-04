@@ -12,7 +12,9 @@ import {
   getTodayKey, 
   isTaskDone, 
   isTaskCompletedToday, 
-  matchesUserPosition 
+  matchesUserPosition,
+  isTaskVisibleToUser,
+  getUserCluster 
 } from '../services/taskService';
 import { isAdmin } from '../utils/permissions';
 import CreateTaskModal from './CreateTaskModal';
@@ -54,10 +56,15 @@ export default function SmartRightPanel({ user, transactions = [], products = []
     return () => unsubUsers();
   }, []);
 
+  // Filter tasks visible to this user (Staff only see own & team tasks; Admin sees all)
+  const visibleTasks = useMemo(() => {
+    return tasks.filter(t => isTaskVisibleToUser(user, t));
+  }, [tasks, user]);
+
   // Today's Statistics
   const stats = useMemo(() => {
     // Only count active today tasks: routine tasks + pending/in_progress assigned tasks + assigned tasks completed TODAY
-    const todayTasks = tasks.filter(t => {
+    const todayTasks = visibleTasks.filter(t => {
       if (t.isRoutine || t.type === 'routine') return true;
       if (!isTaskDone(t, todayKey)) return true;
       return isTaskCompletedToday(t, todayKey);
@@ -71,14 +78,14 @@ export default function SmartRightPanel({ user, transactions = [], products = []
     const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
     return { total, completed, pending, urgentPending, inProgress, percent };
-  }, [tasks, todayKey]);
+  }, [visibleTasks, todayKey]);
 
-  // Urgent pending tasks
+  // Urgent pending tasks (Scoped to user visibility)
   const urgentTasks = useMemo(() => {
-    return tasks
+    return visibleTasks
       .filter(t => t.priority === 'urgent' && !isTaskDone(t, todayKey))
       .slice(0, 3);
-  }, [tasks, todayKey]);
+  }, [visibleTasks, todayKey]);
 
   // SVG Arc calculation for percentage circle
   const radius = 60;
@@ -93,9 +100,11 @@ export default function SmartRightPanel({ user, transactions = [], products = []
         <div className="flex items-center justify-between pb-1 border-b border-slate-50">
           <div>
             <h3 className="text-sm font-black text-slate-800">
-              📊 สรุปภารกิจวันนี้
+              📊 {isUserAdmin ? 'สรุปภารกิจรวม' : 'ภารกิจของคุณวันนี้'}
             </h3>
-            <p className="text-[11px] text-slate-400 font-medium">ความคืบหน้ารวมทั้งหมด</p>
+            <p className="text-[11px] text-slate-400 font-medium">
+              {isUserAdmin ? 'ความคืบหน้าทั้งระบบ' : 'ความคืบหน้างานที่คุณรับผิดชอบ'}
+            </p>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-[#6355d8] border border-purple-100">
             {todayKey}
@@ -192,79 +201,121 @@ export default function SmartRightPanel({ user, transactions = [], products = []
         </section>
       )}
 
-      {/* 3. Real Team Workload Section */}
-      <section className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3.5">
-        <div className="flex items-center justify-between pb-1 border-b border-slate-50">
-          <div className="flex items-center gap-1.5">
-            <Users size={16} className="text-[#6355d8]" />
-            <h3 className="text-sm font-black text-slate-800">
-              👥 สมาชิกทีม ({usersList.length})
-            </h3>
+      {/* 3. Team Workload (Admin) OR Personal Focus (Staff) */}
+      {isUserAdmin ? (
+        <section className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3.5">
+          <div className="flex items-center justify-between pb-1 border-b border-slate-50">
+            <div className="flex items-center gap-1.5">
+              <Users size={16} className="text-[#6355d8]" />
+              <h3 className="text-sm font-black text-slate-800">
+                👥 สมาชิกทีม ({usersList.length})
+              </h3>
+            </div>
+            <span className="text-[10px] text-slate-400 font-bold">ความคืบหน้ารายคน</span>
           </div>
-          <span className="text-[10px] text-slate-400 font-bold">ความคืบหน้ารายคน</span>
-        </div>
 
-        <div className="space-y-2.5 max-h-[300px] overflow-y-auto scrollbar-hide pr-1">
-          {usersList
-            .filter(u => u.status !== 'deactivated')
-            .map(member => {
-              const memTasks = tasks.filter(t => matchesUserPosition(member, t));
-              const mTotal = memTasks.length;
-              const mDone = memTasks.filter(t => isTaskDone(t, todayKey)).length;
-              const mPercent = mTotal > 0 ? Math.round((mDone / mTotal) * 100) : 0;
+          <div className="space-y-2.5 max-h-[300px] overflow-y-auto scrollbar-hide pr-1">
+            {usersList
+              .filter(u => u.status !== 'deactivated')
+              .map(member => {
+                const memTasks = tasks.filter(t => matchesUserPosition(member, t));
+                const mTotal = memTasks.length;
+                const mDone = memTasks.filter(t => isTaskDone(t, todayKey)).length;
+                const mPercent = mTotal > 0 ? Math.round((mDone / mTotal) * 100) : 0;
 
-              return (
-                <div 
-                  key={member.id || member.uid}
-                  className="p-2.5 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-7 h-7 rounded-xl bg-purple-100 text-[#6355d8] font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
-                        {member.photoURL ? (
-                          <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span>{(member.name || 'U').charAt(0).toUpperCase()}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-800 truncate">
-                          {member.name || 'พนักงาน'}
+                return (
+                  <div 
+                    key={member.id || member.uid}
+                    className="p-2.5 rounded-2xl bg-slate-50/70 border border-slate-100 space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-[#6355d8] font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                          {member.photoURL ? (
+                            <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>{(member.name || 'U').charAt(0).toUpperCase()}</span>
+                          )}
                         </div>
-                        <div className="text-[10px] text-slate-400 truncate">
-                          {member.position || (member.role === 'admin' ? 'ผู้ดูแลระบบ' : 'พนักงานทั่วไป')}
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-slate-800 truncate">
+                            {member.name || 'พนักงาน'}
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {member.position || (member.role === 'admin' ? 'ผู้ดูแลระบบ' : 'พนักงานทั่วไป')}
+                          </div>
                         </div>
                       </div>
+
+                      <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md shrink-0">
+                        {mDone}/{mTotal}
+                      </span>
                     </div>
 
-                    <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md shrink-0">
-                      {mDone}/{mTotal}
-                    </span>
+                    {/* Micro Progress Bar */}
+                    <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-[#6355d8] rounded-full transition-all duration-300"
+                        style={{ width: `${mPercent}%` }}
+                      />
+                    </div>
                   </div>
+                );
+              })}
+          </div>
 
-                  {/* Micro Progress Bar */}
-                  <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#6355d8] rounded-full transition-all duration-300"
-                      style={{ width: `${mPercent}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-        </div>
+          {/* Quick Action Button */}
+          <div className="pt-2">
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="w-full py-2.5 px-3 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Plus size={16} strokeWidth={3} />
+              <span>สั่งงานพนักงานด่วน</span>
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3.5">
+          <div className="flex items-center justify-between pb-1 border-b border-slate-50">
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={16} className="text-[#6355d8]" />
+              <h3 className="text-sm font-black text-slate-800">
+                🎯 สรุปภารกิจของคุณ
+              </h3>
+            </div>
+            <span className="text-[10px] text-slate-400 font-bold">โฟกัสวันนี้</span>
+          </div>
 
-        {/* Quick Action Button */}
-        <div className="pt-2">
-          <button
-            onClick={() => setIsCreateOpen(true)}
-            className="w-full py-2.5 px-3 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5"
-          >
-            <Plus size={16} strokeWidth={3} />
-            <span>{isUserAdmin ? 'สั่งงานพนักงานด่วน' : 'เพิ่มงานส่วนตัว'}</span>
-          </button>
-        </div>
-      </section>
+          <div className="space-y-2 text-xs">
+            <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-100 flex items-center justify-between">
+              <span className="font-semibold text-slate-700">🔄 งานประจำวันตำแหน่งนี้</span>
+              <span className="font-black text-[#6355d8]">
+                {visibleTasks.filter(t => (t.isRoutine || t.type === 'routine') && isTaskDone(t, todayKey)).length}/
+                {visibleTasks.filter(t => (t.isRoutine || t.type === 'routine')).length}
+              </span>
+            </div>
+            <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between">
+              <span className="font-semibold text-slate-700">⚡ งานมอบหมายที่รับผิดชอบ</span>
+              <span className="font-black text-indigo-700">
+                {visibleTasks.filter(t => !t.isRoutine && t.type !== 'routine' && isTaskDone(t, todayKey)).length}/
+                {visibleTasks.filter(t => !t.isRoutine && t.type !== 'routine').length}
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Action Button */}
+          <div className="pt-2">
+            <button
+              onClick={() => setIsCreateOpen(true)}
+              className="w-full py-2.5 px-3 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Plus size={16} strokeWidth={3} />
+              <span>เพิ่มบันทึกงานส่วนตัว</span>
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Create Task Modal */}
       <CreateTaskModal

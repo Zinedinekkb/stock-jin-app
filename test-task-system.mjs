@@ -145,6 +145,80 @@ const pendingToday = {
 };
 const isTodayOverdue = !isTaskDone(pendingToday, todayKey) && pendingToday.dueDate < todayKey;
 assert.strictEqual(isTodayOverdue, false, 'Task due today is NOT overdue');
-console.log('✓ Overdue detection verified.');
+// -------------------------------------------------------------
+// Test 6: Role & Department Tab Visibility
+// -------------------------------------------------------------
+console.log('\n[Test 6] Testing Department Tab Visibility (getVisiblePositionTabs & getUserCluster):');
+import { getUserCluster, getVisiblePositionTabs, isTaskVisibleToUser } from './app/services/taskService.js';
+
+const chefUser = { uid: 'chef_01', name: 'เชฟสมชาย', position: 'เชฟ / แม่ครัว', role: 'staff' };
+const warehouseUser = { uid: 'wh_01', name: 'พี่ชาญ', position: 'พนักงานคุมสต็อก', role: 'staff' };
+const cashierUser = { uid: 'cash_01', name: 'น้องฝน', position: 'แคชเชียร์', role: 'staff' };
+const adminUser = { uid: 'admin_01', name: 'จิน', position: 'ผู้ดูแลระบบ', role: 'admin' };
+
+assert.strictEqual(getUserCluster(chefUser), 'kitchen', 'Chef cluster must be kitchen');
+assert.strictEqual(getUserCluster(warehouseUser), 'warehouse', 'Warehouse cluster must be warehouse');
+assert.strictEqual(getUserCluster(cashierUser), 'finance', 'Cashier cluster must be finance');
+assert.strictEqual(getUserCluster(adminUser), 'management', 'Admin cluster must be management');
+
+const chefTabs = getVisiblePositionTabs(chefUser);
+assert.strictEqual(chefTabs.length, 2, 'Chef should see only 2 tabs (my + kitchen)');
+assert.deepStrictEqual(chefTabs.map(t => t.key), ['my', 'kitchen']);
+
+const whTabs = getVisiblePositionTabs(warehouseUser);
+assert.strictEqual(whTabs.length, 2, 'Warehouse should see only 2 tabs (my + warehouse)');
+assert.deepStrictEqual(whTabs.map(t => t.key), ['my', 'warehouse']);
+
+const adminTabs = getVisiblePositionTabs(adminUser);
+assert.strictEqual(adminTabs.length, 8, 'Admin should see all 8 tabs');
+console.log('✓ Tab visibility per role/department strictly enforced.');
+
+// -------------------------------------------------------------
+// Test 7: Task Visibility Filtering (isTaskVisibleToUser)
+// -------------------------------------------------------------
+console.log('\n[Test 7] Testing Task Visibility Filtering (isTaskVisibleToUser):');
+const warehouseTask = {
+  id: 'task_wh',
+  title: 'นับสต็อกเปิดกะ',
+  category: 'warehouse',
+  targetDepartment: 'warehouse',
+  targetPosition: 'เจ้าหน้าที่สต็อก',
+  type: 'routine',
+  isRoutine: true,
+};
+
+const kitchenTask2 = {
+  id: 'task_kitchen',
+  title: 'ตรวจเช็คอุณหภูมิตู้เย็น',
+  category: 'kitchen',
+  targetDepartment: 'kitchen',
+  targetPosition: 'เชฟ / แม่ครัว',
+  type: 'routine',
+  isRoutine: true,
+};
+
+// Chef sees kitchen, but NEVER warehouse
+assert.strictEqual(isTaskVisibleToUser(chefUser, kitchenTask2), true, 'Chef must see kitchen task');
+assert.strictEqual(isTaskVisibleToUser(chefUser, warehouseTask), false, 'Chef must NOT see warehouse task');
+
+// Warehouse staff sees warehouse, but NEVER kitchen
+assert.strictEqual(isTaskVisibleToUser(warehouseUser, warehouseTask), true, 'Warehouse staff must see warehouse task');
+assert.strictEqual(isTaskVisibleToUser(warehouseUser, kitchenTask2), false, 'Warehouse staff must NOT see kitchen task');
+
+// Admin sees EVERYTHING
+assert.strictEqual(isTaskVisibleToUser(adminUser, warehouseTask), true, 'Admin must see warehouse task');
+assert.strictEqual(isTaskVisibleToUser(adminUser, kitchenTask2), true, 'Admin must see kitchen task');
+
+// Directly assigned task is visible to assignee even if different department
+const crossAssignedTask = {
+  id: 'task_cross',
+  title: 'ช่วยตรวจรับวัตถุดิบเข้าครัวด่วน',
+  category: 'kitchen',
+  targetType: 'user',
+  targetUserId: 'wh_01', // assigned to warehouse staff
+};
+assert.strictEqual(isTaskVisibleToUser(warehouseUser, crossAssignedTask), true, 'Directly assigned task must be visible to target user');
+
+console.log('✓ Task visibility filtering verified: regular staff only see their own & their team tasks, admin sees all.');
 
 console.log('\nALL UNIT TESTS PASSED SUCCESSFULLY! 🎉\n');

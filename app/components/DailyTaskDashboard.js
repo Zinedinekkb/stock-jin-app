@@ -22,22 +22,15 @@ import {
   isTaskDone,
   isTaskCompletedToday,
   matchesUserPosition,
+  getVisiblePositionTabs,
+  isTaskVisibleToUser,
+  getUserCluster,
+  POSITION_TABS,
   DEFAULT_ROUTINE_TEMPLATES 
 } from '../services/taskService';
 import { isAdmin } from '../utils/permissions';
 import CreateTaskModal from './CreateTaskModal';
 import LeaveDocumentModal from './LeaveDocumentModal';
-
-const POSITION_TABS = [
-  { key: 'my', label: '⭐ งานของฉัน', icon: '⭐' },
-  { key: 'warehouse', label: '📦 คลัง/สต็อก', icon: '📦' },
-  { key: 'kitchen', label: '👨‍🍳 ครัว/เชฟ', icon: '👨‍🍳' },
-  { key: 'finance', label: '💰 การเงิน/แคชเชียร์', icon: '💰' },
-  { key: 'service', label: '🍱 หน้าร้าน/บริการ', icon: '🍱' },
-  { key: 'shipping', label: '🚚 จัดส่ง/พัสดุ', icon: '🚚' },
-  { key: 'management', label: '👔 บริหาร/Admin', icon: '👔' },
-  { key: 'all', label: '🌐 งานทั้งหมด', icon: '🌐' },
-];
 
 export default function DailyTaskDashboard({ 
   user, 
@@ -51,6 +44,9 @@ export default function DailyTaskDashboard({
   initialPosTab = 'my',
   onPosTabChange = () => {}
 }) {
+  const isUserAdmin = isAdmin(user);
+  const visiblePositionTabs = useMemo(() => getVisiblePositionTabs(user), [user]);
+
   const [tasks, setTasks] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,9 +54,13 @@ export default function DailyTaskDashboard({
 
   useEffect(() => {
     if (initialPosTab) {
-      setSelectedPosTab(initialPosTab);
+      if (isUserAdmin || visiblePositionTabs.some(t => t.key === initialPosTab)) {
+        setSelectedPosTab(initialPosTab);
+      } else {
+        setSelectedPosTab('my');
+      }
     }
-  }, [initialPosTab]);
+  }, [initialPosTab, visiblePositionTabs, isUserAdmin]);
 
   const handleSelectPosTab = (tabKey) => {
     setSelectedPosTab(tabKey);
@@ -101,7 +101,6 @@ export default function DailyTaskDashboard({
   };
 
   const todayKey = useMemo(() => getTodayKey(), []);
-  const isUserAdmin = isAdmin(user);
 
   // Thai Date Formatter
   const thaiDateStr = useMemo(() => {
@@ -175,7 +174,8 @@ export default function DailyTaskDashboard({
 
   // Filter Tasks by Position Tab, Status, and Search
   const filteredTasks = useMemo(() => {
-    let result = [...tasks];
+    // 0. Base Filter: Staff ONLY see their own & their team tasks. Admin sees all.
+    let result = tasks.filter(t => isTaskVisibleToUser(user, t));
 
     // 1. Filter by Position Tab
     if (selectedPosTab === 'my') {
@@ -211,7 +211,7 @@ export default function DailyTaskDashboard({
         return p.includes('บริหาร') || p.includes('ผู้ดูแลระบบ') || p.includes('admin') || p.includes('ผู้จัดการ') || t.category === 'management' || t.targetDepartment === 'management';
       });
     }
-    // 'all' includes everything
+    // 'all' includes all visible tasks
 
     // 2. Filter by Status Sub-filter
     if (statusFilter === 'pending') {
@@ -256,9 +256,10 @@ export default function DailyTaskDashboard({
 
   // Overall Statistics for Today
   const stats = useMemo(() => {
+    const visibleTasks = tasks.filter(t => isTaskVisibleToUser(user, t));
     const applicableTasks = selectedPosTab === 'my' 
-      ? tasks.filter(t => matchesUserPosition(user, t))
-      : tasks;
+      ? visibleTasks.filter(t => matchesUserPosition(user, t))
+      : visibleTasks;
 
     // Filter tasks relevant to today's active scope:
     // 1. Routine tasks (always active for today)
@@ -336,34 +337,43 @@ export default function DailyTaskDashboard({
       {/* ========================================================================= */}
       {/* 1. HERO GREETING BANNER */}
       {/* ========================================================================= */}
-      <div className="smart-hero-banner relative overflow-hidden bg-gradient-to-r from-purple-800 via-indigo-700 to-[#6355d8] text-white p-6 sm:p-8 rounded-3xl shadow-xl shadow-purple-900/10 border border-white/10">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
+      <div className="smart-hero-banner relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-[#4638a8] text-white p-6 sm:p-7 rounded-3xl shadow-sm border border-slate-800">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+          <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-black tracking-wide text-white border border-white/20">
+              <span className="px-2.5 py-0.5 bg-white/15 backdrop-blur-md rounded-full text-[11px] font-bold tracking-wide text-white border border-white/20">
                 {isUserAdmin ? '👑 ผู้ดูแลระบบ (Admin)' : 'พนักงานประจำ'}
               </span>
-              <span className="px-3 py-1 bg-purple-500/30 backdrop-blur-md rounded-full text-xs font-bold text-purple-100 border border-purple-300/20">
-                ตำแหน่ง: {user?.position || (isUserAdmin ? 'ผู้จัดการ / Admin' : 'พนักงานทั่วไป')}
+              <span className="px-2.5 py-0.5 bg-purple-500/25 backdrop-blur-md rounded-full text-[11px] font-medium text-purple-200 border border-purple-300/20">
+                {user?.position || (isUserAdmin ? 'ผู้จัดการ / Admin' : 'พนักงานทั่วไป')}
               </span>
             </div>
             
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2">
-              <span>สวัสดี, {user?.name || 'ทีมงาน StockJin'}</span>
-              <span className="animate-pulse">✨</span>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+              <span>สวัสดีคุณ {user?.name || 'ทีมงาน StockJin'}</span>
+              <span>👋</span>
             </h1>
             
-            <p className="text-xs sm:text-sm text-purple-100/90 font-medium">
-              📅 {thaiDateStr} &bull; สรุปรายการงานประจำวันและภารกิจที่ต้องดำเนินการ
+            <p className="text-xs text-slate-300 font-normal">
+              📅 {thaiDateStr} &bull; สรุปภารกิจประจำวันและรายการงานที่ต้องดำเนินการ
             </p>
           </div>
 
-          {/* Quick Action Button & Summary Pill */}
+          {/* Quick Action Button & Summary Card */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-2xl p-3 px-4 text-center">
-              <div className="text-[11px] font-bold text-purple-200">ความคืบหน้าวันนี้</div>
-              <div className="text-xl font-black text-white mt-0.5">
-                {stats.completed}/{stats.total} <span className="text-xs font-normal">({stats.percent}%)</span>
+            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-2.5 px-4 min-w-[140px]">
+              <div className="flex items-center justify-between text-[11px] text-purple-200 font-medium">
+                <span>ความคืบหน้า</span>
+                <span className="font-bold text-white">{stats.percent}%</span>
+              </div>
+              <div className="text-base font-bold text-white mt-0.5">
+                {stats.completed}/{stats.total} <span className="text-[11px] font-normal text-purple-200">งาน</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden mt-1.5">
+                <div 
+                  className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
+                  style={{ width: `${stats.percent}%` }}
+                />
               </div>
             </div>
 
@@ -372,16 +382,16 @@ export default function DailyTaskDashboard({
                 setEditingTask(null);
                 setIsCreateModalOpen(true);
               }}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-[#6355d8] hover:bg-purple-50 font-black text-xs shadow-lg transition-all active:scale-95"
+              className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white text-[#6355d8] hover:bg-purple-50 font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
             >
-              <Plus size={18} strokeWidth={3} />
-              <span>{isUserAdmin ? '➕ สั่งงานใหม่ / มอบหมายภารกิจ' : '➕ เพิ่มบันทึกงานของฉัน'}</span>
+              <Plus size={16} strokeWidth={2.5} />
+              <span>{isUserAdmin ? 'สั่งงานใหม่ / มอบหมาย' : 'เพิ่มบันทึกงานของฉัน'}</span>
             </button>
           </div>
         </div>
 
-        {/* Decorative background glow */}
-        <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+        {/* Decorative subtle background glow */}
+        <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
       </div>
 
       {/* ========================================================================= */}
@@ -542,23 +552,25 @@ export default function DailyTaskDashboard({
       {/* 4. POSITION TABS & STATUS FILTER STRIP */}
       {/* ========================================================================= */}
       <div className="space-y-3">
-        {/* Row 1: Position Tabs */}
+        {/* Row 1: Position Tabs (Strictly scoped: Staff only sees own + team tab; Admin sees all) */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-          {POSITION_TABS.map(tab => (
+          {visiblePositionTabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => handleSelectPosTab(tab.key)}
-              className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+              className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
                 selectedPosTab === tab.key
-                  ? 'bg-[#6355d8] text-white shadow-md shadow-purple-500/20 scale-[1.02]'
-                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-100'
+                  ? 'bg-[#6355d8] text-white shadow-xs scale-[1.01]'
+                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80 font-semibold'
               }`}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.key === 'my' && (
-                <span className="ml-1 px-1.5 py-0.2 bg-white/25 rounded-md text-[10px]">
-                  {tasks.filter(t => matchesUserPosition(user, t) && !isTaskDone(t, todayKey)).length}
+                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                  selectedPosTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {tasks.filter(t => isTaskVisibleToUser(user, t) && matchesUserPosition(user, t) && !isTaskDone(t, todayKey)).length}
                 </span>
               )}
             </button>
@@ -566,9 +578,9 @@ export default function DailyTaskDashboard({
         </div>
 
         {/* Row 2: Status Sub-Filter & Search Box */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-100">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/70 shadow-xs">
           {/* Status Sub-Filters */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide text-xs font-bold">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide text-xs font-semibold">
             {[
               { key: 'all', label: 'ทั้งหมด' },
               { key: 'pending', label: '⏳ รอดำเนินการ' },
@@ -580,10 +592,10 @@ export default function DailyTaskDashboard({
               <button
                 key={f.key}
                 onClick={() => setStatusFilter(f.key)}
-                className={`px-3 py-1.5 rounded-xl transition-all shrink-0 ${
+                className={`px-3 py-1.5 rounded-xl transition-all shrink-0 cursor-pointer ${
                   statusFilter === f.key
-                    ? 'bg-purple-100 text-[#6355d8]'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                    ? 'bg-[#6355d8]/10 text-[#6355d8] font-bold'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
                 }`}
               >
                 {f.label}
@@ -599,12 +611,12 @@ export default function DailyTaskDashboard({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ค้นหางาน, ผู้รับผิดชอบ..."
-              className="w-full pl-9 pr-8 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 focus:border-[#6355d8] outline-none text-slate-800 bg-slate-50/50"
+              className="w-full pl-9 pr-8 py-1.5 text-xs font-medium rounded-xl border border-slate-200 focus:border-[#6355d8] outline-none text-slate-800 bg-slate-50/50"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -731,21 +743,6 @@ export default function DailyTaskDashboard({
                 const isOverdue = !isDone && !isRoutine && task.dueDate && task.dueDate < todayKey;
                 const isDueToday = !isDone && !isRoutine && task.dueDate && task.dueDate === todayKey;
 
-                // Priority Badge Styles
-                const priorityStyles = {
-                  urgent: 'bg-rose-100 text-rose-700 border-rose-200',
-                  high: 'bg-amber-100 text-amber-800 border-amber-200',
-                  normal: 'bg-indigo-50 text-indigo-700 border-indigo-100',
-                  low: 'bg-slate-100 text-slate-600 border-slate-200',
-                };
-
-                const priorityLabels = {
-                  urgent: '🔥 ด่วนมาก',
-                  high: '🟡 สำคัญ',
-                  normal: 'ปกติ',
-                  low: 'ทั่วไป',
-                };
-
                 const todayRecord = isRoutine 
                   ? task.completedDates?.[todayKey]
                   : (isDone ? {
@@ -757,82 +754,87 @@ export default function DailyTaskDashboard({
                 return (
                   <div
                     key={task.id}
-                    className={`p-4 rounded-3xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                    className={`group rounded-2xl border transition-all duration-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 ${
                       isDone
-                        ? 'bg-slate-50/80 border-slate-200/60 opacity-80'
+                        ? 'bg-slate-50/70 border-slate-200/60 opacity-75'
                         : isOverdue
-                          ? 'bg-rose-50/40 border-rose-200 shadow-xs'
+                          ? 'bg-white border-rose-200 border-l-4 border-l-rose-500 shadow-xs'
                           : task.priority === 'urgent'
-                            ? 'bg-white border-rose-300 shadow-md ring-1 ring-rose-200'
-                            : 'bg-white border-slate-100 shadow-xs hover:border-purple-200 hover:shadow-md'
+                            ? 'bg-white border-slate-200 border-l-4 border-l-rose-500 shadow-xs hover:border-slate-300 hover:shadow-sm'
+                            : task.priority === 'high'
+                              ? 'bg-white border-slate-200 border-l-4 border-l-amber-500 shadow-xs hover:border-slate-300 hover:shadow-sm'
+                              : 'bg-white border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-sm'
                     }`}
                   >
-                    {/* Left: Checkbox & Info */}
+                    {/* Left: Checkbox & Content */}
                     <div className="flex items-start gap-3.5 flex-1 min-w-0">
                       {/* Checkbox Button */}
                       <button
                         onClick={() => handleToggleTask(task)}
-                        className={`mt-0.5 w-6 h-6 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+                        className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 cursor-pointer ${
                           isDone
-                            ? 'bg-emerald-500 text-white shadow-sm'
-                            : 'border-2 border-slate-300 hover:border-[#6355d8] text-transparent hover:text-purple-300'
+                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
+                            : 'border-2 border-slate-300 hover:border-[#6355d8] text-transparent hover:text-[#6355d8]/30 bg-white'
                         }`}
                         title={isDone ? 'คลิกเพื่อยกเลิก' : 'คลิกเพื่อทำเครื่องหมายเสร็จสิ้น'}
                       >
                         <Check size={14} strokeWidth={3} />
                       </button>
 
-                      <div className="space-y-1.5 flex-1 min-w-0">
-                        {/* Title and Badges */}
+                      <div className="flex-1 min-w-0">
+                        {/* Line 1: Title & Key Badges */}
                         <div className="flex flex-wrap items-center gap-2">
-                          <h4 className={`text-sm font-black tracking-tight ${
-                            isDone ? 'line-through text-slate-400' : 'text-slate-800'
+                          <h4 className={`text-sm font-bold tracking-tight ${
+                            isDone ? 'line-through text-slate-400 font-normal' : 'text-slate-800'
                           }`}>
                             {task.title}
                           </h4>
 
-                          {/* Priority Badge */}
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                            priorityStyles[task.priority] || priorityStyles.normal
-                          }`}>
-                            {priorityLabels[task.priority] || 'ปกติ'}
-                          </span>
-
                           {/* Routine vs Assigned Tag */}
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${
                             isRoutine 
-                              ? 'bg-purple-50 text-[#6355d8] border border-purple-200/50' 
-                              : 'bg-blue-50 text-blue-700 border border-blue-200/50'
+                              ? 'bg-slate-100 text-slate-600' 
+                              : 'bg-purple-50 text-[#6355d8] border border-purple-100'
                           }`}>
                             {isRoutine ? '🔄 ประจำวัน' : '⚡ สั่งเสริม'}
                           </span>
 
-                          {/* Overdue Alert */}
-                          {isOverdue && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse shadow-xs">
-                              ⚠️ เกินกำหนดส่ง ({task.dueDate})
+                          {/* Priority Badge - ONLY shown if urgent or high to eliminate clutter! */}
+                          {task.priority === 'urgent' && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                              🔥 ด่วนมาก
+                            </span>
+                          )}
+                          {task.priority === 'high' && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              🟡 สำคัญ
                             </span>
                           )}
 
-                          {/* Due Today Alert */}
+                          {/* Due / Overdue alerts */}
+                          {isOverdue && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-600 text-white shadow-2xs">
+                              ⚠️ เกินกำหนด ({task.dueDate})
+                            </span>
+                          )}
                           {isDueToday && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
                               📅 ครบกำหนดวันนี้
                             </span>
                           )}
                         </div>
 
-                        {/* Description */}
+                        {/* Line 2: Description */}
                         {task.description && (
-                          <p className={`text-xs ${isDone ? 'text-slate-400' : 'text-slate-600'} line-clamp-2`}>
+                          <p className={`text-xs mt-1 leading-relaxed line-clamp-2 ${isDone ? 'text-slate-400' : 'text-slate-500'}`}>
                             {task.description}
                           </p>
                         )}
 
-                        {/* Metadata row: Target Position / User, Due time */}
-                        <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-slate-400 pt-0.5">
+                        {/* Line 3: Clean Metadata Row */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-slate-400 mt-2">
                           {/* Assignment Target */}
-                          <div className="flex items-center gap-1 text-slate-600">
+                          <div className="flex items-center gap-1.5 text-slate-600">
                             {task.targetType === 'user' ? (
                               <>
                                 <User size={13} className="text-[#6355d8]" />
@@ -850,46 +852,40 @@ export default function DailyTaskDashboard({
                           {task.dueTime && (
                             <div className="flex items-center gap-1 text-slate-500">
                               <Clock size={13} />
-                              <span>เสร็จก่อน {task.dueTime} น.</span>
+                              <span>ก่อน {task.dueTime} น.</span>
                             </div>
                           )}
 
-                          {/* Created By */}
+                          {/* Created By (Admin view) */}
                           {task.createdByName && isUserAdmin && (
                             <div className="hidden sm:flex items-center gap-1 text-slate-400 text-[10px]">
-                              <span>สั่งโดย: {task.createdByName}</span>
+                              <span>มอบหมายโดย: {task.createdByName}</span>
+                            </div>
+                          )}
+
+                          {/* Completion Info */}
+                          {isDone && (
+                            <div className="flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px]">
+                              <CheckCircle2 size={13} />
+                              <span>{todayRecord?.completedByName ? `เสร็จโดย ${todayRecord.completedByName}` : 'เสร็จแล้ว'}</span>
+                              {(todayRecord?.note || task.completionNote) && (
+                                <span className="text-slate-500 font-normal italic">
+                                  &ldquo;{todayRecord?.note || task.completionNote}&rdquo;
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
-
-                        {/* Completion Details if Done */}
-                        {isDone && (
-                          <div className="pt-1 flex flex-wrap items-center gap-2 text-[11px] font-bold text-emerald-700">
-                            <span className="flex items-center gap-1">
-                              <CheckCircle2 size={13} />
-                              <span>
-                                {todayRecord?.completedByName 
-                                  ? `เสร็จโดย ${todayRecord.completedByName}` 
-                                  : 'เสร็จเรียบร้อย'}
-                              </span>
-                            </span>
-                            {(todayRecord?.note || task.completionNote) && (
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-100/70 text-emerald-800 font-normal italic">
-                                &ldquo;{todayRecord?.note || task.completionNote}&rdquo;
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
 
                     {/* Right: Actions */}
-                    <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center pt-2 sm:pt-0">
+                    <div className="flex items-center gap-1 shrink-0 self-end sm:self-center pt-2 sm:pt-0">
                       {/* In Progress Button for Assigned Tasks */}
                       {!isRoutine && !isDone && task.status !== 'in_progress' && (
                         <button
                           onClick={() => handleSetInProgress(task)}
-                          className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#6355d8] text-xs font-bold transition-all flex items-center gap-1"
+                          className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#6355d8] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
                           title="เริ่มทำภารกิจนี้"
                         >
                           <PlayCircle size={14} />
@@ -904,7 +900,7 @@ export default function DailyTaskDashboard({
                           task, 
                           noteText: todayRecord?.note || task.completionNote || '' 
                         })}
-                        className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                         title="เพิ่ม/แก้ไขหมายเหตุ"
                       >
                         <MessageSquare size={16} />
@@ -917,7 +913,7 @@ export default function DailyTaskDashboard({
                             setEditingTask(task);
                             setIsCreateModalOpen(true);
                           }}
-                          className="p-2 rounded-xl text-slate-400 hover:text-[#6355d8] hover:bg-purple-50 transition-colors"
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-[#6355d8] hover:bg-purple-50 transition-colors cursor-pointer"
                           title="แก้ไขงานนี้"
                         >
                           <Edit3 size={16} />
@@ -928,7 +924,7 @@ export default function DailyTaskDashboard({
                       {isUserAdmin && (
                         <button
                           onClick={() => setDeleteConfirmTask(task)}
-                          className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                           title="ลบงานนี้"
                         >
                           <Trash2 size={16} />

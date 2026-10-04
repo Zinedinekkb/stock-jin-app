@@ -389,6 +389,87 @@ export const getTodayKey = () => {
   }
 };
 
+// ============================================
+// คลัสเตอร์ตำแหน่งงานและแท็บแผนก
+// ============================================
+export const POSITION_CLUSTERS = {
+  kitchen: ['เชฟ', 'แม่ครัว', 'ครัว', 'ผู้ช่วยเชฟ', 'cook', 'chef', 'kitchen'],
+  warehouse: ['สต็อก', 'คลัง', 'stock', 'warehouse', 'พัสดุ', 'คุมสต็อก'],
+  finance: ['แคชเชียร์', 'การเงิน', 'บัญชี', 'cashier', 'finance', 'accounting'],
+  service: ['เสิร์ฟ', 'หน้าร้าน', 'บริการ', 'service', 'waiter', 'waitress', 'บาริสต้า', 'ต้อนรับ'],
+  shipping: ['ส่ง', 'จัดส่ง', 'โลจิสติกส์', 'ไรเดอร์', 'delivery', 'logistics', 'ขนส่ง', 'พัสดุ'],
+  management: ['ผู้จัดการ', 'บริหาร', 'admin', 'ผู้ดูแลระบบ', 'manager', 'owner', 'เจ้าของ', 'หัวหน้า'],
+};
+
+export const checkIsAdmin = (user) => {
+  if (!user) return false;
+  const userRole = (user.role || '').toLowerCase();
+  const userPos = (user.position || '').toLowerCase();
+  return userRole === 'admin' || 
+    userPos.includes('admin') || 
+    userPos.includes('ผู้ดูแลระบบ') || 
+    userPos.includes('ผู้จัดการ') || 
+    userPos.includes('เจ้าของ') || 
+    userPos.includes('owner');
+};
+
+// Helper: ดึงคีย์คลัสเตอร์ของตำแหน่งงานผู้ใช้
+export const getUserCluster = (user) => {
+  if (!user) return null;
+  const userRole = (user.role || '').toLowerCase();
+  const userPos = (user.position || '').toLowerCase();
+
+  if (checkIsAdmin(user)) {
+    return 'management';
+  }
+
+  for (const [clusterKey, keywords] of Object.entries(POSITION_CLUSTERS)) {
+    if (keywords.some(k => userPos.includes(k))) {
+      return clusterKey;
+    }
+  }
+
+  return null;
+};
+
+// รายการแท็บตำแหน่งงานทั้งหมด
+export const POSITION_TABS = [
+  { key: 'my', label: 'งานของฉัน', icon: '⭐', desc: 'ภารกิจและงานส่วนตัวของคุณ' },
+  { key: 'warehouse', label: 'คลัง/สต็อก', icon: '📦', desc: 'งานฝ่ายคลังสินค้าและสต็อก' },
+  { key: 'kitchen', label: 'ครัว/เชฟ', icon: '👨‍🍳', desc: 'งานฝ่ายครัวและเชฟ' },
+  { key: 'finance', label: 'การเงิน/แคชเชียร์', icon: '💰', desc: 'งานฝ่ายการเงินและแคชเชียร์' },
+  { key: 'service', label: 'หน้าร้าน/บริการ', icon: '🍱', desc: 'งานฝ่ายหน้าร้านและบริการ' },
+  { key: 'shipping', label: 'จัดส่ง/พัสดุ', icon: '🚚', desc: 'งานฝ่ายจัดส่งและพัสดุ' },
+  { key: 'management', label: 'บริหาร/Admin', icon: '👔', desc: 'งานฝ่ายบริหารจัดการ' },
+  { key: 'all', label: 'งานทั้งหมด', icon: '🌐', desc: 'งานทั้งหมดทุกแผนกในระบบ' },
+];
+
+// Helper: คำนวณแท็บตำแหน่งที่ผู้ใช้มีสิทธิ์เข้าถึง (Staff เห็นเฉพาะงานตนเองและทีมตนเอง)
+export const getVisiblePositionTabs = (user) => {
+  if (checkIsAdmin(user)) {
+    return POSITION_TABS;
+  }
+
+  const userCluster = getUserCluster(user);
+  const tabs = [
+    { key: 'my', label: 'งานของฉัน', icon: '⭐', desc: 'ภารกิจและงานส่วนตัวของคุณ' }
+  ];
+
+  if (userCluster && userCluster !== 'management') {
+    const matched = POSITION_TABS.find(t => t.key === userCluster);
+    if (matched) {
+      tabs.push({
+        key: matched.key,
+        label: `ทีม${matched.label}`, // เช่น ทีมคลัง/สต็อก, ทีมครัว/เชฟ
+        icon: matched.icon,
+        desc: matched.desc
+      });
+    }
+  }
+
+  return tabs;
+};
+
 // Helper: ตรวจสอบความสอดคล้องระหว่างข้อมูลผู้ใช้กับตำแหน่งงานที่มอบหมาย
 export const matchesUserPosition = (user, task) => {
   if (!user || !task) return false;
@@ -415,12 +496,7 @@ export const matchesUserPosition = (user, task) => {
   const targetCat = (task.category || '').toLowerCase();
 
   // ผู้ดูแลระบบ / เจ้าของร้าน / ผู้จัดการ
-  const isAdminUser = userRole === 'admin' || 
-    userPos.includes('admin') || 
-    userPos.includes('ผู้ดูแลระบบ') || 
-    userPos.includes('ผู้จัดการ') || 
-    userPos.includes('เจ้าของ') || 
-    userPos.includes('owner');
+  const isAdminUser = checkIsAdmin(user);
 
   const isMgmtTask = targetDept === 'management' || 
     targetCat === 'management' || 
@@ -438,17 +514,7 @@ export const matchesUserPosition = (user, task) => {
     if (userPos.includes(targetPos) || targetPos.includes(userPos)) return true;
   }
 
-  // คลัสเตอร์ตำแหน่งงานในร้านค้า / ร้านอาหาร / คลัง
-  const CLUSTERS = {
-    kitchen: ['เชฟ', 'แม่ครัว', 'ครัว', 'ผู้ช่วยเชฟ', 'cook', 'chef', 'kitchen'],
-    warehouse: ['สต็อก', 'คลัง', 'stock', 'warehouse', 'พัสดุ', 'คุมสต็อก'],
-    finance: ['แคชเชียร์', 'การเงิน', 'บัญชี', 'cashier', 'finance', 'accounting'],
-    service: ['เสิร์ฟ', 'หน้าร้าน', 'บริการ', 'service', 'waiter', 'waitress', 'บาริสต้า', 'ต้อนรับ'],
-    shipping: ['ส่ง', 'จัดส่ง', 'โลจิสติกส์', 'ไรเดอร์', 'delivery', 'logistics', 'ขนส่ง', 'พัสดุ'],
-    management: ['ผู้จัดการ', 'บริหาร', 'admin', 'ผู้ดูแลระบบ', 'manager', 'owner', 'เจ้าของ', 'หัวหน้า'],
-  };
-
-  for (const [clusterKey, keywords] of Object.entries(CLUSTERS)) {
+  for (const [clusterKey, keywords] of Object.entries(POSITION_CLUSTERS)) {
     const userInCluster = keywords.some(k => userPos.includes(k));
     if (!userInCluster) continue;
 
@@ -456,6 +522,46 @@ export const matchesUserPosition = (user, task) => {
     if (keywords.some(k => targetPos.includes(k))) return true;
   }
 
+  return false;
+};
+
+// Helper: ตรวจสอบว่าภารกิจนี้สามารถแสดงให้ผู้ใช้คนนี้เห็นได้หรือไม่
+// (พนักงานทั่วไปจะเห็นเฉพาะงานตนเองและงานทีมตนเองเท่านั้น มีเพียง Admin ที่เห็นของทุกคน)
+export const isTaskVisibleToUser = (user, task) => {
+  if (!user || !task) return false;
+  if (checkIsAdmin(user)) return true; // Admin เห็นงานทั้งหมด
+
+  // 1. งานที่มอบหมายเจาะจงถึงตนเอง
+  if (task.targetUserId && (task.targetUserId === user.uid || task.targetUserId === user.id)) {
+    return true;
+  }
+
+  // 2. งานที่สร้างโดยตนเอง
+  if (task.createdBy && (task.createdBy === user.uid || task.createdBy === user.id)) {
+    return true;
+  }
+
+  // 3. งานที่ตรงกับตำแหน่งตนเอง
+  if (matchesUserPosition(user, task)) {
+    return true;
+  }
+
+  // 4. งานของทีมตัวเอง (User's team cluster)
+  const userCluster = getUserCluster(user);
+  if (userCluster) {
+    const targetDept = (task.targetDepartment || '').toLowerCase();
+    const targetCat = (task.category || '').toLowerCase();
+    if (targetDept === userCluster || targetCat === userCluster) {
+      return true;
+    }
+    const keywords = POSITION_CLUSTERS[userCluster] || [];
+    const targetPos = (task.targetPosition || '').toLowerCase();
+    if (keywords.some(k => targetPos.includes(k))) {
+      return true;
+    }
+  }
+
+  // ปิดกั้นงานของแผนกอื่น
   return false;
 };
 

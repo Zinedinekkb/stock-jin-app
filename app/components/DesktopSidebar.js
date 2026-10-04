@@ -7,6 +7,7 @@ import {
   ChevronLeft, ChevronRight, LogOut, QrCode
 } from 'lucide-react';
 import { isAdmin } from '../utils/permissions';
+import { getUserCluster } from '../services/taskService';
 
 const menuItems = [
   {
@@ -220,7 +221,16 @@ export default function DesktopSidebar({
                   <div className={`smart-sidebar-sub-wrapper ${isExpanded ? 'expanded' : ''}`}>
                     <div className="smart-sidebar-sub-container">
                       {item.subItems
-                        .filter(sub => !sub.adminOnly || isUserAdmin)
+                        .filter(sub => {
+                          if (sub.adminOnly && !isUserAdmin) return false;
+                          if (item.key === 'dashboard' && !isUserAdmin) {
+                            const userCluster = getUserCluster(user);
+                            if (sub.key === 'my' || sub.key === 'analytics') return true;
+                            if (userCluster && sub.key === userCluster) return true;
+                            return false;
+                          }
+                          return true;
+                        })
                         .map(sub => {
                           let isSubActive = false;
                           if (item.key === 'dashboard') {

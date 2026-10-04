@@ -8,6 +8,7 @@ import {
   Layers, FileText, Check, ShieldCheck
 } from 'lucide-react';
 import { isAdmin } from '../utils/permissions';
+import { getUserCluster } from '../services/taskService';
 
 export default function MoreDrawer({ 
   isOpen, 
@@ -274,7 +275,16 @@ export default function MoreDrawer({
                       <div className={`more-drawer-sub-wrapper ${isExpanded ? 'expanded' : ''}`}>
                         <div className="more-drawer-sub-container">
                           {item.subItems
-                            .filter(sub => !sub.adminOnly || isUserAdmin)
+                            .filter(sub => {
+                              if (sub.adminOnly && !isUserAdmin) return false;
+                              if (item.key === 'dashboard' && !isUserAdmin) {
+                                const userCluster = getUserCluster(user);
+                                if (sub.key === 'my' || sub.key === 'analytics') return true;
+                                if (userCluster && sub.key === userCluster) return true;
+                                return false;
+                              }
+                              return true;
+                            })
                             .map(sub => {
                               // Check if sub-item is active
                               let isSubActive = false;
