@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Clock, CheckCircle2, ChevronRight, ClipboardList, FileText, X, 
-  Minus, Plus, Copy, RotateCcw, Trash2, Ban, Search, PackagePlus, Eye
+  Minus, Plus, Copy, RotateCcw, Trash2, Ban, Search, PackagePlus, Eye, Check
 } from 'lucide-react';
 import { hasPermission } from '../utils/permissions';
 
@@ -10,7 +10,7 @@ export default function TabStatus({
   transactions, statusFilter, setStatusFilter,
   verifyingTx, setVerifyingTx,
   actualQty, setActualQty,
-  openVerifyModal, handleVerifyAndSave,
+  openVerifyModal, handleVerifyAndSave, handleQuickApprove,
   copyToClipboard, generateSummaryText,
   handleVoidTransaction, handleEditCompletedTx,
   user, handleDeleteHistory,
@@ -113,7 +113,7 @@ export default function TabStatus({
                   tx.status === 'cancelled' ? 'border-gray-400 opacity-60' : tx.type === 'IN' ? 'border-success-500' : 'border-red-500'
                 }`}
               >
-                <div>
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                       tx.status === 'cancelled' ? 'bg-gray-200 text-gray-600' : tx.type==='IN'?'bg-success-100 text-success-700':'bg-red-100 text-red-800'
@@ -130,10 +130,27 @@ export default function TabStatus({
                   <p className={`text-sm font-bold text-gray-700 ${tx.status === 'cancelled' ? 'line-through' : ''}`}>
                     {(tx.items||[]).length} รายการ <span className="font-normal text-gray-400">| โดย {tx.recorder}</span>
                   </p>
+                  {tx.status === 'pending' && (tx.items || []).length > 0 && (
+                    <p className="text-xs text-ink-muted mt-1 line-clamp-2">
+                      {(tx.items || []).slice(0, 3).map(item => `${item.name} ×${item.qty}`).join(' · ')}
+                      {(tx.items || []).length > 3 && ` · อีก ${(tx.items || []).length - 3} รายการ`}
+                    </p>
+                  )}
                   {tx.status === 'cancelled' && <p className="text-xs text-red-400 mt-1">ยกเลิกโดย: {tx.cancelledBy}</p>}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
+                  {/* อนุมัติด่วนตามยอดที่ขอ (แตะครั้งเดียว) */}
+                  {tx.status === 'pending' && handleQuickApprove && hasPermission(user, 'VERIFY_TX') && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleQuickApprove(tx); }}
+                      className="h-10 px-3 rounded-control bg-brand-500 hover:bg-brand-600 text-white text-sm font-bold flex items-center gap-1.5 shadow-sm"
+                      aria-label={`อนุมัติตามที่ขอ ${tx.docNumber || ''}`}
+                    >
+                      <Check size={16} /> อนุมัติ
+                    </button>
+                  )}
                   {/* ปุ่มเปิดดูเอกสาร PDF ทางการ */}
                   <button
                     type="button"

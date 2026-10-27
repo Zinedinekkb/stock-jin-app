@@ -50,7 +50,11 @@ export default function StockJinApp() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [dashboardSubTab, setDashboardSubTab] = useState('tasks'); // 'tasks' | 'analytics'
+  const [dashboardSubTabState, setDashboardSubTab] = useState('tasks'); // 'tasks' | 'analytics'
+  // Shop-wide settings (settings/app). stockOnlyMode hides HR and daily-task features for small shops.
+  const [appSettings, setAppSettings] = useState({});
+  const stockOnlyMode = Boolean(appSettings.stockOnlyMode);
+  const dashboardSubTab = stockOnlyMode ? 'analytics' : dashboardSubTabState;
   const [dashboardPosTab, setDashboardPosTab] = useState('my'); // 'my' | 'warehouse' | 'kitchen' | 'finance' | 'service' | 'shipping' | 'management' | 'all'
   const [hrInitialView, setHrInitialView] = useState('my');
   const [hrInitialSubTab, setHrInitialSubTab] = useState('attendance');
@@ -304,8 +308,26 @@ export default function StockJinApp() {
       });
     }
 
-    return () => { unsubProd(); unsubCat(); unsubTx(); unsubPending(); unsubLeaves(); unsubHist(); };
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'app'), (snap) => {
+      setAppSettings(snap.exists() ? snap.data() : {});
+    }, (error) => console.error('Settings listener error:', error));
+
+    return () => { unsubProd(); unsubCat(); unsubTx(); unsubPending(); unsubLeaves(); unsubHist(); unsubSettings(); };
   }, [user]);
+
+  // Admin toggles stock-only mode for the whole shop
+  const handleToggleStockOnlyMode = async (enabled) => {
+    try {
+      await setDoc(doc(db, 'settings', 'app'), { stockOnlyMode: enabled, updatedBy: user?.name || '', updatedAt: serverTimestamp() }, { merge: true });
+      showNotification(enabled ? 'เปิดโหมดเฉพาะสต็อกแล้ว' : 'ปิดโหมดเฉพาะสต็อกแล้ว');
+    } catch (error) {
+      console.error('Save settings error:', error);
+      showNotification('บันทึกการตั้งค่าไม่สำเร็จ (ตรวจสิทธิ์ Firestore ของ settings)');
+    }
+  };
+
+  // In stock-only mode the HR tab is hidden; send anyone who lands there to the dashboard
+  if (stockOnlyMode && activeTab === 'hr') setActiveTab('dashboard');
 
   // --- HELPER FUNCTIONS ---
   const stockError = (userMessage) => Object.assign(new Error(userMessage), { userMessage });
@@ -471,22 +493,20 @@ export default function StockJinApp() {
     setActualQty(initialActual);
   };
 
-  const handleVerifyAndSave = async (extraItems = []) => {
-    if (!verifyingTx) return;
+  // ยืนยันบิล: ตัดสต็อกตามยอด qtyMap และเปลี่ยนสถานะเป็นสำเร็จ (ใช้ทั้งหน้าตรวจละเอียดและปุ่มอนุมัติด่วน)
+  const confirmVerifyTransaction = (tx, qtyMap, extraItems = [], { title, intro }) => {
     // เตือนก่อนถ้าเบิกเกินสต็อกที่มี (ไม่ปัดเป็น 0 แบบเงียบ ๆ อีกต่อไป)
-    const overdrawn = verifyingTx.type === 'OUT'
-      ? products.filter(p => (parseInt(actualQty[p.id]) || 0) > (p.stock || 0))
+    const overdrawn = tx.type === 'OUT'
+      ? products.filter(p => (parseInt(qtyMap[p.id]) || 0) > (p.stock || 0))
       : [];
     const overdrawnText = overdrawn.length > 0
-      ? `
-
-⚠️ เบิกเกินสต็อกที่มี: ${overdrawn.map(p => `${p.name} (มี ${p.stock || 0}, เบิก ${parseInt(actualQty[p.id]) || 0})`).join(', ')} สต็อกจะติดลบ`
+      ? `\n\n⚠️ เบิกเกินสต็อกที่มี: ${overdrawn.map(p => `${p.name} (มี ${p.stock || 0}, เบิก ${parseInt(qtyMap[p.id]) || 0})`).join(', ')} สต็อกจะติดลบ`
       : '';
     showConfirm(
-      'ยืนยันยอดจริงถูกต้อง?', `สต็อกจะถูกอัปเดตตามยอดนี้ และสถานะจะเปลี่ยนเป็นสำเร็จ${overdrawnText}`,
+      title, `${intro}${overdrawnText}`,
       async () => {
-        const finalItems = [...(verifyingTx.items || []), ...extraItems];
-        const txRef = doc(db, 'transactions', verifyingTx.id);
+        const finalItems = [...(tx.items || []), ...extraItems];
+        const txRef = doc(db, 'transactions', tx.id);
         const verifiedAtDate = new Date().toLocaleString('th-TH');
         await runTransaction(db, async (t) => {
           const txSnap = await t.get(txRef);
@@ -495,18 +515,18 @@ export default function StockJinApp() {
 
           const updates = [];
           for (const item of finalItems) {
-            const finalQty = parseInt(actualQty[item.id]) || 0;
+            const finalQty = parseInt(qtyMap[item.id]) || 0;
             if (finalQty <= 0) continue;
             const productRef = doc(db, 'products', item.id);
             const productSnap = await t.get(productRef);
             if (!productSnap.exists()) throw stockError(`ไม่พบสินค้า "${item.name}" ในคลังแล้ว`);
-            updates.push({ productRef, delta: verifyingTx.type === 'IN' ? finalQty : -finalQty });
+            updates.push({ productRef, delta: tx.type === 'IN' ? finalQty : -finalQty });
           }
           updates.forEach(({ productRef, delta }) => t.update(productRef, { stock: increment(delta) }));
           t.update(txRef, {
             status: 'completed',
             items: finalItems,
-            actualItems: actualQty,
+            actualItems: qtyMap,
             verifiedBy: user ? user.name : 'Admin',
             verifiedAt: verifiedAtDate
           });
@@ -516,10 +536,10 @@ export default function StockJinApp() {
         try {
           await uploadAndSaveTransactionDocument({
             transaction: {
-              ...verifyingTx,
+              ...tx,
               status: 'completed',
               items: finalItems,
-              actualItems: actualQty,
+              actualItems: qtyMap,
               verifiedBy: user ? user.name : 'Admin',
               verifiedAt: verifiedAtDate,
             },
@@ -530,10 +550,29 @@ export default function StockJinApp() {
           console.error("Auto PDF Generation on Verify Error:", pdfErr);
         }
 
-        setVerifyingTx(null); 
+        setVerifyingTx(null);
         showNotification('ยืนยันแล้ว สต็อกอัปเดตเรียบร้อย');
       }, 'info'
     );
+  };
+
+  const handleVerifyAndSave = (extraItems = []) => {
+    if (!verifyingTx) return;
+    confirmVerifyTransaction(verifyingTx, actualQty, extraItems, {
+      title: 'ยืนยันยอดจริงถูกต้อง?',
+      intro: 'สต็อกจะถูกอัปเดตตามยอดนี้ และสถานะจะเปลี่ยนเป็นสำเร็จ',
+    });
+  };
+
+  // อนุมัติด่วน: ยอดจริง = ยอดที่ขอ ไม่ต้องเปิดบิลหรือพิมพ์ตัวเลข
+  const handleQuickApprove = (tx) => {
+    const qtyMap = {};
+    (tx.items || []).forEach(item => { qtyMap[item.id] = parseInt(item.qty) || 0; });
+    const summary = (tx.items || []).map(item => `• ${item.name} ${item.qty} ${item.unit || ''}`.trim()).join('\n');
+    confirmVerifyTransaction(tx, qtyMap, [], {
+      title: `อนุมัติ${tx.type === 'IN' ? 'รับเข้า' : 'เบิกออก'}ตามที่ขอ?`,
+      intro: `${summary}\n\nสต็อกจะ${tx.type === 'IN' ? 'เพิ่ม' : 'ลด'}ตามยอดนี้ทันที`,
+    });
   };
 
   // --- [ฟังก์ชันใหม่] ส่งสต็อกเข้า LINE (รองรับการเลือกหมวดหมู่) ---
@@ -1088,7 +1127,7 @@ export default function StockJinApp() {
           transactions={transactions} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
           verifyingTx={verifyingTx} setVerifyingTx={setVerifyingTx}
           actualQty={actualQty} setActualQty={setActualQty}
-          openVerifyModal={openVerifyModal} handleVerifyAndSave={handleVerifyAndSave}
+          openVerifyModal={openVerifyModal} handleVerifyAndSave={handleVerifyAndSave} handleQuickApprove={handleQuickApprove}
           copyToClipboard={copyToClipboard} generateSummaryText={generateSummaryText}
           handleVoidTransaction={handleVoidTransaction}
           handleEditCompletedTx={handleEditCompletedTx}
@@ -1115,6 +1154,7 @@ export default function StockJinApp() {
       {activeTab === 'documents' && <TabDocuments user={user} />}
       {activeTab === 'menu' && <TabMenu 
           user={user} handleLogout={handleLogout}
+          stockOnlyMode={stockOnlyMode} onToggleStockOnlyMode={handleToggleStockOnlyMode}
           pendingUsers={pendingUsers} approvalHistory={approvalHistory} handleApproveUser={handleApproveUser} handleRejectUser={handleRejectUser}
           handleUpdateProfile={handleUpdateProfile}
       />}
@@ -1181,6 +1221,7 @@ export default function StockJinApp() {
           onNavigateWithSub={handleNavigateWithSub}
           dashboardPosTab={dashboardPosTab}
           dashboardSubTab={dashboardSubTab}
+          stockOnlyMode={stockOnlyMode}
         />
         <div className="smart-main-wrapper flex-1 flex flex-col min-h-screen overflow-x-hidden">
           {/* Top Header */}
@@ -1197,13 +1238,13 @@ export default function StockJinApp() {
           />
 
           {/* Desktop Content Grid */}
-          <main className={`smart-content-grid flex-1 ${activeTab === 'dashboard' ? 'has-right-panel' : ''}`}>
+          <main className={`smart-content-grid flex-1 ${activeTab === 'dashboard' && !stockOnlyMode ? 'has-right-panel' : ''}`}>
             {/* Main Area */}
             <div className="space-y-6 min-w-0 max-w-full">
               {activeTab === 'dashboard' ? (
                 <>
-                  {/* Mode Switcher */}
-                  <div className="flex items-center justify-between px-1 -mb-2">
+                  {/* Mode Switcher (hidden in stock-only mode: there are no daily tasks) */}
+                  {!stockOnlyMode && <div className="flex items-center justify-between px-1 -mb-2">
                     <div className="text-sm font-bold text-ink-muted">
                       ภาพรวมระบบและภารกิจประจำวัน
                     </div>
@@ -1221,7 +1262,7 @@ export default function StockJinApp() {
                         สถิติ & รายงาน
                       </button>
                     </div>
-                  </div>
+                  </div>}
 
                   {(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
                     <SmartDashboardView 
@@ -1259,8 +1300,8 @@ export default function StockJinApp() {
               )}
             </div>
 
-            {/* Right Panel (Shown ONLY on Dashboard tab) */}
-            {activeTab === 'dashboard' && (
+            {/* Right Panel (Dashboard only; task-based, so hidden in stock-only mode) */}
+            {activeTab === 'dashboard' && !stockOnlyMode && (
               <div className="hidden xl:block shrink-0">
                 <SmartRightPanel 
                   user={user}
@@ -1316,8 +1357,8 @@ export default function StockJinApp() {
         <div className="p-4 flex-1 overflow-y-auto scrollbar-hide pb-28 space-y-4">
           {activeTab === 'dashboard' ? (
             <>
-              {/* Mobile Sub-tab switch */}
-              <div className="glass flex p-1 rounded-2xl text-sm font-bold">
+              {/* Mobile Sub-tab switch (hidden in stock-only mode) */}
+              {!stockOnlyMode && <div className="glass flex p-1 rounded-2xl text-sm font-bold">
                 <button 
                   onClick={() => setDashboardSubTab('tasks')}
                   className={`flex-1 h-10 rounded-xl transition-colors ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-muted'}`}
@@ -1330,7 +1371,7 @@ export default function StockJinApp() {
                 >
                   สถิติ & รายงาน
                 </button>
-              </div>
+              </div>}
 
               {(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
                 <>
@@ -1406,6 +1447,7 @@ export default function StockJinApp() {
           onNavigateWithSub={handleNavigateWithSub}
           dashboardPosTab={dashboardPosTab}
           dashboardSubTab={dashboardSubTab}
+          stockOnlyMode={stockOnlyMode}
           user={user}
           unreadNotifCount={unreadNotifCount}
           handleLogout={handleLogout}

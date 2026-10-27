@@ -12,7 +12,8 @@ export default function DesktopSidebar({
   unreadNotifCount = 0,
   onNavigateWithSub,
   dashboardPosTab = 'my',
-  dashboardSubTab = 'tasks'
+  dashboardSubTab = 'tasks',
+  stockOnlyMode = false
 }) {
   // Sidebar expanded / collapsed state
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -37,7 +38,7 @@ export default function DesktopSidebar({
       return;
     }
 
-    const hasSub = item.subItems && item.subItems.length > 0;
+    const hasSub = getVisibleSubItems(item, user, { stockOnlyMode }).length > 0;
     // First click navigates and opens the sub-menu; clicking the already-active item toggles it
     if (activeTab !== item.key) {
       setActiveTab(item.key);
@@ -95,11 +96,11 @@ export default function DesktopSidebar({
 
       {/* Navigation List (Scrollable) */}
       <div className="smart-sidebar-nav smart-sidebar-scroll">
-        {getVisibleNavItems(user)
+        {getVisibleNavItems(user, { stockOnlyMode })
           .map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.key;
-            const hasSub = item.subItems && item.subItems.length > 0;
+            const hasSub = getVisibleSubItems(item, user, { stockOnlyMode }).length > 0;
             const isExpanded = expandedSection === item.key && !isCollapsed;
             const showBadge = item.key === 'notifications' && unreadNotifCount > 0;
 
@@ -154,7 +155,7 @@ export default function DesktopSidebar({
                 {!isCollapsed && hasSub && (
                   <div className={`smart-sidebar-sub-wrapper ${isExpanded ? 'expanded' : ''}`}>
                     <div className="smart-sidebar-sub-container">
-                      {getVisibleSubItems(item, user)
+                      {getVisibleSubItems(item, user, { stockOnlyMode })
                         .map(sub => {
                           const isSubActive = isSubItemActive(item, sub, { activeTab, dashboardSubTab, dashboardPosTab });
                           const SubIcon = sub.icon;

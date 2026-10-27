@@ -13,6 +13,7 @@ export default function MoreDrawer({
   onNavigateWithSub,
   dashboardPosTab = 'my',
   dashboardSubTab = 'tasks',
+  stockOnlyMode = false,
   user,
   unreadNotifCount = 0,
 }) {
@@ -90,10 +91,10 @@ export default function MoreDrawer({
         {/* Navigation (accordion) */}
         <div className="more-drawer-content">
           <div className="space-y-1 px-3 pb-6 pt-1">
-            {getVisibleNavItems(user).map(item => {
+            {getVisibleNavItems(user, { stockOnlyMode }).map(item => {
               const Icon = item.icon;
               const isTabActive = activeTab === item.key;
-              const subItems = getVisibleSubItems(item, user);
+              const subItems = getVisibleSubItems(item, user, { stockOnlyMode });
               const hasSub = subItems.length > 0;
               const isExpanded = hasSub && expandedSection === item.key;
               const badge = item.key === 'notifications' ? unreadNotifCount : 0;

@@ -28,21 +28,28 @@ export const NAV_ITEMS = [
   { key: 'stock', label: 'คลังสินค้า', icon: Package, desc: 'จัดการสินค้าและตรวจนับสต็อก' },
   { key: 'transaction', label: 'เบิก/รับสินค้า', icon: ArrowRightLeft, desc: 'เบิกจ่ายและรับสินค้าเข้าคลัง' },
   { key: 'status', label: 'สถานะรายการ', icon: ClipboardList, desc: 'ประวัติและสถานะการทำรายการ' },
-  { key: 'hr', label: 'เข้า-ออกงาน / ลา', icon: Clock, desc: 'บันทึกเวลา เช็คชื่อ และยื่นใบลา' },
+  { key: 'hr', label: 'เข้า-ออกงาน / ลา', icon: Clock, desc: 'บันทึกเวลา เช็คชื่อ และยื่นใบลา', hiddenInStockOnly: true },
   { key: 'documents', label: 'เอกสาร', icon: FolderOpen, desc: 'คลังเอกสาร ใบลา ใบสั่งของ' },
   { key: 'notifications', label: 'การแจ้งเตือน', icon: Bell, desc: 'ข้อความและแจ้งเตือนระบบ' },
   { key: 'users', label: 'จัดการบัญชีผู้ใช้', icon: Users, desc: 'รายชื่อและสิทธิ์ผู้ใช้งาน', adminOnly: true },
   { key: 'menu', label: 'ตั้งค่า & บัญชี', icon: Settings, desc: 'ข้อมูลส่วนตัวและบัญชี' },
 ];
 
-// Menu items the user may see
-export const getVisibleNavItems = (user) => {
+// Menu items the user may see. Stock-only mode (a shop-wide setting) hides HR and daily tasks.
+export const getVisibleNavItems = (user, { stockOnlyMode = false } = {}) => {
   const admin = isAdmin(user);
-  return NAV_ITEMS.filter(item => !item.adminOnly || admin);
+  return NAV_ITEMS
+    .filter(item => !item.adminOnly || admin)
+    .filter(item => !(stockOnlyMode && item.hiddenInStockOnly))
+    .map(item => (stockOnlyMode && item.key === 'dashboard')
+      ? { ...item, label: 'ภาพรวมสต็อก', desc: 'สถิติสต็อกและรายงาน' }
+      : item);
 };
 
 // Dashboard sub-items: staff only see their own work, their team, and analytics
-export const getVisibleSubItems = (item, user) => {
+export const getVisibleSubItems = (item, user, { stockOnlyMode = false } = {}) => {
+  // Stock-only mode has no team task lists, so the dashboard needs no sub-menu
+  if (stockOnlyMode && item.key === 'dashboard') return [];
   const admin = isAdmin(user);
   return (item.subItems || []).filter(sub => {
     if (sub.adminOnly && !admin) return false;

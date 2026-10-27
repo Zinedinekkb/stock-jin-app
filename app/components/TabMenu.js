@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import {
   User, Settings, Smartphone, LogOut, ShieldCheck, Check, X, History, Briefcase,
-  ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone
+  ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone, Boxes
 } from 'lucide-react';
 import { GlassCard, Button, Badge, SectionHeader, ListRow } from './ui';
 
@@ -19,6 +19,8 @@ const PRESET_POSITIONS = [
 
 export default function TabMenu({ 
   user, handleLogout,
+  // Shop-wide stock-only mode (admin switch)
+  stockOnlyMode = false, onToggleStockOnlyMode,
   // Props สำหรับแอดมินอนุมัติ
   pendingUsers = [], approvalHistory = [], handleApproveUser, handleRejectUser,
   // Props สำหรับแก้ไขโปรไฟล์
@@ -251,6 +253,19 @@ export default function TabMenu({
                   </div>
                 )}
               </>
+            )}
+            {isUserAdmin && onToggleStockOnlyMode && (
+              <ListRow
+                icon={Boxes}
+                label="โหมดเฉพาะสต็อก"
+                description="ซ่อนเข้า-ออกงาน/ลา และรายการงานประจำวัน สำหรับทุกคนในร้าน"
+                onClick={() => onToggleStockOnlyMode(!stockOnlyMode)}
+                trailing={
+                  <span role="switch" aria-checked={stockOnlyMode} className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${stockOnlyMode ? 'bg-brand-500' : 'bg-ink-subtle/30'}`}>
+                    <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-[left] duration-150 ${stockOnlyMode ? 'left-6' : 'left-1'}`} />
+                  </span>
+                }
+              />
             )}
             <ListRow icon={Smartphone} label="เกี่ยวกับแอป" description="StockPro · ระบบคลังสินค้าและบุคลากร" trailing={<Badge tone="neutral">v2.2</Badge>} />
           </GlassCard>
