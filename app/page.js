@@ -36,7 +36,7 @@ import { compressImageFile, blobToDataUrl } from '@/app/utils/cameraUtils';
 import { db, auth, storage } from '@/lib/firebase';
 import { 
   collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, getDocs,
-  serverTimestamp, query, orderBy, where, writeBatch
+  serverTimestamp, query, orderBy, where, writeBatch, increment, runTransaction
 } from 'firebase/firestore';
 import { 
   signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword,
@@ -217,27 +217,27 @@ export default function StockJinApp() {
     return () => unsubscribe();
   }, []);
 
-  // --- REAL-TIME STATUS LISTENER FOR PENDING USERS ---
+  // --- REAL-TIME LISTENER: status/role changes apply immediately ---
   useEffect(() => {
-    if (!user?.uid || user?.status !== 'pending') return;
+    if (!user?.uid) return;
     const unsubUser = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.status && data.status !== user.status) {
+        if ((data.status && data.status !== user.status) || (data.role && data.role !== user.role) || (data.position && data.position !== user.position)) {
           setUser(prev => ({
             ...prev,
             status: data.status,
             role: data.role || prev?.role || 'staff',
             position: data.position || prev?.position || 'พนักงานทั่วไป'
           }));
-          if (data.status === 'approved') {
+          if (user.status === 'pending' && data.status === 'approved') {
             showNotification('บัญชีของคุณได้รับการอนุมัติเรียบร้อยแล้ว! ยินดีต้อนรับสู่ระบบ 🎉');
           }
         }
       }
     });
     return () => unsubUser();
-  }, [user?.uid, user?.status]);
+  }, [user?.uid, user?.status, user?.role, user?.position]);
 
   const handleCheckUserStatus = async () => {
     if (!user?.uid) return;
@@ -307,8 +307,24 @@ export default function StockJinApp() {
   }, [user]);
 
   // --- HELPER FUNCTIONS ---
+  const stockError = (userMessage) => Object.assign(new Error(userMessage), { userMessage });
+
   const showConfirm = (title, message, onConfirm, type = 'danger') => {
-    setModalConfig({ isOpen: true, title, message, type, onConfirm: () => { onConfirm(); setModalConfig(prev => ({ ...prev, isOpen: false })); }});
+    // ล็อกปุ่มระหว่างทำงาน กันกดยืนยันซ้ำ (เช่น ตัดสต็อกสองรอบ)
+    let running = false;
+    setModalConfig({ isOpen: true, busy: false, title, message, type, onConfirm: async () => {
+      if (running) return;
+      running = true;
+      setModalConfig(prev => ({ ...prev, busy: true }));
+      try {
+        await onConfirm();
+      } catch (error) {
+        console.error(error);
+        showNotification(error?.userMessage || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+      } finally {
+        setModalConfig(prev => ({ ...prev, isOpen: false, busy: false }));
+      }
+    }});
   };
 
   const showNotification = (msg) => { setToastMsg(msg); setShowToast(true); setTimeout(() => setShowToast(false), 2000); };
@@ -331,32 +347,36 @@ export default function StockJinApp() {
   };
 
   // --- LOGIC: Void/Edit/Reorder ---
-  const revertStock = async (tx) => {
-    const reversePromises = (tx.items || []).map(async (item) => {
-       const qtyUsed = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : 0;
-       if (qtyUsed > 0) {
-         const productRef = doc(db, 'products', item.id);
-         const productSnap = await getDoc(productRef);
-         if (productSnap.exists()) {
-            const currentStock = productSnap.data().stock || 0;
-            let revertedStock = currentStock;
-            if (tx.type === 'IN') revertedStock = currentStock - qtyUsed;
-            else revertedStock = currentStock + qtyUsed;
-            await updateDoc(productRef, { stock: Math.max(0, revertedStock) });
-         }
-       }
-    });
-    await Promise.all(reversePromises);
-  };
+  // คืนค่าสต็อกของบิลที่ "สำเร็จ" แล้ว พร้อมอัปเดตสถานะบิลในธุรกรรมเดียว
+  // อ่านสถานะล่าสุดจากฐานข้อมูล กันการคืนสต็อกซ้ำเมื่อมีคนกดพร้อมกัน
+  const revertStock = (tx, txUpdate, allowedStatuses) => runTransaction(db, async (t) => {
+    const txRef = doc(db, 'transactions', tx.id);
+    const txSnap = await t.get(txRef);
+    if (!txSnap.exists()) throw stockError('ไม่พบรายการนี้แล้ว');
+    const live = txSnap.data();
+    if (!allowedStatuses.includes(live.status)) throw stockError('รายการนี้ถูกเปลี่ยนสถานะไปแล้ว กรุณารีเฟรช');
+
+    const reverts = [];
+    if (live.status === 'completed') {
+      for (const item of live.items || []) {
+        const qtyUsed = parseInt(live.actualItems?.[item.id]) || 0;
+        if (qtyUsed <= 0) continue;
+        const productRef = doc(db, 'products', item.id);
+        const productSnap = await t.get(productRef);
+        if (productSnap.exists()) reverts.push({ productRef, delta: live.type === 'IN' ? -qtyUsed : qtyUsed });
+      }
+    }
+    reverts.forEach(({ productRef, delta }) => t.update(productRef, { stock: increment(delta) }));
+    t.update(txRef, txUpdate);
+  });
 
   const handleVoidTransaction = (tx) => {
     showConfirm('ยืนยันยกเลิกบิล?', 'ระบบจะทำการคืนค่าสต็อกสินค้า และเปลี่ยนสถานะเป็น "ยกเลิก"', async () => {
-       await revertStock(tx);
-       await updateDoc(doc(db, 'transactions', tx.id), {
+       await revertStock(tx, {
           status: 'cancelled',
           cancelledBy: user.name,
           cancelledAt: new Date().toLocaleString('th-TH')
-       });
+       }, ['pending', 'completed']);
        setVerifyingTx(null); showNotification('ยกเลิกบิลและคืนค่าสต็อกแล้ว');
     }, 'danger');
   };
@@ -376,8 +396,7 @@ export default function StockJinApp() {
 
   const handleEditCompletedTx = (tx) => {
     showConfirm('ต้องการแก้ไขรายการ?', 'สต็อกจะถูกคืนค่าเดิม และรายการนี้จะกลับไปสถานะ "รอตรวจสอบ"', async () => {
-       await revertStock(tx);
-       await updateDoc(doc(db, 'transactions', tx.id), { status: 'pending', actualItems: null, verifiedBy: null, verifiedAt: null });
+       await revertStock(tx, { status: 'pending', actualItems: null, verifiedBy: null, verifiedAt: null }, ['completed']);
        setStatusFilter('pending'); 
        const initialActual = {};
        (tx.items || []).forEach(item => { initialActual[item.id] = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : item.qty; });
@@ -447,29 +466,43 @@ export default function StockJinApp() {
 
   const handleVerifyAndSave = async (extraItems = []) => {
     if (!verifyingTx) return;
+    // เตือนก่อนถ้าเบิกเกินสต็อกที่มี (ไม่ปัดเป็น 0 แบบเงียบ ๆ อีกต่อไป)
+    const overdrawn = verifyingTx.type === 'OUT'
+      ? products.filter(p => (parseInt(actualQty[p.id]) || 0) > (p.stock || 0))
+      : [];
+    const overdrawnText = overdrawn.length > 0
+      ? `
+
+⚠️ เบิกเกินสต็อกที่มี: ${overdrawn.map(p => `${p.name} (มี ${p.stock || 0}, เบิก ${parseInt(actualQty[p.id]) || 0})`).join(', ')} สต็อกจะติดลบ`
+      : '';
     showConfirm(
-      'ยืนยันยอดจริงถูกต้อง?', 'สต็อกจะถูกอัปเดตตามยอดนี้ สถานะจะเปลี่ยนเป็นสำเร็จ และระบบจะปรับปรุงเอกสาร PDF ฉบับอนุมัติลงคลังเอกสารอัตโนมัติ',
+      'ยืนยันยอดจริงถูกต้อง?', `สต็อกจะถูกอัปเดตตามยอดนี้ และสถานะจะเปลี่ยนเป็นสำเร็จ${overdrawnText}`,
       async () => {
         const finalItems = [...(verifyingTx.items || []), ...extraItems];
-        const updatePromises = products.map(async (p) => {
-          if (actualQty[p.id] !== undefined) {
-             const finalQty = parseInt(actualQty[p.id]) || 0;
-             if (finalQty > 0) {
-               const newStock = verifyingTx.type === 'IN' ? p.stock + finalQty : p.stock - finalQty;
-               const productRef = doc(db, 'products', p.id);
-               await updateDoc(productRef, { stock: Math.max(0, newStock) });
-             }
-          }
-        });
-        await Promise.all(updatePromises);
         const txRef = doc(db, 'transactions', verifyingTx.id);
         const verifiedAtDate = new Date().toLocaleString('th-TH');
-        await updateDoc(txRef, { 
-            status: 'completed', 
+        await runTransaction(db, async (t) => {
+          const txSnap = await t.get(txRef);
+          if (!txSnap.exists()) throw stockError('ไม่พบรายการนี้แล้ว');
+          if (txSnap.data().status !== 'pending') throw stockError('รายการนี้ถูกตรวจสอบหรือยกเลิกไปแล้ว');
+
+          const updates = [];
+          for (const item of finalItems) {
+            const finalQty = parseInt(actualQty[item.id]) || 0;
+            if (finalQty <= 0) continue;
+            const productRef = doc(db, 'products', item.id);
+            const productSnap = await t.get(productRef);
+            if (!productSnap.exists()) throw stockError(`ไม่พบสินค้า "${item.name}" ในคลังแล้ว`);
+            updates.push({ productRef, delta: verifyingTx.type === 'IN' ? finalQty : -finalQty });
+          }
+          updates.forEach(({ productRef, delta }) => t.update(productRef, { stock: increment(delta) }));
+          t.update(txRef, {
+            status: 'completed',
             items: finalItems,
-            actualItems: actualQty, 
-            verifiedBy: user ? user.name : 'Admin', 
-            verifiedAt: verifiedAtDate 
+            actualItems: actualQty,
+            verifiedBy: user ? user.name : 'Admin',
+            verifiedAt: verifiedAtDate
+          });
         });
 
         // สร้าง/อัปเดตเอกสารทางการฉบับสมบูรณ์ (Approved PDF) เก็บลงคลังเอกสารอัตโนมัติ
@@ -536,13 +569,14 @@ export default function StockJinApp() {
             const items = tx.items || [];
             items.forEach(item => {
                 const qty = (tx.actualItems && tx.actualItems[item.id] !== undefined) 
-                            ? parseInt(tx.actualItems[item.id]) 
+                            ? (parseInt(tx.actualItems[item.id]) || 0) 
                             : item.qty;
                 
-                if (itemsMap[item.name]) {
-                    itemsMap[item.name].totalQty += qty;
+                const key = item.id || item.name;
+                if (itemsMap[key]) {
+                    itemsMap[key].totalQty += qty;
                 } else {
-                    itemsMap[item.name] = { ...item, totalQty: qty };
+                    itemsMap[key] = { ...item, totalQty: qty };
                 }
             });
         });
@@ -551,7 +585,7 @@ export default function StockJinApp() {
         return Object.values(itemsMap)
             .filter(i => i.totalQty > 0)
             .map(item => {
-                const realProduct = products.find(p => p.name === item.name); 
+                const realProduct = products.find(p => p.id === item.id) || products.find(p => p.name === item.name);
                 return { 
                     ...item, 
                     currentStock: realProduct ? realProduct.stock : 0 
@@ -590,7 +624,14 @@ export default function StockJinApp() {
     await updateDoc(doc(db, 'products', editingProduct.id), { ...editFormData, stock: parseInt(editFormData.stock), minStock: parseInt(editFormData.minStock)||5 });
     setEditingProduct(null); showNotification('แก้ไขแล้ว');
   };
-  const handleDeleteProduct = async () => { await deleteDoc(doc(db, 'products', editingProduct.id)); setEditingProduct(null); showNotification('ลบแล้ว'); };
+  const handleDeleteProduct = () => {
+    const target = editingProduct;
+    if (!target) return;
+    showConfirm('ลบสินค้านี้?', `"${target.name}" จะถูกลบออกจากคลังถาวร (ประวัติรายการเดิมยังอยู่)`, async () => {
+      await deleteDoc(doc(db, 'products', target.id));
+      setEditingProduct(null); showNotification('ลบแล้ว');
+    }, 'danger');
+  };
   
   const handleSaveCategory = async () => {
     if(!newCatData.name) return showNotification('ใส่ชื่อหมวดด้วย!');
@@ -622,7 +663,7 @@ export default function StockJinApp() {
 
   // Cart Functions
   const handleAddToCart = (p) => setCart(prev => { const ex=prev.find(x=>x.id===p.id); return ex?prev.map(x=>x.id===p.id?{...x,qty:x.qty+1}:x):[...prev,{...p,qty:1}] });
-  const handleAdjustQty = (id, d) => setCart(prev => prev.map(i=>i.id===id?{...i,qty:Math.max(1,i.qty+d)}:i).filter(i=>i.qty>0));
+  const handleAdjustQty = (id, d) => setCart(prev => prev.map(i=>i.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0));
   const handleRemoveItem = (id) => setCart(prev => prev.filter(i=>i.id!==id));
   const handleCartQtyChange = (id, val) => { const qty = parseInt(val) || 0; if (qty <= 0) return handleRemoveItem(id); setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i)); };
 
@@ -1241,7 +1282,7 @@ export default function StockJinApp() {
           </main>
         </div>
 
-        <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
+        <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} busy={modalConfig.busy} onCancel={() => setModalConfig(prev => prev.busy ? prev : ({ ...prev, isOpen: false }))} />
         {showToast && <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
       </div>
     );
@@ -1368,7 +1409,7 @@ export default function StockJinApp() {
           handleLogout={handleLogout}
         />
         
-        <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
+        <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} busy={modalConfig.busy} onCancel={() => setModalConfig(prev => prev.busy ? prev : ({ ...prev, isOpen: false }))} />
 
         {/* Official Transaction Document Modal (GRN / GIS A4 PDF) */}
         <TransactionDocumentModal
