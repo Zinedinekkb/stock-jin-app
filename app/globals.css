@@ -1921,9 +1921,13 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 16px 0 20px;
+  /* Inactive items sit 8px in, so hover never changes layout; padding keeps the icon at the same x as the active item */
+  margin: 0 8px;
+  width: calc(100% - 16px);
+  padding: 0 16px 0 12px;
+  border-radius: 16px;
   position: relative;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.15s ease, color 0.15s ease;
   cursor: pointer;
   border: none;
   background: transparent;
@@ -1934,9 +1938,6 @@
 
 .smart-sidebar-item:hover:not(.active) {
   background: rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  margin: 0 8px;
-  width: calc(100% - 16px);
   color: #ffffff;
 }
 
@@ -1948,8 +1949,11 @@
   border-bottom-left-radius: 26px;
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
-  margin-right: 0;
+  margin: 0;
   width: 100%;
+  padding-left: 20px;
+  /* The notch corners (::before/::after) can't fade, so the active state switches instantly to avoid a ghost highlight */
+  transition: none;
 }
 
 .smart-sidebar-item.active::before {
@@ -2998,4 +3002,4 @@
     border: none !important;
   }
 }
-
+

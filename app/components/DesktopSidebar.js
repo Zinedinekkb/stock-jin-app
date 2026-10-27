@@ -108,8 +108,14 @@ export default function DesktopSidebar({
       return;
     }
 
-    setActiveTab(item.key);
-    if (item.subItems && item.subItems.length > 0) {
+    const hasSub = item.subItems && item.subItems.length > 0;
+    // First click navigates and opens the sub-menu; clicking the already-active item toggles it
+    if (activeTab !== item.key) {
+      setActiveTab(item.key);
+      if (hasSub) setExpandedSection(item.key);
+      return;
+    }
+    if (hasSub) {
       setExpandedSection(prev => prev === item.key ? null : item.key);
     }
   };
