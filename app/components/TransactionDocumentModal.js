@@ -64,7 +64,7 @@ export default function TransactionDocumentModal({
 
   const primaryColor = isModeIn ? '#15803d' : '#b91c1c';
   const headerBgGradient = isModeIn 
-    ? 'from-emerald-700 to-green-600' 
+    ? 'from-success-700 to-success-600' 
     : 'from-rose-800 to-red-600';
 
   // 1. Download PDF directly to local machine
@@ -150,7 +150,7 @@ export default function TransactionDocumentModal({
         <div className="leave-modal-header no-print">
           <div className="flex items-center gap-2.5">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-xs ${
-              isModeIn ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+              isModeIn ? 'bg-success-50 text-success-600' : 'bg-rose-50 text-rose-600'
             }`}>
               <FileText size={20} />
             </div>
@@ -186,7 +186,7 @@ export default function TransactionDocumentModal({
               type="button"
               onClick={handleSaveToDocuments}
               disabled={isGenerating}
-              className="px-3.5 py-1.5 bg-[#6355d8] hover:bg-[#5244c9] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+              className="px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
             >
               {isGenerating ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -351,7 +351,7 @@ export default function TransactionDocumentModal({
                           <td className="py-2 px-2.5 text-slate-600 text-[11px]">{item.category || '-'}</td>
                           <td className="py-2 px-2.5 text-center font-semibold text-slate-800">{Number(item.qty).toLocaleString()}</td>
                           <td className={`py-2 px-2.5 text-center font-bold ${
-                            isQtyDiff ? 'text-amber-600' : isCompleted ? 'text-emerald-700' : 'text-slate-400'
+                            isQtyDiff ? 'text-amber-600' : isCompleted ? 'text-success-700' : 'text-slate-400'
                           }`}>
                             {isCompleted ? Number(actQty).toLocaleString() : (isQtyDiff ? Number(actQty).toLocaleString() : '-')}
                           </td>
@@ -368,7 +368,7 @@ export default function TransactionDocumentModal({
                       รวมทั้งหมด ({items.length} รายการ):
                     </td>
                     <td className="py-2.5 px-2.5 text-center text-slate-900">{totalRequestedQty.toLocaleString()}</td>
-                    <td className={`py-2.5 px-2.5 text-center ${isCompleted ? 'text-emerald-700' : 'text-slate-500'}`}>
+                    <td className={`py-2.5 px-2.5 text-center ${isCompleted ? 'text-success-700' : 'text-slate-500'}`}>
                       {isCompleted ? totalActualQty.toLocaleString() : '-'}
                     </td>
                     <td colSpan="2" className="py-2.5 px-3 text-slate-500 text-[10px]">
@@ -429,7 +429,7 @@ export default function TransactionDocumentModal({
 
             {/* Stamp if completed */}
             {isCompleted && (
-              <div className="absolute right-14 bottom-32 border-4 border-double border-emerald-600 text-emerald-600 rounded-2xl px-4 py-2 text-center font-black text-xs tracking-widest -rotate-12 bg-emerald-50/90 shadow-md pointer-events-none">
+              <div className="absolute right-14 bottom-32 border-4 border-double border-success-600 text-success-600 rounded-2xl px-4 py-2 text-center font-black text-xs tracking-widest -rotate-12 bg-success-50/90 shadow-md pointer-events-none">
                 <div>★ STOCKPRO VERIFIED ★</div>
                 <div className="text-[9px] font-bold tracking-normal mt-0.5">อนุมัติและปรับยอดสต็อกแล้ว</div>
                 <div className="text-[8px] font-medium mt-0.5">{verifiedAtText || formattedDate}</div>

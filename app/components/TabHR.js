@@ -410,7 +410,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
             </div>
             <div className="hr-checkin-times">
               <div className="hr-time-item">
-                <LogIn size={18} className="text-green-600" />
+                <LogIn size={18} className="text-success-600" />
                 <div>
                   <p className="hr-time-label">เข้างาน</p>
                   <p className="hr-time-value">{todayRecord?.checkIn || '—:——'}</p>
@@ -693,7 +693,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-xs text-gray-800">{r.userName || 'พนักงาน'}</span>
-                            <span className="text-[11px] text-gray-500">{r.dateStr}</span>
+                            <span className="text-xs text-gray-500">{r.dateStr}</span>
                             {hasPhoto && (
                               <button
                                 type="button"
@@ -755,7 +755,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
                             onClick={() => handleOpenLeaveDoc(lv)}
                             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
                               lv.status === 'pending'
-                                ? 'bg-[#6355d8] hover:bg-[#5244c4] text-white hover:scale-105 active:scale-95 shadow-purple-500/20'
+                                ? 'bg-brand-500 hover:bg-[#5244c4] text-white hover:scale-105 active:scale-95 shadow-purple-500/20'
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
                             }`}
                             title="ตรวจสอบเอกสาร A4 และลงนามพิจารณา"

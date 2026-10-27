@@ -163,7 +163,7 @@ export default function CameraAttendanceModal({
             </div>
             <div>
               <h3 className="text-sm font-bold text-gray-800 leading-tight">{titleText}</h3>
-              <p className="text-[11px] text-gray-500">{userName} · ถ่ายภาพเพื่อยืนยันตัวตน</p>
+              <p className="text-xs text-gray-500">{userName} · ถ่ายภาพเพื่อยืนยันตัวตน</p>
             </div>
           </div>
           <button
@@ -218,7 +218,7 @@ export default function CameraAttendanceModal({
             <div className="cam-overlay-state p-6 text-center">
               <AlertCircle size={36} className="text-red-500 mb-2" />
               <p className="text-xs font-semibold text-gray-800 mb-1">ไม่สามารถเปิดกล้องได้</p>
-              <p className="text-[11px] text-gray-500 leading-relaxed mb-4">{cameraError}</p>
+              <p className="text-xs text-gray-500 leading-relaxed mb-4">{cameraError}</p>
               <button
                 type="button"
                 onClick={() => {
@@ -264,7 +264,7 @@ export default function CameraAttendanceModal({
               size={12}
               className={
                 locationStatus === 'found'
-                  ? 'text-emerald-500'
+                  ? 'text-success-500'
                   : locationStatus === 'searching'
                   ? 'text-amber-500 animate-pulse'
                   : 'text-gray-400'

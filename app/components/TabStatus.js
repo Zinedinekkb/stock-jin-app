@@ -81,13 +81,13 @@ export default function TabStatus({
       <div className="space-y-4 pb-20 animate-fade-in-slide relative">
         {/* Header, Search, Filter Tabs */}
         <div className="sticky top-0 bg-gray-50 z-10 py-2">
-            <h2 className="text-2xl font-bold text-green-900 mb-2">สถานะคำสั่ง</h2>
+            <h2 className="text-2xl font-bold text-success-700 mb-2">สถานะคำสั่ง</h2>
             <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"><Search size={16} /></div>
                 <input 
                   type="text" 
                   placeholder="ค้นหา (ชื่อคน, สินค้า, เลขที่เอกสาร, หมายเหตุ)..." 
-                  className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-gray-200 bg-white shadow-sm text-sm focus:ring-2 focus:ring-green-500 outline-none" 
+                  className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-gray-200 bg-white shadow-sm text-sm focus:ring-2 focus:ring-success-500 outline-none" 
                   value={searchTerm} 
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -97,7 +97,7 @@ export default function TabStatus({
         
         <div className="flex bg-gray-200 p-1 rounded-xl sticky top-[88px] z-10 overflow-x-auto">
           <button onClick={() => setStatusFilter('pending')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${statusFilter === 'pending' ? 'bg-white shadow text-orange-600' : 'text-gray-500'}`}><Clock size={16}/> รอตรวจ</button>
-          <button onClick={() => setStatusFilter('completed')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${statusFilter === 'completed' ? 'bg-white shadow text-green-600' : 'text-gray-500'}`}><CheckCircle2 size={16}/> สำเร็จ</button>
+          <button onClick={() => setStatusFilter('completed')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${statusFilter === 'completed' ? 'bg-white shadow text-success-600' : 'text-gray-500'}`}><CheckCircle2 size={16}/> สำเร็จ</button>
           <button onClick={() => setStatusFilter('cancelled')} className={`flex-1 min-w-[100px] py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${statusFilter === 'cancelled' ? 'bg-white shadow text-gray-600' : 'text-gray-500'}`}><Ban size={16}/> ยกเลิก</button>
         </div>
         
@@ -110,19 +110,19 @@ export default function TabStatus({
                 key={tx.id} 
                 onClick={() => openVerifyModal(tx)} 
                 className={`bg-white p-4 rounded-2xl shadow-sm border-l-4 cursor-pointer active:scale-95 transition-transform flex justify-between items-center ${
-                  tx.status === 'cancelled' ? 'border-gray-400 opacity-60' : tx.type === 'IN' ? 'border-green-500' : 'border-red-500'
+                  tx.status === 'cancelled' ? 'border-gray-400 opacity-60' : tx.type === 'IN' ? 'border-success-500' : 'border-red-500'
                 }`}
               >
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                      tx.status === 'cancelled' ? 'bg-gray-200 text-gray-600' : tx.type==='IN'?'bg-green-100 text-green-800':'bg-red-100 text-red-800'
+                      tx.status === 'cancelled' ? 'bg-gray-200 text-gray-600' : tx.type==='IN'?'bg-success-100 text-success-700':'bg-red-100 text-red-800'
                     }`}>
                       {tx.status === 'cancelled' ? 'ยกเลิกแล้ว' : (tx.type === 'IN' ? 'รับเข้า' : 'เบิกออก')}
                     </span>
                     <span className="text-xs text-gray-400">{tx.date}</span>
                     {tx.docNumber && (
-                      <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">
+                      <span className="text-xs font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">
                         {tx.docNumber}
                       </span>
                     )}
@@ -130,7 +130,7 @@ export default function TabStatus({
                   <p className={`text-sm font-bold text-gray-700 ${tx.status === 'cancelled' ? 'line-through' : ''}`}>
                     {(tx.items||[]).length} รายการ <span className="font-normal text-gray-400">| โดย {tx.recorder}</span>
                   </p>
-                  {tx.status === 'cancelled' && <p className="text-[10px] text-red-400 mt-1">ยกเลิกโดย: {tx.cancelledBy}</p>}
+                  {tx.status === 'cancelled' && <p className="text-xs text-red-400 mt-1">ยกเลิกโดย: {tx.cancelledBy}</p>}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -141,7 +141,7 @@ export default function TabStatus({
                       e.stopPropagation();
                       if (onOpenTransactionDoc) onOpenTransactionDoc(tx);
                     }}
-                    className="p-2 sm:px-2.5 sm:py-1 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#6355d8] text-xs font-bold flex items-center gap-1 border border-purple-200 transition-colors shadow-2xs"
+                    className="p-2 sm:px-2.5 sm:py-1 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand-500 text-xs font-bold flex items-center gap-1 border border-purple-200 transition-colors shadow-2xs"
                     title="ดูเอกสารทางการ PDF"
                   >
                     <FileText size={15} />
@@ -156,23 +156,23 @@ export default function TabStatus({
 
         {/* --- Modal ตรวจสอบ --- */}
         {verifyingTx && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm animate-fade-in">
             <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-sm m-auto overflow-hidden flex flex-col max-h-[85vh] animate-scale-in relative border-4 ${
               verifyingTx.status === 'pending' ? 'border-orange-100' : 
-              verifyingTx.status === 'cancelled' ? 'border-gray-300' : 'border-green-100'
+              verifyingTx.status === 'cancelled' ? 'border-gray-300' : 'border-success-100'
             }`}>
               {/* Modal Header */}
               <div className={`p-4 border-b flex justify-between items-center ${
                 verifyingTx.status === 'pending' ? 'bg-orange-50 border-orange-100' : 
-                verifyingTx.status === 'cancelled' ? 'bg-gray-100 border-gray-200' : 'bg-green-50 border-green-100'
+                verifyingTx.status === 'cancelled' ? 'bg-gray-100 border-gray-200' : 'bg-success-50 border-success-100'
               }`}>
                 <div>
-                  <h3 className={`font-bold flex items-center gap-2 ${verifyingTx.status === 'pending' ? 'text-orange-800' : verifyingTx.status === 'cancelled' ? 'text-gray-600' : 'text-green-800'}`}>
+                  <h3 className={`font-bold flex items-center gap-2 ${verifyingTx.status === 'pending' ? 'text-orange-800' : verifyingTx.status === 'cancelled' ? 'text-gray-600' : 'text-success-700'}`}>
                     {verifyingTx.status === 'pending' ? <ClipboardList size={20}/> : <FileText size={20}/>} 
                     {verifyingTx.status === 'pending' ? 'ตรวจสอบยอดจริง' : verifyingTx.status === 'cancelled' ? 'รายการที่ยกเลิก' : 'รายละเอียด'}
                   </h3>
                   {verifyingTx.docNumber && (
-                    <span className="text-[10px] font-mono text-gray-500 font-bold">
+                    <span className="text-xs font-mono text-gray-500 font-bold">
                       {verifyingTx.docNumber}
                     </span>
                   )}
@@ -188,7 +188,7 @@ export default function TabStatus({
                     <div className="flex-1">
                       <p className={`font-bold text-gray-800 text-sm ${verifyingTx.status === 'cancelled' ? 'line-through opacity-50' : ''}`}>{item.name}</p>
                       {verifyingTx.status === 'completed' || verifyingTx.status === 'cancelled' ? (
-                        <p className="text-xs text-gray-500">ขอ: {item.qty} → <span className="font-bold text-green-600">จริง: {actualQty[item.id]}</span> {item.unit}</p>
+                        <p className="text-xs text-gray-500">ขอ: {item.qty} → <span className="font-bold text-success-600">จริง: {actualQty[item.id]}</span> {item.unit}</p>
                       ) : (
                         <p className="text-xs text-gray-400">ยอดขอเบิก: {item.qty} {item.unit}</p>
                       )}
@@ -208,7 +208,7 @@ export default function TabStatus({
                 {/* 2. รายการที่เพิ่มเอง (Extra) */}
                 {extraItems.map((item, idx) => (
                    <div key={`extra-${idx}`} className="flex justify-between items-center border-b border-orange-100 pb-3 bg-orange-50/50 p-2 rounded-lg relative">
-                      <div className="absolute top-0 right-0 bg-orange-500 text-white text-[9px] px-1.5 py-0.5 rounded-bl-lg font-bold">เพิ่มเอง</div>
+                      <div className="absolute top-0 right-0 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-bl-lg font-bold">เพิ่มเอง</div>
                       <div className="flex-1">
                         <p className="font-bold text-orange-900 text-sm">{item.name}</p>
                         <p className="text-xs text-orange-400">มาเกิน / ตกหล่น</p>
@@ -244,7 +244,7 @@ export default function TabStatus({
                                         return (
                                             <button key={p.id} onClick={() => handleAddExtraItem(p)} className="w-full text-left text-xs p-2 hover:bg-white rounded-lg flex justify-between items-center group">
                                                 <span className="font-bold text-gray-700">{p.name}</span>
-                                                <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded group-hover:bg-green-100 group-hover:text-green-700">เลือก</span>
+                                                <span className="text-xs text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded group-hover:bg-success-100 group-hover:text-success-700">เลือก</span>
                                             </button>
                                         );
                                     })}
@@ -260,7 +260,7 @@ export default function TabStatus({
                 <button 
                   type="button" 
                   onClick={() => onOpenTransactionDoc && onOpenTransactionDoc(verifyingTx)}
-                  className="w-full py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#6355d8] font-bold text-xs flex items-center justify-center gap-1.5 border border-purple-200 transition-colors shadow-2xs"
+                  className="w-full py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand-500 font-bold text-xs flex items-center justify-center gap-1.5 border border-purple-200 transition-colors shadow-2xs"
                 >
                   <FileText size={15}/> ดูเอกสารสำคัญทางการ (A4 PDF / สั่งพิมพ์)
                 </button>
@@ -309,7 +309,7 @@ export default function TabStatus({
 
                 {/* ปุ่มลบประวัติถาวร */}
                 {user?.role === 'admin' && verifyingTx.status !== 'pending' && (
-                    <button onClick={() => handleDeleteHistory(verifyingTx)} className="w-full py-2 rounded-xl bg-white border border-red-100 text-red-500 font-bold text-[11px] flex items-center justify-center gap-1.5 mt-1 hover:bg-red-50">
+                    <button onClick={() => handleDeleteHistory(verifyingTx)} className="w-full py-2 rounded-xl bg-white border border-red-100 text-red-500 font-bold text-xs flex items-center justify-center gap-1.5 mt-1 hover:bg-red-50">
                         <Trash2 size={13}/> ลบประวัตินี้ถาวร (Admin Only)
                     </button>
                 )}

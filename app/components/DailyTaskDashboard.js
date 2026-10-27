@@ -341,10 +341,10 @@ export default function DailyTaskDashboard({
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-white/15 backdrop-blur-md rounded-full text-[11px] font-bold tracking-wide text-white border border-white/20">
+              <span className="px-2.5 py-0.5 bg-white/15 backdrop-blur-md rounded-full text-xs font-bold tracking-wide text-white border border-white/20">
                 {isUserAdmin ? '👑 ผู้ดูแลระบบ (Admin)' : 'พนักงานประจำ'}
               </span>
-              <span className="px-2.5 py-0.5 bg-purple-500/25 backdrop-blur-md rounded-full text-[11px] font-medium text-purple-200 border border-purple-300/20">
+              <span className="px-2.5 py-0.5 bg-purple-500/25 backdrop-blur-md rounded-full text-xs font-medium text-purple-200 border border-purple-300/20">
                 {user?.position || (isUserAdmin ? 'ผู้จัดการ / Admin' : 'พนักงานทั่วไป')}
               </span>
             </div>
@@ -362,16 +362,16 @@ export default function DailyTaskDashboard({
           {/* Quick Action Button & Summary Card */}
           <div className="flex flex-wrap items-center gap-3">
             <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-2.5 px-4 min-w-[140px]">
-              <div className="flex items-center justify-between text-[11px] text-purple-200 font-medium">
+              <div className="flex items-center justify-between text-xs text-purple-200 font-medium">
                 <span>ความคืบหน้า</span>
                 <span className="font-bold text-white">{stats.percent}%</span>
               </div>
               <div className="text-base font-bold text-white mt-0.5">
-                {stats.completed}/{stats.total} <span className="text-[11px] font-normal text-purple-200">งาน</span>
+                {stats.completed}/{stats.total} <span className="text-xs font-normal text-purple-200">งาน</span>
               </div>
               <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden mt-1.5">
                 <div 
-                  className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
+                  className="h-full bg-success-500 rounded-full transition-all duration-500" 
                   style={{ width: `${stats.percent}%` }}
                 />
               </div>
@@ -382,7 +382,7 @@ export default function DailyTaskDashboard({
                 setEditingTask(null);
                 setIsCreateModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white text-[#6355d8] hover:bg-purple-50 font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
+              className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white text-brand-500 hover:bg-purple-50 font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
             >
               <Plus size={16} strokeWidth={2.5} />
               <span>{isUserAdmin ? 'สั่งงานใหม่ / มอบหมาย' : 'เพิ่มบันทึกงานของฉัน'}</span>
@@ -411,7 +411,7 @@ export default function DailyTaskDashboard({
                 onClick={() => setViewMode(viewMode === 'tasks' ? 'team' : 'tasks')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                   viewMode === 'team'
-                    ? 'bg-[#6355d8] text-white shadow-xs'
+                    ? 'bg-brand-500 text-white shadow-xs'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
               >
@@ -436,10 +436,10 @@ export default function DailyTaskDashboard({
                   {pendingUsers.length} คน
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-[#6355d8]">
+              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-brand-500">
                 ผู้ใช้รออนุมัติ
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">เปิดแท็บบัญชีผู้ใช้ →</div>
+              <div className="text-xs text-slate-400 mt-0.5">เปิดแท็บบัญชีผู้ใช้ →</div>
             </button>
 
             {/* Card 2: Pending Leaves */}
@@ -455,10 +455,10 @@ export default function DailyTaskDashboard({
                   {pendingLeaves.length} ใบ
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-[#6355d8]">
+              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-brand-500">
                 คำขอลารอพิจารณา
               </div>
-              <div className="text-[10px] text-purple-600 font-semibold mt-0.5">
+              <div className="text-xs text-purple-600 font-semibold mt-0.5">
                 {pendingLeaves.length > 0 ? '📄 คลิกตรวจเอกสาร & อนุมัติ →' : 'ไม่มีคำขอค้าง'}
               </div>
             </button>
@@ -476,10 +476,10 @@ export default function DailyTaskDashboard({
                   {pendingTxCount} รายการ
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-[#6355d8]">
+              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-brand-500">
                 รายการเบิก/รับรอยืนยัน
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">เปิดแท็บสถานะรายการ →</div>
+              <div className="text-xs text-slate-400 mt-0.5">เปิดแท็บสถานะรายการ →</div>
             </button>
 
             {/* Card 4: Low Stock Alert */}
@@ -490,15 +490,15 @@ export default function DailyTaskDashboard({
               <div className="flex items-center justify-between">
                 <span className="text-xl">⚠️</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                  lowStockCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                  lowStockCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-success-100 text-success-700'
                 }`}>
                   {lowStockCount} ชนิด
                 </span>
               </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-[#6355d8]">
+              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-brand-500">
                 สินค้าใกล้หมดสต็อก
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">เปิดคลังสินค้า →</div>
+              <div className="text-xs text-slate-400 mt-0.5">เปิดคลังสินค้า →</div>
             </button>
           </div>
         </div>
@@ -528,7 +528,7 @@ export default function DailyTaskDashboard({
             <button
               onClick={handleSeedTemplates}
               disabled={isSeeding}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all shrink-0 disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all shrink-0 disabled:opacity-50"
             >
               {isSeeding ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
               <span>{isSeeding ? 'กำลังโหลดข้อมูล...' : '⚡ โหลดชุดงานประจำวันเริ่มต้น (24 รายการ)'}</span>
@@ -539,7 +539,7 @@ export default function DailyTaskDashboard({
                 setEditingTask(null);
                 setIsCreateModalOpen(true);
               }}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all shrink-0"
+              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all shrink-0"
             >
               <Plus size={16} />
               <span>เพิ่มงานของฉัน</span>
@@ -560,14 +560,14 @@ export default function DailyTaskDashboard({
               onClick={() => handleSelectPosTab(tab.key)}
               className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
                 selectedPosTab === tab.key
-                  ? 'bg-[#6355d8] text-white shadow-xs scale-[1.01]'
+                  ? 'bg-brand-500 text-white shadow-xs scale-[1.01]'
                   : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80 font-semibold'
               }`}
             >
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.key === 'my' && (
-                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
+                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-xs font-bold ${
                   selectedPosTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                 }`}>
                   {tasks.filter(t => isTaskVisibleToUser(user, t) && matchesUserPosition(user, t) && !isTaskDone(t, todayKey)).length}
@@ -594,7 +594,7 @@ export default function DailyTaskDashboard({
                 onClick={() => setStatusFilter(f.key)}
                 className={`px-3 py-1.5 rounded-xl transition-all shrink-0 cursor-pointer ${
                   statusFilter === f.key
-                    ? 'bg-[#6355d8]/10 text-[#6355d8] font-bold'
+                    ? 'bg-brand-500/10 text-brand-500 font-bold'
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
                 }`}
               >
@@ -611,7 +611,7 @@ export default function DailyTaskDashboard({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ค้นหางาน, ผู้รับผิดชอบ..."
-              className="w-full pl-9 pr-8 py-1.5 text-xs font-medium rounded-xl border border-slate-200 focus:border-[#6355d8] outline-none text-slate-800 bg-slate-50/50"
+              className="w-full pl-9 pr-8 py-1.5 text-xs font-medium rounded-xl border border-slate-200 focus:border-brand-500 outline-none text-slate-800 bg-slate-50/50"
             />
             {searchQuery && (
               <button
@@ -632,7 +632,7 @@ export default function DailyTaskDashboard({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
-              <Users size={16} className="text-[#6355d8]" />
+              <Users size={16} className="text-brand-500" />
               <span>ติดตามสถานะภารกิจทีมงานรายบุคคล ({usersList.length} คน)</span>
             </h3>
             <span className="text-xs text-slate-400 font-medium">คลิกที่พนักงานเพื่อดูกรองงานเฉพาะบุคคล</span>
@@ -657,7 +657,7 @@ export default function DailyTaskDashboard({
                     className="p-4 bg-white rounded-2xl border border-slate-100 hover:border-purple-300 shadow-xs hover:shadow-md transition-all cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#6355d8] to-purple-400 text-white font-bold flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-500 to-purple-400 text-white font-bold flex items-center justify-center overflow-hidden shrink-0">
                         {member.photoURL ? (
                           <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover" />
                         ) : (
@@ -666,16 +666,16 @@ export default function DailyTaskDashboard({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <h4 className="text-xs font-black text-slate-800 truncate group-hover:text-[#6355d8]">
+                          <h4 className="text-xs font-black text-slate-800 truncate group-hover:text-brand-500">
                             {member.name || 'พนักงาน'}
                           </h4>
                           {member.role === 'admin' && (
-                            <span className="text-[10px] px-1.5 py-0.2 bg-purple-100 text-[#6355d8] font-bold rounded-md">
+                            <span className="text-xs px-1.5 py-0.2 bg-purple-100 text-brand-500 font-bold rounded-md">
                               Admin
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                        <p className="text-xs text-slate-400 truncate mt-0.5">
                           {member.position || 'พนักงานทั่วไป'}
                         </p>
                       </div>
@@ -683,16 +683,16 @@ export default function DailyTaskDashboard({
 
                     {/* Workload Progress Bar */}
                     <div className="mt-3.5 pt-3 border-t border-slate-50 space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold">
+                      <div className="flex items-center justify-between text-xs font-bold">
                         <span className="text-slate-500">ความคืบหน้างาน</span>
-                        <span className={memPercent === 100 && memTotal > 0 ? 'text-emerald-600' : 'text-[#6355d8]'}>
+                        <span className={memPercent === 100 && memTotal > 0 ? 'text-success-600' : 'text-brand-500'}>
                           {memDone}/{memTotal} งาน ({memPercent}%)
                         </span>
                       </div>
                       <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div 
                           className={`h-full rounded-full transition-all duration-500 ${
-                            memPercent === 100 && memTotal > 0 ? 'bg-emerald-500' : 'bg-[#6355d8]'
+                            memPercent === 100 && memTotal > 0 ? 'bg-success-500' : 'bg-brand-500'
                           }`}
                           style={{ width: `${memPercent}%` }}
                         />
@@ -710,12 +710,12 @@ export default function DailyTaskDashboard({
         <div className="space-y-3">
           {loading ? (
             <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-100">
-              <Loader2 size={32} className="animate-spin text-[#6355d8]" />
+              <Loader2 size={32} className="animate-spin text-brand-500" />
               <p className="text-xs text-slate-500 font-bold mt-3">กำลังโหลดข้อมูลภารกิจ...</p>
             </div>
           ) : filteredTasks.length === 0 ? (
             <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 space-y-3">
-              <div className="w-16 h-16 rounded-full bg-purple-50 text-[#6355d8] text-3xl flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 rounded-full bg-purple-50 text-brand-500 text-3xl flex items-center justify-center mx-auto">
                 🎉
               </div>
               <h4 className="text-base font-black text-slate-800">
@@ -729,7 +729,7 @@ export default function DailyTaskDashboard({
                   setEditingTask(null);
                   setIsCreateModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#6355d8] text-white text-xs font-bold shadow-md hover:bg-[#5244c4] transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-500 text-white text-xs font-bold shadow-md hover:bg-[#5244c4] transition-all"
               >
                 <Plus size={16} />
                 <span>{isUserAdmin ? 'สั่งงานใหม่' : 'เพิ่มงานส่วนตัว'}</span>
@@ -773,8 +773,8 @@ export default function DailyTaskDashboard({
                         onClick={() => handleToggleTask(task)}
                         className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 cursor-pointer ${
                           isDone
-                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
-                            : 'border-2 border-slate-300 hover:border-[#6355d8] text-transparent hover:text-[#6355d8]/30 bg-white'
+                            ? 'bg-success-500 border-success-500 text-white shadow-xs'
+                            : 'border-2 border-slate-300 hover:border-brand-500 text-transparent hover:text-brand-500/30 bg-white'
                         }`}
                         title={isDone ? 'คลิกเพื่อยกเลิก' : 'คลิกเพื่อทำเครื่องหมายเสร็จสิ้น'}
                       >
@@ -791,34 +791,34 @@ export default function DailyTaskDashboard({
                           </h4>
 
                           {/* Routine vs Assigned Tag */}
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                          <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
                             isRoutine 
                               ? 'bg-slate-100 text-slate-600' 
-                              : 'bg-purple-50 text-[#6355d8] border border-purple-100'
+                              : 'bg-purple-50 text-brand-500 border border-purple-100'
                           }`}>
                             {isRoutine ? '🔄 ประจำวัน' : '⚡ สั่งเสริม'}
                           </span>
 
                           {/* Priority Badge - ONLY shown if urgent or high to eliminate clutter! */}
                           {task.priority === 'urgent' && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                            <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
                               🔥 ด่วนมาก
                             </span>
                           )}
                           {task.priority === 'high' && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                            <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
                               🟡 สำคัญ
                             </span>
                           )}
 
                           {/* Due / Overdue alerts */}
                           {isOverdue && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-600 text-white shadow-2xs">
+                            <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-rose-600 text-white shadow-2xs">
                               ⚠️ เกินกำหนด ({task.dueDate})
                             </span>
                           )}
                           {isDueToday && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
                               📅 ครบกำหนดวันนี้
                             </span>
                           )}
@@ -832,13 +832,13 @@ export default function DailyTaskDashboard({
                         )}
 
                         {/* Line 3: Clean Metadata Row */}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-slate-400 mt-2">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-slate-400 mt-2">
                           {/* Assignment Target */}
                           <div className="flex items-center gap-1.5 text-slate-600">
                             {task.targetType === 'user' ? (
                               <>
-                                <User size={13} className="text-[#6355d8]" />
-                                <span className="font-bold text-[#6355d8]">{task.targetUserName || 'พนักงาน'}</span>
+                                <User size={13} className="text-brand-500" />
+                                <span className="font-bold text-brand-500">{task.targetUserName || 'พนักงาน'}</span>
                               </>
                             ) : (
                               <>
@@ -858,14 +858,14 @@ export default function DailyTaskDashboard({
 
                           {/* Created By (Admin view) */}
                           {task.createdByName && isUserAdmin && (
-                            <div className="hidden sm:flex items-center gap-1 text-slate-400 text-[10px]">
+                            <div className="hidden sm:flex items-center gap-1 text-slate-400 text-xs">
                               <span>มอบหมายโดย: {task.createdByName}</span>
                             </div>
                           )}
 
                           {/* Completion Info */}
                           {isDone && (
-                            <div className="flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px]">
+                            <div className="flex items-center gap-1.5 text-success-600 font-semibold text-xs">
                               <CheckCircle2 size={13} />
                               <span>{todayRecord?.completedByName ? `เสร็จโดย ${todayRecord.completedByName}` : 'เสร็จแล้ว'}</span>
                               {(todayRecord?.note || task.completionNote) && (
@@ -885,7 +885,7 @@ export default function DailyTaskDashboard({
                       {!isRoutine && !isDone && task.status !== 'in_progress' && (
                         <button
                           onClick={() => handleSetInProgress(task)}
-                          className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#6355d8] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand-500 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
                           title="เริ่มทำภารกิจนี้"
                         >
                           <PlayCircle size={14} />
@@ -913,7 +913,7 @@ export default function DailyTaskDashboard({
                             setEditingTask(task);
                             setIsCreateModalOpen(true);
                           }}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-[#6355d8] hover:bg-purple-50 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-brand-500 hover:bg-purple-50 transition-colors cursor-pointer"
                           title="แก้ไขงานนี้"
                         >
                           <Edit3 size={16} />
@@ -960,7 +960,7 @@ export default function DailyTaskDashboard({
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
-                <MessageSquare size={16} className="text-[#6355d8]" />
+                <MessageSquare size={16} className="text-brand-500" />
                 <span>บันทึกหมายเหตุการทำงาน</span>
               </h3>
               <button 
@@ -980,7 +980,7 @@ export default function DailyTaskDashboard({
               value={noteModalConfig.noteText}
               onChange={(e) => setNoteModalConfig(prev => ({ ...prev, noteText: e.target.value }))}
               placeholder="ระบุข้อความ เช่น นับแล้วขาด 2 ชิ้น, ส่ง Kerry รอบบ่ายแล้ว 12 กล่อง..."
-              className="w-full p-3 rounded-2xl border border-slate-200 focus:border-[#6355d8] text-xs font-medium text-slate-800 outline-none resize-none"
+              className="w-full p-3 rounded-2xl border border-slate-200 focus:border-brand-500 text-xs font-medium text-slate-800 outline-none resize-none"
             />
 
             <div className="flex justify-end gap-2 pt-2">
@@ -992,7 +992,7 @@ export default function DailyTaskDashboard({
               </button>
               <button
                 onClick={handleSaveNote}
-                className="px-5 py-2 rounded-xl bg-[#6355d8] text-white text-xs font-bold hover:bg-[#5244c4] shadow-sm"
+                className="px-5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold hover:bg-[#5244c4] shadow-sm"
               >
                 บันทึกหมายเหตุ
               </button>
@@ -1039,7 +1039,7 @@ export default function DailyTaskDashboard({
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-[#6355d8] flex items-center justify-center font-bold text-lg">
+                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-brand-500 flex items-center justify-center font-bold text-lg">
                   📄
                 </div>
                 <div>
@@ -1066,7 +1066,7 @@ export default function DailyTaskDashboard({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-slate-800 truncate">{lv.userName}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">
+                      <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">
                         {lv.type === 'sick' ? 'ลาป่วย' : lv.type === 'personal' ? 'ลากิจ' : 'ลาพักร้อน'}
                       </span>
                     </div>
@@ -1084,7 +1084,7 @@ export default function DailyTaskDashboard({
                       setLeaveDocModalOpen(true);
                       setPendingLeavesListModalOpen(false);
                     }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-xs transition-all shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-xs transition-all shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
                   >
                     <span>📄 ตรวจเอกสาร</span>
                   </button>

@@ -204,9 +204,9 @@ export default function TabDashboard({ transactions, products, categories, dateF
         </h2>
 
         <div className="flex bg-gray-100 p-1 rounded-lg mt-4 text-xs font-bold">
-          <button onClick={() => setDateFilterType('today')} className={`flex-1 py-2 rounded-md transition-all ${dateFilterType === 'today' ? 'bg-white shadow text-green-700' : 'text-gray-400'}`}>วันนี้</button>
-          <button onClick={() => setDateFilterType('7days')} className={`flex-1 py-2 rounded-md transition-all ${dateFilterType === '7days' ? 'bg-white shadow text-green-700' : 'text-gray-400'}`}>7 วัน</button>
-          <button onClick={() => setDateFilterType('30days')} className={`flex-1 py-2 rounded-md transition-all ${dateFilterType === '30days' ? 'bg-white shadow text-green-700' : 'text-gray-400'}`}>30 วัน</button>
+          <button onClick={() => setDateFilterType('today')} className={`flex-1 py-2 rounded-md transition-all ${dateFilterType === 'today' ? 'bg-white shadow text-success-700' : 'text-gray-400'}`}>วันนี้</button>
+          <button onClick={() => setDateFilterType('7days')} className={`flex-1 py-2 rounded-md transition-all ${dateFilterType === '7days' ? 'bg-white shadow text-success-700' : 'text-gray-400'}`}>7 วัน</button>
+          <button onClick={() => setDateFilterType('30days')} className={`flex-1 py-2 rounded-md transition-all ${dateFilterType === '30days' ? 'bg-white shadow text-success-700' : 'text-gray-400'}`}>30 วัน</button>
         </div>
       </div>
 
@@ -222,7 +222,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
           {/* เลือกวันที่ (ตั้งแต่ - ถึง) */}
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <p className="text-[10px] text-blue-500 mb-1 ml-1 font-bold">ตั้งแต่</p>
+              <p className="text-xs text-blue-500 mb-1 ml-1 font-bold">ตั้งแต่</p>
               <input
                 type="date"
                 value={reportStartDate}
@@ -235,7 +235,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
             </div>
             <div className="text-blue-300 pt-4"><ArrowRight size={16} /></div>
             <div className="flex-1">
-              <p className="text-[10px] text-blue-500 mb-1 ml-1 font-bold">ถึงวันที่</p>
+              <p className="text-xs text-blue-500 mb-1 ml-1 font-bold">ถึงวันที่</p>
               <input
                 type="date"
                 value={reportEndDate}
@@ -263,7 +263,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
               onClick={handleSendDailyReport}
               disabled={isSending}
               className={`flex-1 py-2.5 rounded-lg text-sm font-bold shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 text-white
-                        ${reportType === 'IN' ? 'bg-green-600 shadow-green-200' :
+                        ${reportType === 'IN' ? 'bg-success-600 shadow-green-200' :
                   reportType === 'OUT' ? 'bg-red-500 shadow-red-200' :
                     'bg-blue-600 shadow-blue-200'}`
               }
@@ -282,7 +282,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
 
           {/* --- ปุ่ม Export Excel & PDF --- */}
           <div className="export-section">
-            <p className="text-[10px] text-gray-500 font-bold mb-2 flex items-center gap-1">
+            <p className="text-xs text-gray-500 font-bold mb-2 flex items-center gap-1">
               <Download size={12} /> ดาวน์โหลดรายงาน
             </p>
             <div className="flex gap-2">
@@ -303,24 +303,24 @@ export default function TabDashboard({ transactions, products, categories, dateF
                 <span>Export PDF</span>
               </button>
             </div>
-            <p className="text-[9px] text-gray-400 text-center mt-1.5">Excel = ตารางแก้ไขได้ | PDF = รายงานทางการ</p>
+            <p className="text-xs text-gray-400 text-center mt-1.5">Excel = ตารางแก้ไขได้ | PDF = รายงานทางการ</p>
           </div>
 
-          <p className="text-[10px] text-gray-400 text-center">* เลือกช่วงเวลาที่ต้องการสรุปยอดได้เลย</p>
+          <p className="text-xs text-gray-400 text-center">* เลือกช่วงเวลาที่ต้องการสรุปยอดได้เลย</p>
         </div>
       </div>
 
       {/* Cards สรุปตัวเลข (เหมือนเดิม) */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-green-500 flex flex-col justify-between">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-success-500 flex flex-col justify-between">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs text-gray-400 font-bold">รับเข้า (รายการ)</p>
-              <h3 className="text-2xl font-black text-green-700">{stats.countIn}</h3>
+              <h3 className="text-2xl font-black text-success-700">{stats.countIn}</h3>
             </div>
-            <div className="bg-green-100 p-2 rounded-full text-green-600"><Package size={20} /></div>
+            <div className="bg-success-100 p-2 rounded-full text-success-600"><Package size={20} /></div>
           </div>
-          <p className="text-[10px] text-gray-300 mt-2">ในช่วงเวลาที่เลือก (ด้านบน)</p>
+          <p className="text-xs text-gray-300 mt-2">ในช่วงเวลาที่เลือก (ด้านบน)</p>
         </div>
         <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-red-500 flex flex-col justify-between">
           <div className="flex items-start justify-between">
@@ -330,7 +330,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
             </div>
             <div className="bg-red-100 p-2 rounded-full text-red-600"><TrendingDown size={20} /></div>
           </div>
-          <p className="text-[10px] text-gray-300 mt-2">ในช่วงเวลาที่เลือก (ด้านบน)</p>
+          <p className="text-xs text-gray-300 mt-2">ในช่วงเวลาที่เลือก (ด้านบน)</p>
         </div>
       </div>
 

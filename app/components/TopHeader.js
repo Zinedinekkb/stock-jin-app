@@ -57,7 +57,7 @@ export default function TopHeader({
           title="ตั้งค่าระบบ"
           className="smart-icon-btn"
         >
-          <Settings size={20} className="text-gray-600 hover:text-[#6355d8] transition-colors" />
+          <Settings size={20} className="text-gray-600 hover:text-brand-500 transition-colors" />
         </button>
 
         {/* Notifications button */}
@@ -66,7 +66,7 @@ export default function TopHeader({
           title="การแจ้งเตือน"
           className="smart-icon-btn relative"
         >
-          <Bell size={20} className="text-gray-600 hover:text-[#6355d8] transition-colors" />
+          <Bell size={20} className="text-gray-600 hover:text-brand-500 transition-colors" />
           {unreadNotifCount > 0 && (
             <span className="smart-notif-dot">
               {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
@@ -103,7 +103,7 @@ export default function TopHeader({
               <div className="p-3 border-b border-gray-100">
                 <p className="text-xs text-gray-400 font-medium">เข้าสู่ระบบในชื่อ</p>
                 <p className="text-sm font-bold text-gray-800 truncate">{displayName}</p>
-                <p className="text-xs text-[#6355d8] font-semibold mt-0.5">{user?.role === 'admin' ? '👑 ผู้ดูแลระบบ' : 'พนักงาน'}</p>
+                <p className="text-xs text-brand-500 font-semibold mt-0.5">{user?.role === 'admin' ? '👑 ผู้ดูแลระบบ' : 'พนักงาน'}</p>
               </div>
 
               <div className="p-1">

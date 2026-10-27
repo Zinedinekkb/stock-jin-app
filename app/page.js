@@ -232,7 +232,7 @@ export default function StockJinApp() {
             position: data.position || prev?.position || 'พนักงานทั่วไป'
           }));
           if (user.status === 'pending' && data.status === 'approved') {
-            showNotification('บัญชีของคุณได้รับการอนุมัติเรียบร้อยแล้ว! ยินดีต้อนรับสู่ระบบ 🎉');
+            showNotification('บัญชีได้รับการอนุมัติแล้ว ยินดีต้อนรับ');
           }
         }
       }
@@ -455,7 +455,7 @@ export default function StockJinApp() {
             const res = await submitTransactionService({ cart, transMode, note, user });
             setCart([]); setNote('');
             const docInfo = res?.docNumber ? ` (เลขที่ ${res.docNumber})` : '';
-            showNotification(`ส่งคำขอและออกเอกสาร PDF ทางการ${docInfo} เก็บลงคลังเอกสารเรียบร้อยแล้ว! 📄✨`);
+            showNotification(`ส่งคำขอแล้ว${docInfo} · รอตรวจสอบ`);
             setActiveTab('status');
         } catch (error) {
             console.error(error); showNotification('เกิดข้อผิดพลาด กรุณาลองใหม่');
@@ -531,7 +531,7 @@ export default function StockJinApp() {
         }
 
         setVerifyingTx(null); 
-        showNotification('อัปเดตสต็อกและบันทึกเอกสาร PDF ฉบับอนุมัติลงคลังเอกสารเรียบร้อย! 📄✅');
+        showNotification('ยืนยันแล้ว สต็อกอัปเดตเรียบร้อย');
       }, 'info'
     );
   };
@@ -1127,7 +1127,7 @@ export default function StockJinApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f4f5fa]">
         <div className="text-center space-y-3">
-          <Loader2 size={40} className="animate-spin text-[#6355d8] mx-auto"/>
+          <Loader2 size={40} className="animate-spin text-brand-500 mx-auto"/>
           <p className="text-slate-700 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p>
         </div>
       </div>

@@ -45,7 +45,7 @@ export default function AttendancePhotoModal({ isOpen, onClose, record }) {
             </div>
             <div>
               <h3 className="text-sm font-bold text-gray-800">หลักฐานการลงเวลา</h3>
-              <p className="text-[11px] text-gray-500">
+              <p className="text-xs text-gray-500">
                 {record.userName || 'พนักงาน'} · {record.dateStr}
               </p>
             </div>
@@ -68,7 +68,7 @@ export default function AttendancePhotoModal({ isOpen, onClose, record }) {
               onClick={() => setActiveTab('in')}
               className={`flex-1 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === 'in'
-                  ? 'bg-white text-green-700 shadow-sm'
+                  ? 'bg-white text-success-700 shadow-sm'
                   : 'text-gray-500 hover:text-gray-800'
               }`}
             >
@@ -97,12 +97,12 @@ export default function AttendancePhotoModal({ isOpen, onClose, record }) {
                 alt="Attendance proof"
                 className="w-full h-full object-contain max-h-[360px]"
               />
-              <div className="absolute bottom-2 left-2 right-2 bg-black/60 backdrop-blur-sm rounded-xl px-3 py-1.5 flex items-center justify-between text-white text-[11px]">
+              <div className="absolute bottom-2 left-2 right-2 bg-ink/40 backdrop-blur-sm rounded-xl px-3 py-1.5 flex items-center justify-between text-white text-xs">
                 <span className="flex items-center gap-1 font-semibold">
                   <Clock size={12} className="text-amber-300" />
                   {activeTab === 'in' ? `เข้า: ${record.checkIn || '-'}` : `ออก: ${record.checkOut || '-'}`}
                 </span>
-                <span className="text-[10px] text-gray-300">{record.dateStr}</span>
+                <span className="text-xs text-gray-300">{record.dateStr}</span>
               </div>
             </div>
           ) : (
@@ -115,11 +115,11 @@ export default function AttendancePhotoModal({ isOpen, onClose, record }) {
           {/* Location Details */}
           <div className="w-full mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <div className="w-7 h-7 rounded-lg bg-success-100 text-success-700 flex items-center justify-center">
                 <MapPin size={15} />
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">พิกัดสถานที่</p>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">พิกัดสถานที่</p>
                 <p className="text-xs font-bold text-gray-800">
                   {currentLoc && typeof currentLoc.lat === 'number'
                     ? `${currentLoc.lat}, ${currentLoc.lng}`

@@ -22,12 +22,12 @@ const DOC_CATEGORIES = [
 ];
 
 const getFileIcon = (url = '', type, name = '') => {
-  if (type === 'order' || name?.includes('ใบรับสินค้า') || name?.includes('GRN')) return <FileText size={20} className="text-emerald-600" />;
+  if (type === 'order' || name?.includes('ใบรับสินค้า') || name?.includes('GRN')) return <FileText size={20} className="text-success-600" />;
   if (type === 'receipt' || name?.includes('ใบเบิก') || name?.includes('GIS')) return <FileText size={20} className="text-rose-600" />;
   if (type === 'leave' || name?.includes('ใบขอลา') || name?.includes('ใบลา')) return <FileText size={20} className="text-purple-600" />;
   if (type === 'image') return <Image size={20} className="text-blue-500" />;
   if (url.includes('drive.google')) return <File size={20} className="text-yellow-600" />;
-  if (url.includes('line') || url.includes('chat')) return <Link2 size={20} className="text-green-600" />;
+  if (url.includes('line') || url.includes('chat')) return <Link2 size={20} className="text-success-600" />;
   return <FileText size={20} className="text-gray-500" />;
 };
 
@@ -267,7 +267,7 @@ export default function TabDocuments({ user }) {
             return (
               <div 
                 key={item.id} 
-                className="docs-card cursor-pointer hover:border-[#6355d8]/50 transition-all"
+                className="docs-card cursor-pointer hover:border-brand-500/50 transition-all"
                 onClick={() => handleOpenDoc(item)}
               >
                 <div className="docs-card-top" onClick={e => e.stopPropagation()}>
@@ -320,17 +320,17 @@ export default function TabDocuments({ user }) {
 
       {/* In-App PDF / Document Viewer Modal */}
       {viewingDoc && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-ink/40 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[92vh] flex flex-col overflow-hidden animate-scale-in border border-gray-200">
             {/* Modal Header */}
             <div className="p-3.5 sm:p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/90">
               <div className="flex items-center gap-2.5 min-w-0 pr-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-[#6355d8] flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-brand-500 flex items-center justify-center shrink-0">
                   <FileText size={20} />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-bold text-sm text-gray-800 truncate">{viewingDoc.name}</h3>
-                  <p className="text-[11px] text-gray-500 truncate">{viewingDoc.note || 'เอกสารทางการคลังพัสดุ'}</p>
+                  <p className="text-xs text-gray-500 truncate">{viewingDoc.note || 'เอกสารทางการคลังพัสดุ'}</p>
                 </div>
               </div>
 
@@ -338,7 +338,7 @@ export default function TabDocuments({ user }) {
                 <button
                   type="button"
                   onClick={() => handleDownloadDoc(viewingDoc)}
-                  className="px-3.5 py-1.5 bg-[#6355d8] hover:bg-[#5244c9] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                  className="px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
                 >
                   <Download size={14} /> <span>ดาวน์โหลด</span>
                 </button>

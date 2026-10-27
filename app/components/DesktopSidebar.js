@@ -80,7 +80,7 @@ export default function DesktopSidebar({
           {!isCollapsed && (
             <div className="min-w-0 transition-opacity duration-200">
               <h1 className="text-base font-black text-white tracking-wide leading-none truncate">StockPro</h1>
-              <p className="text-[10px] text-white/70 font-medium mt-1 truncate">Workforce & Inventory</p>
+              <p className="text-xs text-white/70 font-medium mt-1 truncate">Workforce & Inventory</p>
             </div>
           )}
         </div>
@@ -119,7 +119,7 @@ export default function DesktopSidebar({
                     <Icon 
                       size={22} 
                       strokeWidth={isActive ? 2.5 : 2} 
-                      className={isActive ? 'text-[#6355d8]' : 'text-white/85 group-hover:text-white'} 
+                      className={isActive ? 'text-brand-500' : 'text-white/85 group-hover:text-white'} 
                     />
                     {showBadge && (
                       <span className="smart-sidebar-badge">
@@ -130,13 +130,13 @@ export default function DesktopSidebar({
 
                   {!isCollapsed && (
                     <>
-                      <span className={`flex-1 text-xs truncate tracking-tight ${isActive ? 'text-[#6355d8] font-black' : 'font-semibold text-white/90'}`}>
+                      <span className={`flex-1 text-xs truncate tracking-tight ${isActive ? 'text-brand-500 font-black' : 'font-semibold text-white/90'}`}>
                         {item.label}
                       </span>
                       {hasSub && (
                         <ChevronDown 
                           size={14} 
-                          className={`transition-transform duration-200 shrink-0 ${isActive ? 'text-[#6355d8]' : 'text-white/60'} ${isExpanded ? 'rotate-180' : ''}`}
+                          className={`transition-transform duration-200 shrink-0 ${isActive ? 'text-brand-500' : 'text-white/60'} ${isExpanded ? 'rotate-180' : ''}`}
                         />
                       )}
                     </>
@@ -201,7 +201,7 @@ export default function DesktopSidebar({
               )}
             </div>
             {!isCollapsed && (
-              <span className="text-[11px] font-bold text-white truncate max-w-[120px]">
+              <span className="text-xs font-bold text-white truncate max-w-[120px]">
                 {user?.name?.split(' ')[0] || 'ผู้ใช้งาน'}
               </span>
             )}

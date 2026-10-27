@@ -62,7 +62,7 @@ export default function TabNotifications({
           : <AlertTriangle size={20} className="text-yellow-500" />;
       case 'movement':
         return notif.subType === 'IN'
-          ? <ArrowDownCircle size={20} className="text-green-500" />
+          ? <ArrowDownCircle size={20} className="text-success-500" />
           : <ArrowUpCircle size={20} className="text-blue-500" />;
       case 'dashboard':
         return <BarChart3 size={20} className="text-purple-500" />;
@@ -110,8 +110,8 @@ export default function TabNotifications({
     <div className="space-y-4 pb-20 animate-fade-in-slide">
       {/* Header */}
       <div className="flex justify-between items-center px-1 pt-1">
-        <h2 className="text-2xl font-bold text-green-900 flex items-center gap-2">
-          <Bell size={24} className="text-green-700" /> แจ้งเตือน
+        <h2 className="text-2xl font-bold text-success-700 flex items-center gap-2">
+          <Bell size={24} className="text-success-700" /> แจ้งเตือน
           {unreadCounts.all > 0 && (
             <span className="notif-badge-large">{unreadCounts.all}</span>
           )}
@@ -119,7 +119,7 @@ export default function TabNotifications({
         {unreadCounts.all > 0 && (
           <button
             onClick={onMarkAllAsRead}
-            className="flex items-center gap-1.5 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 hover:bg-green-100 active:scale-95 transition-all"
+            className="flex items-center gap-1.5 text-xs font-bold text-success-600 bg-success-50 px-3 py-1.5 rounded-full border border-success-100 hover:bg-success-100 active:scale-95 transition-all"
           >
             <CheckCheck size={14} /> อ่านทั้งหมด
           </button>
@@ -180,7 +180,7 @@ export default function TabNotifications({
                   <h4 className={`text-sm font-bold truncate ${!notif.read ? 'text-gray-900' : 'text-gray-600'}`}>
                     {notif.title}
                   </h4>
-                  <span className="text-[10px] text-gray-400 whitespace-nowrap flex-shrink-0">
+                  <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
                     {formatTime(notif.timestamp)}
                   </span>
                 </div>

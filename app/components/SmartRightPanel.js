@@ -102,11 +102,11 @@ export default function SmartRightPanel({ user, transactions = [], products = []
             <h3 className="text-sm font-black text-slate-800">
               📊 {isUserAdmin ? 'สรุปภารกิจรวม' : 'ภารกิจของคุณวันนี้'}
             </h3>
-            <p className="text-[11px] text-slate-400 font-medium">
+            <p className="text-xs text-slate-400 font-medium">
               {isUserAdmin ? 'ความคืบหน้าทั้งระบบ' : 'ความคืบหน้างานที่คุณรับผิดชอบ'}
             </p>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-[#6355d8] border border-purple-100">
+          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 text-brand-500 border border-purple-100">
             {todayKey}
           </span>
         </div>
@@ -149,7 +149,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
             <span className="text-2xl font-black text-slate-800 tracking-tight">
               {stats.percent}%
             </span>
-            <span className="text-[10px] font-bold text-slate-400 mt-0.5">
+            <span className="text-xs font-bold text-slate-400 mt-0.5">
               เสร็จ {stats.completed}/{stats.total} งาน
             </span>
           </div>
@@ -158,19 +158,19 @@ export default function SmartRightPanel({ user, transactions = [], products = []
         {/* 4 Mini Stat Badges */}
         <div className="grid grid-cols-2 gap-2 pt-1">
           <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-100 text-center">
-            <div className="text-[10px] font-bold text-slate-500">⏳ รอดำเนินการ</div>
+            <div className="text-xs font-bold text-slate-500">⏳ รอดำเนินการ</div>
             <div className="text-base font-black text-slate-800 mt-0.5">{stats.pending}</div>
           </div>
           <div className="p-2.5 rounded-2xl bg-purple-50 border border-purple-100 text-center">
-            <div className="text-[10px] font-bold text-[#6355d8]">⚡ กำลังทำ</div>
-            <div className="text-base font-black text-[#6355d8] mt-0.5">{stats.inProgress}</div>
+            <div className="text-xs font-bold text-brand-500">⚡ กำลังทำ</div>
+            <div className="text-base font-black text-brand-500 mt-0.5">{stats.inProgress}</div>
           </div>
-          <div className="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-100 text-center">
-            <div className="text-[10px] font-bold text-emerald-700">✅ สำเร็จแล้ว</div>
-            <div className="text-base font-black text-emerald-700 mt-0.5">{stats.completed}</div>
+          <div className="p-2.5 rounded-2xl bg-success-50 border border-success-100 text-center">
+            <div className="text-xs font-bold text-success-700">✅ สำเร็จแล้ว</div>
+            <div className="text-base font-black text-success-700 mt-0.5">{stats.completed}</div>
           </div>
           <div className="p-2.5 rounded-2xl bg-rose-50 border border-rose-100 text-center">
-            <div className="text-[10px] font-bold text-rose-700">🔥 งานด่วน</div>
+            <div className="text-xs font-bold text-rose-700">🔥 งานด่วน</div>
             <div className="text-base font-black text-rose-700 mt-0.5">{stats.urgentPending}</div>
           </div>
         </div>
@@ -188,7 +188,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
           <div className="space-y-1.5">
             {urgentTasks.map(t => (
               <div key={t.id} className="p-2.5 bg-white rounded-xl border border-rose-100 shadow-2xs text-left">
-                <div className="flex items-center justify-between gap-1 text-[10px] font-bold text-rose-700">
+                <div className="flex items-center justify-between gap-1 text-xs font-bold text-rose-700">
                   <span className="truncate">{t.targetPosition || 'ทุกคน'}</span>
                   {t.dueTime && <span>⏰ {t.dueTime} น.</span>}
                 </div>
@@ -206,12 +206,12 @@ export default function SmartRightPanel({ user, transactions = [], products = []
         <section className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3.5">
           <div className="flex items-center justify-between pb-1 border-b border-slate-50">
             <div className="flex items-center gap-1.5">
-              <Users size={16} className="text-[#6355d8]" />
+              <Users size={16} className="text-brand-500" />
               <h3 className="text-sm font-black text-slate-800">
                 👥 สมาชิกทีม ({usersList.length})
               </h3>
             </div>
-            <span className="text-[10px] text-slate-400 font-bold">ความคืบหน้ารายคน</span>
+            <span className="text-xs text-slate-400 font-bold">ความคืบหน้ารายคน</span>
           </div>
 
           <div className="space-y-2.5 max-h-[300px] overflow-y-auto scrollbar-hide pr-1">
@@ -230,7 +230,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-[#6355d8] font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-brand-500 font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
                           {member.photoURL ? (
                             <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover" />
                           ) : (
@@ -241,13 +241,13 @@ export default function SmartRightPanel({ user, transactions = [], products = []
                           <div className="text-xs font-bold text-slate-800 truncate">
                             {member.name || 'พนักงาน'}
                           </div>
-                          <div className="text-[10px] text-slate-400 truncate">
+                          <div className="text-xs text-slate-400 truncate">
                             {member.position || (member.role === 'admin' ? 'ผู้ดูแลระบบ' : 'พนักงานทั่วไป')}
                           </div>
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md shrink-0">
+                      <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md shrink-0">
                         {mDone}/{mTotal}
                       </span>
                     </div>
@@ -255,7 +255,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
                     {/* Micro Progress Bar */}
                     <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-[#6355d8] rounded-full transition-all duration-300"
+                        className="h-full bg-brand-500 rounded-full transition-all duration-300"
                         style={{ width: `${mPercent}%` }}
                       />
                     </div>
@@ -268,7 +268,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
           <div className="pt-2">
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="w-full py-2.5 px-3 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2.5 px-3 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Plus size={16} strokeWidth={3} />
               <span>สั่งงานพนักงานด่วน</span>
@@ -279,18 +279,18 @@ export default function SmartRightPanel({ user, transactions = [], products = []
         <section className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3.5">
           <div className="flex items-center justify-between pb-1 border-b border-slate-50">
             <div className="flex items-center gap-1.5">
-              <Sparkles size={16} className="text-[#6355d8]" />
+              <Sparkles size={16} className="text-brand-500" />
               <h3 className="text-sm font-black text-slate-800">
                 🎯 สรุปภารกิจของคุณ
               </h3>
             </div>
-            <span className="text-[10px] text-slate-400 font-bold">โฟกัสวันนี้</span>
+            <span className="text-xs text-slate-400 font-bold">โฟกัสวันนี้</span>
           </div>
 
           <div className="space-y-2 text-xs">
             <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-100 flex items-center justify-between">
               <span className="font-semibold text-slate-700">🔄 งานประจำวันตำแหน่งนี้</span>
-              <span className="font-black text-[#6355d8]">
+              <span className="font-black text-brand-500">
                 {visibleTasks.filter(t => (t.isRoutine || t.type === 'routine') && isTaskDone(t, todayKey)).length}/
                 {visibleTasks.filter(t => (t.isRoutine || t.type === 'routine')).length}
               </span>
@@ -308,7 +308,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
           <div className="pt-2">
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="w-full py-2.5 px-3 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2.5 px-3 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Plus size={16} strokeWidth={3} />
               <span>เพิ่มบันทึกงานส่วนตัว</span>
