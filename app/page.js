@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, Check, Loader2, Bell, ShieldAlert, Users
 } from 'lucide-react';
@@ -327,7 +327,13 @@ export default function StockJinApp() {
     }});
   };
 
-  const showNotification = (msg) => { setToastMsg(msg); setShowToast(true); setTimeout(() => setShowToast(false), 2000); };
+  // Toast: a new message restarts the timer so it is never cut short by an older one
+  const toastTimerRef = useRef(null);
+  const showNotification = (msg) => {
+    setToastMsg(msg); setShowToast(true);
+    clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setShowToast(false), 4000);
+  };
   const toggleCollapse = (catName) => setCollapsedCats(prev => ({ ...prev, [catName]: !prev[catName] }));
   const copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => showNotification('คัดลอกแล้ว!')).catch(() => showNotification('คัดลอกไม่สำเร็จ'));
 
@@ -1166,7 +1172,7 @@ export default function StockJinApp() {
   // ========================
   if (isDesktop && user) {
     return (
-      <div className="smart-layout font-sans text-gray-800 selection:bg-purple-100">
+      <div className="smart-layout app-glass-bg text-ink selection:bg-brand-100">
         <DesktopSidebar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
@@ -1199,21 +1205,21 @@ export default function StockJinApp() {
                 <>
                   {/* Mode Switcher */}
                   <div className="flex items-center justify-between px-1 -mb-2">
-                    <div className="text-xs font-bold text-gray-500">
+                    <div className="text-sm font-bold text-ink-muted">
                       ภาพรวมระบบและภารกิจประจำวัน
                     </div>
-                    <div className="bg-white p-1 rounded-2xl shadow-xs border border-gray-100 flex text-xs font-bold">
+                    <div className="glass p-1 rounded-2xl flex text-sm font-bold">
                       <button 
                         onClick={() => setDashboardSubTab('tasks')}
-                        className={`px-4 py-1.5 rounded-xl transition-all ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+                        className={`px-4 h-9 rounded-xl transition-colors ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                       >
-                        📋 แดชบอร์ดงานประจำวัน (Daily Tasks)
+                        งานประจำวัน
                       </button>
                       <button 
                         onClick={() => setDashboardSubTab('analytics')}
-                        className={`px-4 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'analytics' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+                        className={`px-4 h-9 rounded-xl transition-colors ${dashboardSubTab === 'analytics' ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                       >
-                        📊 สถิติสต็อกและรายงาน (Stock Analytics)
+                        สถิติ & รายงาน
                       </button>
                     </div>
                   </div>
@@ -1283,7 +1289,7 @@ export default function StockJinApp() {
         </div>
 
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} busy={modalConfig.busy} onCancel={() => setModalConfig(prev => prev.busy ? prev : ({ ...prev, isOpen: false }))} />
-        {showToast && <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
+        {showToast && <div role="status" aria-live="polite" className="fixed top-6 left-1/2 -translate-x-1/2 w-max max-w-[calc(100%-32px)] bg-ink/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl text-sm font-semibold shadow-glass-lg z-[70] flex items-center gap-3 animate-bounce-in border border-white/10"><div className="bg-brand-500 rounded-full p-0.5 text-white shrink-0"><Check size={14} strokeWidth={3}/></div> <span>{toastMsg}</span></div>}
       </div>
     );
   }
@@ -1292,53 +1298,53 @@ export default function StockJinApp() {
   // MOBILE LAYOUT (<1024px)
   // ========================
   return (
-    <div className="bg-[#f4f5fa] min-h-screen font-sans text-gray-800 flex justify-center selection:bg-purple-100">
-      <div className="w-full max-w-md bg-[#f4f5fa] h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
+    <div className="app-glass-bg min-h-screen text-ink flex justify-center selection:bg-brand-100">
+      <div className="w-full max-w-md h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
         {/* Navbar */}
-        <div className="bg-[#6355d8] px-5 py-3.5 sticky top-0 z-40 flex justify-between items-center shadow-md">
-          <div className="flex items-center gap-3">
+        <div className="glass sticky top-0 z-40 mx-3 mt-3 rounded-card px-3 py-2.5 flex justify-between items-center">
+          <div className="flex items-center gap-2.5">
             <button 
               onClick={() => setShowMoreDrawer(true)}
-              className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-xs hover:bg-white/30 transition-all active:scale-95"
-              title="เปิดเมนูนำทาง (ซ้าย)"
+              className="w-10 h-10 bg-brand-50 rounded-control flex items-center justify-center text-brand-600 hover:bg-brand-100 transition-colors"
+              aria-label="เปิดเมนู"
             >
-              <Menu size={20} strokeWidth={2.5}/>
+              <Menu size={20} strokeWidth={2.4}/>
             </button>
             <div>
-              <h1 className="text-base font-black text-white tracking-wide leading-none">StockPro</h1>
-              <p className="text-[10px] text-white/80 mt-0.5">Inventory & Workforce Platform</p>
+              <h1 className="text-base font-black text-ink tracking-tight leading-none">StockPro</h1>
+              <p className="text-xs text-ink-muted mt-0.5">{tabTitles[activeTab]?.title || 'คลังสินค้า & บุคลากร'}</p>
             </div>
           </div>
           {user && (
-            <div className="flex items-center gap-2">
-              <button onClick={() => setActiveTab('notifications')} className="relative p-1.5 rounded-full hover:bg-white/10 transition-colors text-white">
-                <Bell size={18} />
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setActiveTab('notifications')} className="relative w-10 h-10 rounded-control flex items-center justify-center text-ink-muted hover:bg-white/70 transition-colors" aria-label="การแจ้งเตือน">
+                <Bell size={19} />
                 {unreadNotifCount > 0 && <span className="smart-notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
               </button>
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs border border-white/30 overflow-hidden">
+              <button onClick={() => setActiveTab('menu')} className="w-9 h-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold text-sm ring-2 ring-white overflow-hidden" aria-label="บัญชีของฉัน">
                 {user.photoURL ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" /> : user.name.charAt(0)}
-              </div>
+              </button>
             </div>
           )}
         </div>
 
         {/* Content */}
-        <div className="p-4 flex-1 overflow-y-auto scrollbar-hide pb-24 space-y-4">
+        <div className="p-4 flex-1 overflow-y-auto scrollbar-hide pb-28 space-y-4">
           {activeTab === 'dashboard' ? (
             <>
               {/* Mobile Sub-tab switch */}
-              <div className="flex bg-white p-1 rounded-2xl shadow-xs border border-gray-100 text-xs font-bold">
+              <div className="glass flex p-1 rounded-2xl text-sm font-bold">
                 <button 
                   onClick={() => setDashboardSubTab('tasks')}
-                  className={`flex-1 py-1.5 rounded-xl transition-all ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500'}`}
+                  className={`flex-1 h-10 rounded-xl transition-colors ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-muted'}`}
                 >
-                  📋 งานประจำวัน
+                  งานประจำวัน
                 </button>
                 <button 
                   onClick={() => setDashboardSubTab('analytics')}
-                  className={`flex-1 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'analytics' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500'}`}
+                  className={`flex-1 h-10 rounded-xl transition-colors ${dashboardSubTab === 'analytics' ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-muted'}`}
                 >
-                  📊 สถิติสต็อก
+                  สถิติ & รายงาน
                 </button>
               </div>
 
@@ -1375,24 +1381,36 @@ export default function StockJinApp() {
 
         {/* Bottom Nav */}
         {user && (
-          <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200 px-6 py-2 flex justify-between items-center z-50 pb-8 safe-area-pb shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-            <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dashboard' ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}><LayoutDashboard size={22} strokeWidth={activeTab==='dashboard'?2.5:2}/><span className="text-[9px] font-bold">ภาพรวม</span></button>
-            <button onClick={() => setActiveTab('stock')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'stock' ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}><Package size={22} strokeWidth={activeTab==='stock'?2.5:2}/><span className="text-[9px] font-bold">คลัง</span></button>
-            <div className="relative -top-8 group"><div className={`absolute inset-0 bg-purple-400 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity ${activeTab === 'transaction' ? 'block' : 'hidden'}`}></div><button onClick={() => setActiveTab('transaction')} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-purple-900/30 border-[6px] border-[#f4f5fa] transition-all active:scale-90 ${activeTab === 'transaction' ? 'bg-[#6355d8] text-white scale-110' : 'bg-gray-800 text-white'}`}><ArrowRightLeft size={28} strokeWidth={2.5} /></button></div>
-            <button onClick={() => setActiveTab('status')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'status' ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}><ClipboardList size={22} strokeWidth={activeTab==='status'?2.5:2}/><span className="text-[9px] font-bold">สถานะ</span></button>
-            <button
-              onClick={() => setShowMoreDrawer(true)}
-              className={`flex flex-col items-center gap-1 transition-all ${ ['hr','documents','menu','notifications'].includes(activeTab) ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}
-            >
-              <div className="relative">
-                <Menu size={22} strokeWidth={['hr','documents','menu','notifications'].includes(activeTab)?2.5:2}/>
-                {(['hr','documents','menu','notifications'].includes(activeTab) || unreadNotifCount > 0) && (
-                  <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${unreadNotifCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-[#6355d8]'}`} />
-                )}
-              </div>
-              <span className="text-[9px] font-bold">อื่นๆ</span>
-            </button>
-          </div>
+          <nav className="glass-strong absolute bottom-3 left-3 right-3 rounded-[24px] px-2 py-1.5 flex justify-between items-center z-50 safe-area-pb" aria-label="เมนูหลัก">
+            {[
+              { key: 'dashboard', label: 'ภาพรวม', icon: LayoutDashboard },
+              { key: 'stock', label: 'คลัง', icon: Package },
+              { key: 'transaction', label: 'เบิก/รับ', icon: ArrowRightLeft },
+              { key: 'status', label: 'สถานะ', icon: ClipboardList },
+            ].map(({ key, label, icon: Icon }) => {
+              const active = activeTab === key;
+              return (
+                <button key={key} onClick={() => setActiveTab(key)} aria-current={active ? 'page' : undefined}
+                  className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-14 rounded-2xl transition-colors duration-150 ${active ? 'bg-brand-500 text-white shadow-[0_6px_16px_rgba(99,85,216,0.3)]' : 'text-ink-subtle hover:text-brand-600'}`}>
+                  <Icon size={21} strokeWidth={active ? 2.4 : 2}/>
+                  <span className="text-xs font-bold">{label}</span>
+                </button>
+              );
+            })}
+            {(() => {
+              const moreActive = ['hr','documents','menu','notifications','users'].includes(activeTab);
+              return (
+                <button onClick={() => setShowMoreDrawer(true)}
+                  className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-14 rounded-2xl transition-colors duration-150 ${moreActive ? 'bg-brand-500 text-white' : 'text-ink-subtle hover:text-brand-600'}`}>
+                  <span className="relative">
+                    <Menu size={21} strokeWidth={moreActive ? 2.4 : 2}/>
+                    {unreadNotifCount > 0 && <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-danger-500 ring-2 ring-white" />}
+                  </span>
+                  <span className="text-xs font-bold">อื่นๆ</span>
+                </button>
+              );
+            })()}
+          </nav>
         )}
 
         {/* More Drawer (Mobile) */}
@@ -1423,7 +1441,7 @@ export default function StockJinApp() {
           onSuccessSave={(msg) => showNotification(msg)}
         />
 
-        {showToast && <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
+        {showToast && <div role="status" aria-live="polite" className="absolute top-24 left-1/2 -translate-x-1/2 w-max max-w-[calc(100%-32px)] bg-ink/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl text-sm font-semibold shadow-glass-lg z-[70] flex items-center gap-3 animate-bounce-in border border-white/10"><div className="bg-brand-500 rounded-full p-0.5 text-white shrink-0"><Check size={14} strokeWidth={3}/></div> <span>{toastMsg}</span></div>}
       </div>
     </div>
   );

@@ -1,79 +1,8 @@
 // app/components/DesktopSidebar.js
 'use client';
-import React, { useState, useEffect } from 'react';
-import { 
-  Home, Package, ArrowRightLeft, ClipboardList, Bell, 
-  Clock, FolderOpen, Users, Settings, ChevronDown, 
-  ChevronLeft, ChevronRight, LogOut, QrCode
-} from 'lucide-react';
-import { isAdmin } from '../utils/permissions';
-import { getUserCluster } from '../services/taskService';
-
-const menuItems = [
-  {
-    key: 'dashboard',
-    label: 'แดชบอร์ด & งาน',
-    icon: Home,
-    emoji: '📊',
-    subItems: [
-      { key: 'my', label: 'งานของฉัน', icon: '⭐', params: { posTab: 'my', subTab: 'tasks' } },
-      { key: 'warehouse', label: 'คลัง/สต็อก', icon: '📦', params: { posTab: 'warehouse', subTab: 'tasks' } },
-      { key: 'kitchen', label: 'ครัว/เชฟ', icon: '👨‍🍳', params: { posTab: 'kitchen', subTab: 'tasks' } },
-      { key: 'finance', label: 'การเงิน/แคชเชียร์', icon: '💰', params: { posTab: 'finance', subTab: 'tasks' } },
-      { key: 'service', label: 'หน้าร้าน/บริการ', icon: '🍱', params: { posTab: 'service', subTab: 'tasks' } },
-      { key: 'shipping', label: 'จัดส่ง/พัสดุ', icon: '🚚', params: { posTab: 'shipping', subTab: 'tasks' } },
-      { key: 'management', label: 'บริหาร/Admin', icon: '👔', params: { posTab: 'management', subTab: 'tasks' } },
-      { key: 'all', label: 'งานทั้งหมด', icon: '🌐', params: { posTab: 'all', subTab: 'tasks' } },
-      { key: 'analytics', label: 'สถิติสต็อก & รายงาน', icon: '📈', params: { subTab: 'analytics' } },
-    ]
-  },
-  {
-    key: 'stock',
-    label: 'คลังสินค้า',
-    icon: Package,
-    emoji: '📦'
-  },
-  {
-    key: 'transaction',
-    label: 'เบิก/รับสินค้า',
-    icon: ArrowRightLeft,
-    emoji: '🔄'
-  },
-  {
-    key: 'status',
-    label: 'สถานะรายการ',
-    icon: ClipboardList,
-    emoji: '📑'
-  },
-  {
-    key: 'hr',
-    label: 'เข้า-ออกงาน / ลา',
-    icon: Clock,
-    emoji: '⏰'
-  },
-  {
-    key: 'documents',
-    label: 'เอกสาร',
-    icon: FolderOpen,
-    emoji: '📁'
-  },
-  {
-    key: 'users',
-    label: 'จัดการบัญชีผู้ใช้',
-    icon: Users,
-    adminOnly: true
-  },
-  {
-    key: 'notifications',
-    label: 'การแจ้งเตือน',
-    icon: Bell
-  },
-  {
-    key: 'menu',
-    label: 'ตั้งค่า & บัญชี',
-    icon: Settings
-  }
-];
+import React, { useState } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, Package, QrCode } from 'lucide-react';
+import { getVisibleNavItems, getVisibleSubItems, isSubItemActive, NAV_ITEMS } from '../config/navigation';
 
 export default function DesktopSidebar({ 
   activeTab, 
@@ -90,15 +19,15 @@ export default function DesktopSidebar({
   // Accordion expanded section
   const [expandedSection, setExpandedSection] = useState('dashboard');
   const [hoveredTab, setHoveredTab] = useState(null);
+  const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
 
-  const isUserAdmin = isAdmin(user);
-
-  // Auto-expand section if activeTab has subItems
-  useEffect(() => {
-    if (activeTab && menuItems.some(i => i.key === activeTab && i.subItems?.length)) {
+  // Auto-expand section when navigating to a tab that has sub-items (adjusted during render, not in an effect)
+  if (activeTab !== prevActiveTab) {
+    setPrevActiveTab(activeTab);
+    if (NAV_ITEMS.some(i => i.key === activeTab && i.subItems?.length)) {
       setExpandedSection(activeTab);
     }
-  }, [activeTab]);
+  }
 
   const handleItemClick = (item) => {
     if (isCollapsed) {
@@ -166,8 +95,7 @@ export default function DesktopSidebar({
 
       {/* Navigation List (Scrollable) */}
       <div className="smart-sidebar-nav smart-sidebar-scroll">
-        {menuItems
-          .filter(item => !item.adminOnly || isUserAdmin)
+        {getVisibleNavItems(user)
           .map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.key;
@@ -226,26 +154,10 @@ export default function DesktopSidebar({
                 {!isCollapsed && hasSub && (
                   <div className={`smart-sidebar-sub-wrapper ${isExpanded ? 'expanded' : ''}`}>
                     <div className="smart-sidebar-sub-container">
-                      {item.subItems
-                        .filter(sub => {
-                          if (sub.adminOnly && !isUserAdmin) return false;
-                          if (item.key === 'dashboard' && !isUserAdmin) {
-                            const userCluster = getUserCluster(user);
-                            if (sub.key === 'my' || sub.key === 'analytics') return true;
-                            if (userCluster && sub.key === userCluster) return true;
-                            return false;
-                          }
-                          return true;
-                        })
+                      {getVisibleSubItems(item, user)
                         .map(sub => {
-                          let isSubActive = false;
-                          if (item.key === 'dashboard') {
-                            if (sub.key === 'analytics') {
-                              isSubActive = isActive && dashboardSubTab === 'analytics';
-                            } else {
-                              isSubActive = isActive && (dashboardSubTab === 'tasks' || !dashboardSubTab) && dashboardPosTab === sub.key;
-                            }
-                          }
+                          const isSubActive = isSubItemActive(item, sub, { activeTab, dashboardSubTab, dashboardPosTab });
+                          const SubIcon = sub.icon;
 
                           return (
                             <button
@@ -253,7 +165,7 @@ export default function DesktopSidebar({
                               onClick={() => handleSubItemClick(item.key, sub)}
                               className={`smart-sidebar-sub-item ${isSubActive ? 'active' : ''}`}
                             >
-                              <span className="text-sm shrink-0">{sub.icon}</span>
+                              <SubIcon size={15} className="shrink-0" />
                               <span className="truncate">{sub.label}</span>
                             </button>
                           );
