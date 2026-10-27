@@ -19,7 +19,7 @@ const BUTTON_VARIANTS = {
   ghost: 'bg-transparent text-brand-600 hover:bg-brand-50',
   danger: 'bg-danger-600 text-white hover:bg-danger-700',
   'danger-ghost': 'bg-transparent text-danger-600 hover:bg-danger-50',
-  success: 'bg-success-600 text-white hover:bg-success-700',
+  success: 'bg-success-700 text-white hover:bg-success-700/90',
 };
 
 const BUTTON_SIZES = {

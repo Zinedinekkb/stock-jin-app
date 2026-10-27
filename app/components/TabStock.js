@@ -338,19 +338,20 @@ export default function TabStock({
             ))}
           </div>
 
-          {/* Secondary actions */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Button size="sm" variant="ghost" icon={Clipboard} onClick={handleCopyStockReport}>คัดลอกรายงาน</Button>
-            {canSendLine && <Button size="sm" variant="ghost" icon={Share2} onClick={() => setShowReportModal(true)}>ส่งเข้า LINE</Button>}
-            {canEdit && (
-              <>
-                <Button size="sm" variant="ghost" icon={Layers} onClick={() => { setShowCatManager(true); setNewProductMode(false); setIsEditingStock(false); }}>หมวดหมู่</Button>
-                <Button size="sm" variant={isEditingStock ? 'primary' : 'ghost'} icon={isEditingStock ? Check : ArrowUpDown} onClick={() => { setIsEditingStock(!isEditingStock); setNewProductMode(false); setShowCatManager(false); }}>
-                  {isEditingStock ? 'เสร็จสิ้น' : 'จัดเรียง / แก้ไข'}
-                </Button>
-              </>
-            )}
-          </div>
+        </div>
+
+        {/* Secondary actions */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Button size="sm" variant="ghost" icon={Clipboard} onClick={handleCopyStockReport}>คัดลอกรายงาน</Button>
+          {canSendLine && <Button size="sm" variant="ghost" icon={Share2} onClick={() => setShowReportModal(true)}>ส่งเข้า LINE</Button>}
+          {canEdit && (
+            <>
+              <Button size="sm" variant="ghost" icon={Layers} onClick={() => { setShowCatManager(true); setNewProductMode(false); setIsEditingStock(false); }}>หมวดหมู่</Button>
+              <Button size="sm" variant={isEditingStock ? 'primary' : 'ghost'} icon={isEditingStock ? Check : ArrowUpDown} onClick={() => { setIsEditingStock(!isEditingStock); setNewProductMode(false); setShowCatManager(false); }}>
+                {isEditingStock ? 'เสร็จสิ้น' : 'จัดเรียง / แก้ไข'}
+              </Button>
+            </>
+          )}
         </div>
 
         {isEditingStock && (

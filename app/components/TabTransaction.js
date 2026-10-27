@@ -137,7 +137,7 @@ export default function TabTransaction({
             <button
               role="tab" aria-selected={isModeIn}
               onClick={() => requestModeChange('IN')}
-              className={`h-12 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${isModeIn ? 'bg-success-600 text-white shadow-sm' : 'text-ink-muted hover:text-ink'}`}
+              className={`h-12 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${isModeIn ? 'bg-success-700 text-white shadow-sm' : 'text-ink-muted hover:text-ink'}`}
             >
               <ArrowDownToLine size={18}/> รับเข้า
             </button>
@@ -228,7 +228,7 @@ export default function TabTransaction({
         <div className="lg:hidden sticky bottom-[88px] z-30 mt-3">
           <button
             onClick={() => setShowCartSheet(true)}
-            className={`w-full h-14 rounded-card px-4 flex items-center justify-between text-white shadow-glass-lg ${isModeIn ? 'bg-success-600' : 'bg-danger-600'}`}
+            className={`w-full h-14 rounded-card px-4 flex items-center justify-between text-white shadow-glass-lg ${isModeIn ? 'bg-success-700' : 'bg-danger-600'}`}
           >
             <span className="flex items-center gap-2 font-bold"><ShoppingCart size={19}/> {cart.length} รายการ · {totalQty} ชิ้น</span>
             <span className="flex items-center gap-1 font-bold text-sm">ตรวจและส่ง <ChevronUp size={18}/></span>
