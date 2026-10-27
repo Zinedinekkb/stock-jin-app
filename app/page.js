@@ -1387,13 +1387,7 @@ export default function StockJinApp() {
                     initialPosTab={dashboardPosTab}
                     onPosTabChange={setDashboardPosTab}
                   />
-                  <div className="mt-4">
-                    <SmartRightPanel 
-                      user={user}
-                      transactions={transactions}
-                      products={products}
-                    />
-                  </div>
+                  {/* Mobile skips SmartRightPanel: it repeats the progress card and adds a long team list */}
                 </>
               ) : (
                 renderTabContent()

@@ -300,7 +300,7 @@ export default function TabStock({
   return (
       <div className="space-y-4 pb-24 animate-fade-in-slide relative">
         {/* Toolbar: search + actions, sticky so it is reachable while scrolling */}
-        <div className="sticky top-0 z-20 -mx-1 px-1 pt-1 pb-2 space-y-2.5 bg-[#f4f5fa]/70 backdrop-blur-md rounded-b-card">
+        <div className="sticky top-0 z-20 -mx-1 px-1 pt-1 pb-2 space-y-2.5 bg-[#f4f5fa]/95 backdrop-blur-md rounded-b-card">
           <div className="flex gap-2">
             <label className="relative flex-1">
               <span className="sr-only">ค้นหาสินค้า</span>

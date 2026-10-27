@@ -468,19 +468,19 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
           {/* Stats */}
           <div className="hr-stats-row">
             <div className="hr-stat-card">
-              <span className="hr-stat-num" style={{ color: '#16a34a' }}>
+              <span className="hr-stat-num" style={{ color: '#1e1b3a' }}>
                 {workedDays}
               </span>
               <span className="hr-stat-label">วันทำงาน</span>
             </div>
             <div className="hr-stat-card">
-              <span className="hr-stat-num" style={{ color: '#f59e0b' }}>
+              <span className="hr-stat-num" style={{ color: '#1e1b3a' }}>
                 {pendingLeaves}
               </span>
               <span className="hr-stat-label">รอพิจารณา</span>
             </div>
             <div className="hr-stat-card">
-              <span className="hr-stat-num" style={{ color: '#3b82f6' }}>
+              <span className="hr-stat-num" style={{ color: '#1e1b3a' }}>
                 {approvedLeaves}
               </span>
               <span className="hr-stat-label">ลาที่อนุมัติ</span>

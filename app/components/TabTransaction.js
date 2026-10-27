@@ -131,7 +131,7 @@ export default function TabTransaction({
     <div className="pb-6 animate-fade-in-slide flex flex-col lg:flex-row lg:gap-6 relative w-full min-w-0">
       {/* ===== LEFT: choose products ===== */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <div className="sticky top-0 z-20 pb-2 pt-1 space-y-2.5 bg-[#f4f5fa]/70 backdrop-blur-md rounded-b-card">
+        <div className="sticky top-0 z-20 pb-2 pt-1 space-y-2.5 bg-[#f4f5fa]/95 backdrop-blur-md rounded-b-card">
           {/* IN / OUT segmented control */}
           <div className="glass grid grid-cols-2 p-1 rounded-2xl" role="tablist" aria-label="ประเภทรายการ">
             <button

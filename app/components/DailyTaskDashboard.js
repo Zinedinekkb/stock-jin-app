@@ -7,8 +7,9 @@ import {
   ChevronRight, ChevronDown, Flame, Sparkles, ShieldCheck, 
   ArrowRight, RefreshCw, Briefcase, Package, ArrowRightLeft, 
   ClipboardList, MessageSquare, Loader2, PlayCircle, Eye,
-  BarChart3, CheckSquare, Layers
+  BarChart3, CheckSquare, Layers, UserPlus
 } from 'lucide-react';
+import { GlassCard, Button, Badge, SectionHeader } from './ui';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { 
@@ -332,296 +333,146 @@ export default function DailyTaskDashboard({
     }
   };
 
+  // "Needs attention" items for admins: only rows with something to do are emphasised
+  const attentionItems = isUserAdmin ? [
+    { key: 'tx', icon: ClipboardList, label: 'เบิก/รับรอยืนยัน', count: pendingTxCount, unit: 'รายการ', tone: 'brand', onClick: () => setActiveTab('status') },
+    { key: 'leave', icon: Calendar, label: 'คำขอลารอพิจารณา', count: pendingLeaves.length, unit: 'ใบ', tone: 'warning', onClick: handlePendingLeavesClick },
+    { key: 'stock', icon: AlertTriangle, label: 'สินค้าใกล้หมด', count: lowStockCount, unit: 'ชนิด', tone: 'danger', onClick: () => setActiveTab('stock') },
+    { key: 'users', icon: UserPlus, label: 'ผู้ใช้รออนุมัติ', count: pendingUsers.length, unit: 'คน', tone: 'warning', onClick: () => setActiveTab('users') },
+  ] : [];
+  const TONE = {
+    brand: 'bg-brand-50 text-brand-600',
+    warning: 'bg-warning-50 text-warning-700',
+    danger: 'bg-danger-50 text-danger-600',
+  };
+  const STATUS_FILTERS = [
+    { key: 'all', label: 'ทั้งหมด' },
+    { key: 'pending', label: 'ยังไม่เสร็จ' },
+    { key: 'urgent', label: 'ด่วน' },
+    { key: 'completed', label: 'เสร็จแล้ว' },
+  ];
+  const chipClass = (active) => `h-9 px-3.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors shrink-0 flex items-center gap-1.5 ${active ? 'bg-brand-500 text-white' : 'bg-white/70 text-ink-muted hover:bg-white'}`;
+
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      {/* ========================================================================= */}
-      {/* 1. HERO GREETING BANNER */}
-      {/* ========================================================================= */}
-      <div className="smart-hero-banner relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-[#4638a8] text-white p-6 sm:p-7 rounded-3xl shadow-sm border border-slate-800">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-white/15 backdrop-blur-md rounded-full text-xs font-bold tracking-wide text-white border border-white/20">
-                {isUserAdmin ? '👑 ผู้ดูแลระบบ (Admin)' : 'พนักงานประจำ'}
-              </span>
-              <span className="px-2.5 py-0.5 bg-purple-500/25 backdrop-blur-md rounded-full text-xs font-medium text-purple-200 border border-purple-300/20">
-                {user?.position || (isUserAdmin ? 'ผู้จัดการ / Admin' : 'พนักงานทั่วไป')}
-              </span>
+    <div className="space-y-5 animate-fade-in pb-10">
+      {/* 1. Greeting + today's progress + one main action */}
+      <GlassCard strong className="p-5">
+        <p className="text-sm text-ink-muted">{thaiDateStr}</p>
+        <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight mt-0.5">สวัสดี {user?.name?.split(' ')[0] || 'ทีมงาน'}</h1>
+        <p className="text-sm text-ink-muted">{user?.position || (isUserAdmin ? 'ผู้ดูแลระบบ' : 'พนักงาน')}</p>
+
+        <div className="mt-4 flex items-end justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-ink tabular-nums">{stats.completed}<span className="text-lg text-ink-subtle">/{stats.total}</span></span>
+              <span className="text-sm font-semibold text-ink-muted">งานวันนี้เสร็จแล้ว</span>
             </div>
-            
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              <span>สวัสดีคุณ {user?.name || 'ทีมงาน StockJin'}</span>
-              <span>👋</span>
-            </h1>
-            
-            <p className="text-xs text-slate-300 font-normal">
-              📅 {thaiDateStr} &bull; สรุปภารกิจประจำวันและรายการงานที่ต้องดำเนินการ
+            <div className="w-full h-2 bg-brand-100 rounded-full overflow-hidden mt-2" role="progressbar" aria-valuenow={stats.percent} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full bg-brand-500 rounded-full transition-all duration-500" style={{ width: `${stats.percent}%` }} />
+            </div>
+          </div>
+          {stats.urgentPending > 0 && <Badge tone="danger" icon={Flame}>ด่วน {stats.urgentPending}</Badge>}
+        </div>
+
+        <Button
+          icon={Plus}
+          block
+          className="mt-4 sm:w-auto"
+          onClick={() => { setEditingTask(null); setIsCreateModalOpen(true); }}
+        >
+          {isUserAdmin ? 'สั่งงานใหม่' : 'เพิ่มงานของฉัน'}
+        </Button>
+      </GlassCard>
+
+      {/* 2. Admin: what needs attention, in one compact list */}
+      {isUserAdmin && (
+        <section>
+          <SectionHeader
+            title="ต้องจัดการ"
+            action={
+              <button onClick={() => setViewMode(viewMode === 'tasks' ? 'team' : 'tasks')} className="text-sm font-bold text-brand-600 hover:underline flex items-center gap-1">
+                <Users size={15} /> {viewMode === 'team' ? 'กลับไปดูรายการงาน' : 'ดูงานรายคน'}
+              </button>
+            }
+          />
+          <GlassCard className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-white/70 overflow-hidden">
+            {attentionItems.map(({ key, icon: Icon, label, count, unit, tone, onClick }) => (
+              <button key={key} onClick={onClick} className="p-3.5 text-left hover:bg-white/60 transition-colors min-h-[88px] flex flex-col justify-between">
+                <span className={`w-9 h-9 rounded-control flex items-center justify-center ${count > 0 ? TONE[tone] : 'bg-white/70 text-ink-subtle'}`}>
+                  <Icon size={18} />
+                </span>
+                <span className="mt-2">
+                  <span className={`text-xl font-black tabular-nums ${count > 0 ? 'text-ink' : 'text-ink-subtle'}`}>{count}</span>
+                  <span className="text-xs text-ink-subtle"> {unit}</span>
+                  <span className="block text-sm font-semibold text-ink-muted leading-tight">{label}</span>
+                </span>
+              </button>
+            ))}
+          </GlassCard>
+        </section>
+      )}
+
+      {/* 3. Empty state: no tasks yet */}
+      {tasks.length === 0 && !loading && (
+        <GlassCard className="p-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div>
+            <h4 className="text-base font-bold text-ink">ยังไม่มีรายการงาน</h4>
+            <p className="text-sm text-ink-muted mt-0.5 max-w-md">
+              {isUserAdmin
+                ? 'โหลดชุดงานประจำวันเริ่มต้น 24 รายการ (สต็อก ครัว การเงิน จัดส่ง บริหาร หน้าร้าน) เพื่อเริ่มใช้ได้ทันที'
+                : 'ยังไม่มีงานที่ได้รับมอบหมาย เพิ่มงานของคุณเองได้เลย'}
             </p>
           </div>
-
-          {/* Quick Action Button & Summary Card */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-2.5 px-4 min-w-[140px]">
-              <div className="flex items-center justify-between text-xs text-purple-200 font-medium">
-                <span>ความคืบหน้า</span>
-                <span className="font-bold text-white">{stats.percent}%</span>
-              </div>
-              <div className="text-base font-bold text-white mt-0.5">
-                {stats.completed}/{stats.total} <span className="text-xs font-normal text-purple-200">งาน</span>
-              </div>
-              <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden mt-1.5">
-                <div 
-                  className="h-full bg-success-500 rounded-full transition-all duration-500" 
-                  style={{ width: `${stats.percent}%` }}
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setEditingTask(null);
-                setIsCreateModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white text-brand-500 hover:bg-purple-50 font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
-            >
-              <Plus size={16} strokeWidth={2.5} />
-              <span>{isUserAdmin ? 'สั่งงานใหม่ / มอบหมาย' : 'เพิ่มบันทึกงานของฉัน'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Decorative subtle background glow */}
-        <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 2. ADMIN EXECUTIVE OPERATIONAL STRIP (FOR ADMIN / OWNER ONLY) */}
-      {/* ========================================================================= */}
-      {isUserAdmin && (
-        <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-base">👔</span>
-              <h3 className="text-sm font-black text-slate-800">
-                ระบบจัดการสำหรับผู้บริหาร (Executive Fast-Track)
-              </h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewMode(viewMode === 'tasks' ? 'team' : 'tasks')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  viewMode === 'team'
-                    ? 'bg-brand-500 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <Users size={14} />
-                <span>{viewMode === 'team' ? 'ดูรายการงาน' : '👥 ตรวจสอบงานทีมงาน'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 4 Bottleneck Metric Cards with Direct Jumps */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Card 1: Pending Users */}
-            <button
-              onClick={() => setActiveTab('users')}
-              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xl">👥</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                  pendingUsers.length > 0 ? 'bg-amber-100 text-amber-700 animate-pulse' : 'bg-slate-200 text-slate-600'
-                }`}>
-                  {pendingUsers.length} คน
-                </span>
-              </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-brand-500">
-                ผู้ใช้รออนุมัติ
-              </div>
-              <div className="text-xs text-slate-400 mt-0.5">เปิดแท็บบัญชีผู้ใช้ →</div>
-            </button>
-
-            {/* Card 2: Pending Leaves */}
-            <button
-              onClick={handlePendingLeavesClick}
-              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group cursor-pointer"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xl">⏱️</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                  pendingLeaves.length > 0 ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-slate-200 text-slate-600'
-                }`}>
-                  {pendingLeaves.length} ใบ
-                </span>
-              </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-brand-500">
-                คำขอลารอพิจารณา
-              </div>
-              <div className="text-xs text-purple-600 font-semibold mt-0.5">
-                {pendingLeaves.length > 0 ? '📄 คลิกตรวจเอกสาร & อนุมัติ →' : 'ไม่มีคำขอค้าง'}
-              </div>
-            </button>
-
-            {/* Card 3: Pending Transactions */}
-            <button
-              onClick={() => setActiveTab('status')}
-              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xl">📋</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                  pendingTxCount > 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-200 text-slate-600'
-                }`}>
-                  {pendingTxCount} รายการ
-                </span>
-              </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-brand-500">
-                รายการเบิก/รับรอยืนยัน
-              </div>
-              <div className="text-xs text-slate-400 mt-0.5">เปิดแท็บสถานะรายการ →</div>
-            </button>
-
-            {/* Card 4: Low Stock Alert */}
-            <button
-              onClick={() => setActiveTab('stock')}
-              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xl">⚠️</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                  lowStockCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-success-100 text-success-700'
-                }`}>
-                  {lowStockCount} ชนิด
-                </span>
-              </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-brand-500">
-                สินค้าใกล้หมดสต็อก
-              </div>
-              <div className="text-xs text-slate-400 mt-0.5">เปิดคลังสินค้า →</div>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 3. SEED ROUTINE CHECKLIST PROMPT (When 0 tasks exist and Admin is logged in) */}
-      {/* ========================================================================= */}
-      {tasks.length === 0 && !loading && (
-        <div className="p-6 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-2xl shrink-0">
-              ⚡
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-purple-950">
-                ยังไม่มีรายการงานในระบบ
-              </h4>
-              <p className="text-xs text-purple-700 mt-0.5 max-w-md">
-                {isUserAdmin 
-                  ? 'ต้องการโหลดชุดงานประจำวันเริ่มต้นสำหรับทุกตำแหน่งงาน (สต็อก, ครัว, การเงิน, จัดส่ง, บริหาร, หน้าร้าน 24 รายการ) หรือไม่?'
-                  : 'ยังไม่มีภารกิจที่ถูกมอบหมาย คุณสามารถคลิกเพิ่มงานส่วนตัวของคุณได้ทันที'}
-              </p>
-            </div>
-          </div>
           {isUserAdmin ? (
-            <button
-              onClick={handleSeedTemplates}
-              disabled={isSeeding}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all shrink-0 disabled:opacity-50"
-            >
-              {isSeeding ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-              <span>{isSeeding ? 'กำลังโหลดข้อมูล...' : '⚡ โหลดชุดงานประจำวันเริ่มต้น (24 รายการ)'}</span>
-            </button>
+            <Button icon={Sparkles} loading={isSeeding} onClick={handleSeedTemplates} className="shrink-0">
+              {isSeeding ? 'กำลังโหลด' : 'โหลดชุดงานเริ่มต้น'}
+            </Button>
           ) : (
-            <button
-              onClick={() => {
-                setEditingTask(null);
-                setIsCreateModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all shrink-0"
-            >
-              <Plus size={16} />
-              <span>เพิ่มงานของฉัน</span>
-            </button>
+            <Button icon={Plus} className="shrink-0" onClick={() => { setEditingTask(null); setIsCreateModalOpen(true); }}>เพิ่มงานของฉัน</Button>
           )}
-        </div>
+        </GlassCard>
       )}
 
-      {/* ========================================================================= */}
-      {/* 4. POSITION TABS & STATUS FILTER STRIP */}
-      {/* ========================================================================= */}
-      <div className="space-y-3">
-        {/* Row 1: Position Tabs (Strictly scoped: Staff only sees own + team tab; Admin sees all) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-          {visiblePositionTabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => handleSelectPosTab(tab.key)}
-              className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
-                selectedPosTab === tab.key
-                  ? 'bg-brand-500 text-white shadow-xs scale-[1.01]'
-                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80 font-semibold'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-              {tab.key === 'my' && (
-                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-xs font-bold ${
-                  selectedPosTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {tasks.filter(t => isTaskVisibleToUser(user, t) && matchesUserPosition(user, t) && !isTaskDone(t, todayKey)).length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+      {/* 4. Filters: team chips, status chips, search */}
+      <div className="space-y-2.5">
+        {visiblePositionTabs.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            {visiblePositionTabs.map(tab => (
+              <button key={tab.key} onClick={() => handleSelectPosTab(tab.key)} className={chipClass(selectedPosTab === tab.key)}>
+                {tab.label}
+                {tab.key === 'my' && (
+                  <span className={selectedPosTab === tab.key ? 'opacity-80' : 'text-ink-subtle'}>
+                    {tasks.filter(t => isTaskVisibleToUser(user, t) && matchesUserPosition(user, t) && !isTaskDone(t, todayKey)).length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Row 2: Status Sub-Filter & Search Box */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/70 shadow-xs">
-          {/* Status Sub-Filters */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide text-xs font-semibold">
-            {[
-              { key: 'all', label: 'ทั้งหมด' },
-              { key: 'pending', label: '⏳ รอดำเนินการ' },
-              { key: 'urgent', label: '🔥 งานด่วน' },
-              { key: 'routine', label: '🔄 ประจำวัน' },
-              { key: 'assigned', label: '⚡ งานสั่งเสริม' },
-              { key: 'completed', label: '✅ เสร็จแล้ว' },
-            ].map(f => (
+        <div className="flex flex-col sm:flex-row gap-2.5">
+          <div className="glass flex p-1 rounded-2xl gap-1 overflow-x-auto scrollbar-hide">
+            {STATUS_FILTERS.map(f => (
               <button
                 key={f.key}
                 onClick={() => setStatusFilter(f.key)}
-                className={`px-3 py-1.5 rounded-xl transition-all shrink-0 cursor-pointer ${
-                  statusFilter === f.key
-                    ? 'bg-brand-500/10 text-brand-500 font-bold'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
-                }`}
+                className={`h-9 px-3.5 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${statusFilter === f.key ? 'bg-white text-brand-600 shadow-sm' : 'text-ink-muted hover:text-ink'}`}
               >
                 {f.label}
               </button>
             ))}
           </div>
-
-          {/* Search Box */}
-          <div className="relative min-w-[200px] max-w-xs">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <label className="relative flex-1 sm:max-w-xs">
+            <span className="sr-only">ค้นหางาน</span>
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none" />
             <input
-              type="text"
+              type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ค้นหางาน, ผู้รับผิดชอบ..."
-              className="w-full pl-9 pr-8 py-1.5 text-xs font-medium rounded-xl border border-slate-200 focus:border-brand-500 outline-none text-slate-800 bg-slate-50/50"
+              placeholder="ค้นหางานหรือชื่อคน"
+              className="glass w-full h-11 pl-9 pr-3 text-sm rounded-control text-ink outline-none focus:ring-2 focus:ring-brand-200"
             />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
+          </label>
         </div>
       </div>
 
@@ -751,186 +602,91 @@ export default function DailyTaskDashboard({
                       note: task.completionNote
                     } : null);
 
+                const accent = isDone ? '' : (isOverdue || task.priority === 'urgent') ? 'bg-danger-500' : task.priority === 'high' ? 'bg-warning-500' : '';
+                const iconBtn = 'w-9 h-9 rounded-control flex items-center justify-center text-ink-subtle transition-colors';
+                const actions = (
+                  <>
+                      {!isRoutine && !isDone && task.status !== 'in_progress' && (
+                        <button onClick={() => handleSetInProgress(task)} className={`${iconBtn} hover:text-brand-600 hover:bg-brand-50`} aria-label="เริ่มทำ">
+                          <PlayCircle size={18} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setNoteModalConfig({ isOpen: true, task, noteText: todayRecord?.note || task.completionNote || '' })}
+                        className={`${iconBtn} hover:text-ink hover:bg-white/70`}
+                        aria-label="หมายเหตุ"
+                      >
+                        <MessageSquare size={17} />
+                      </button>
+                      {(isUserAdmin || task.createdBy === user?.uid) && (
+                        <button onClick={() => { setEditingTask(task); setIsCreateModalOpen(true); }} className={`${iconBtn} hover:text-brand-600 hover:bg-brand-50`} aria-label="แก้ไขงาน">
+                          <Edit3 size={17} />
+                        </button>
+                      )}
+                      {isUserAdmin && (
+                        <button onClick={() => setDeleteConfirmTask(task)} className={`${iconBtn} hover:text-danger-600 hover:bg-danger-50`} aria-label="ลบงาน">
+                          <Trash2 size={17} />
+                        </button>
+                      )}
+                  </>
+                );
                 return (
                   <div
                     key={task.id}
-                    className={`group rounded-2xl border transition-all duration-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 ${
-                      isDone
-                        ? 'bg-slate-50/70 border-slate-200/60 opacity-75'
-                        : isOverdue
-                          ? 'bg-white border-rose-200 border-l-4 border-l-rose-500 shadow-xs'
-                          : task.priority === 'urgent'
-                            ? 'bg-white border-slate-200 border-l-4 border-l-rose-500 shadow-xs hover:border-slate-300 hover:shadow-sm'
-                            : task.priority === 'high'
-                              ? 'bg-white border-slate-200 border-l-4 border-l-amber-500 shadow-xs hover:border-slate-300 hover:shadow-sm'
-                              : 'bg-white border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-sm'
-                    }`}
+                    className={`glass rounded-card relative overflow-hidden pl-3 pr-2 py-3 flex items-start gap-3 ${isDone ? 'opacity-70' : ''}`}
                   >
-                    {/* Left: Checkbox & Content */}
-                    <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                      {/* Checkbox Button */}
-                      <button
-                        onClick={() => handleToggleTask(task)}
-                        className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                          isDone
-                            ? 'bg-success-500 border-success-500 text-white shadow-xs'
-                            : 'border-2 border-slate-300 hover:border-brand-500 text-transparent hover:text-brand-500/30 bg-white'
-                        }`}
-                        title={isDone ? 'คลิกเพื่อยกเลิก' : 'คลิกเพื่อทำเครื่องหมายเสร็จสิ้น'}
-                      >
-                        <Check size={14} strokeWidth={3} />
-                      </button>
+                    {accent && <span className={`absolute left-0 top-0 bottom-0 w-1 ${accent}`} />}
 
-                      <div className="flex-1 min-w-0">
-                        {/* Line 1: Title & Key Badges */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className={`text-sm font-bold tracking-tight ${
-                            isDone ? 'line-through text-slate-400 font-normal' : 'text-slate-800'
-                          }`}>
-                            {task.title}
-                          </h4>
+                    {/* Done toggle: a large target, since this is the most used action */}
+                    <button
+                      onClick={() => handleToggleTask(task)}
+                      className="w-11 h-11 -my-1 flex items-center justify-center shrink-0"
+                      aria-label={isDone ? `ยกเลิกเสร็จ: ${task.title}` : `ทำเครื่องหมายเสร็จ: ${task.title}`}
+                      aria-pressed={isDone}
+                    >
+                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                        isDone ? 'bg-success-600 text-white' : 'border-2 border-brand-200 bg-white text-transparent hover:border-brand-500'
+                      }`}>
+                        <Check size={16} strokeWidth={3} />
+                      </span>
+                    </button>
 
-                          {/* Routine vs Assigned Tag */}
-                          <span className={`px-2 py-0.5 rounded-md text-xs font-semibold ${
-                            isRoutine 
-                              ? 'bg-slate-100 text-slate-600' 
-                              : 'bg-purple-50 text-brand-500 border border-purple-100'
-                          }`}>
-                            {isRoutine ? '🔄 ประจำวัน' : '⚡ สั่งเสริม'}
+                    <div className="flex-1 min-w-0">
+                      <h4 className={`text-[15px] font-bold leading-snug ${isDone ? 'line-through text-ink-subtle font-semibold' : 'text-ink'}`}>
+                        {task.title}
+                      </h4>
+
+                      {task.description && !isDone && (
+                        <p className="text-sm text-ink-muted mt-0.5 line-clamp-1">{task.description}</p>
+                      )}
+
+                      {/* One metadata line: who · when · state */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-subtle mt-1.5">
+                        <span className="flex items-center gap-1">
+                          {task.targetType === 'user' ? <User size={13} /> : <Briefcase size={13} />}
+                          {task.targetType === 'user' ? (task.targetUserName || 'พนักงาน') : (task.targetPosition || 'ทุกคน')}
+                        </span>
+                        {task.dueTime && <span className="flex items-center gap-1"><Clock size={13} /> ก่อน {task.dueTime} น.</span>}
+                        {!isRoutine && <span>งานสั่งเพิ่ม</span>}
+                        {task.priority === 'urgent' && !isDone && <span className="font-bold text-danger-600">ด่วน</span>}
+                        {task.priority === 'high' && !isDone && <span className="font-bold text-warning-700">สำคัญ</span>}
+                        {isOverdue && <span className="font-bold text-danger-600">เกินกำหนด {task.dueDate}</span>}
+                        {isDueToday && !isDone && <span className="font-bold text-brand-600">ครบกำหนดวันนี้</span>}
+                        {task.status === 'in_progress' && !isDone && <span className="font-bold text-brand-600">กำลังทำ</span>}
+                        {isDone && (
+                          <span className="font-semibold text-success-700">
+                            {todayRecord?.completedByName ? `เสร็จโดย ${todayRecord.completedByName}` : 'เสร็จแล้ว'}
+                            {(todayRecord?.note || task.completionNote) && <span className="font-normal text-ink-subtle"> · “{todayRecord?.note || task.completionNote}”</span>}
                           </span>
-
-                          {/* Priority Badge - ONLY shown if urgent or high to eliminate clutter! */}
-                          {task.priority === 'urgent' && (
-                            <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                              🔥 ด่วนมาก
-                            </span>
-                          )}
-                          {task.priority === 'high' && (
-                            <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                              🟡 สำคัญ
-                            </span>
-                          )}
-
-                          {/* Due / Overdue alerts */}
-                          {isOverdue && (
-                            <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-rose-600 text-white shadow-2xs">
-                              ⚠️ เกินกำหนด ({task.dueDate})
-                            </span>
-                          )}
-                          {isDueToday && (
-                            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                              📅 ครบกำหนดวันนี้
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Line 2: Description */}
-                        {task.description && (
-                          <p className={`text-xs mt-1 leading-relaxed line-clamp-2 ${isDone ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {task.description}
-                          </p>
                         )}
-
-                        {/* Line 3: Clean Metadata Row */}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium text-slate-400 mt-2">
-                          {/* Assignment Target */}
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            {task.targetType === 'user' ? (
-                              <>
-                                <User size={13} className="text-brand-500" />
-                                <span className="font-bold text-brand-500">{task.targetUserName || 'พนักงาน'}</span>
-                              </>
-                            ) : (
-                              <>
-                                <Briefcase size={13} className="text-slate-400" />
-                                <span>{task.targetPosition || 'ทุกคน'}</span>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Due Time */}
-                          {task.dueTime && (
-                            <div className="flex items-center gap-1 text-slate-500">
-                              <Clock size={13} />
-                              <span>ก่อน {task.dueTime} น.</span>
-                            </div>
-                          )}
-
-                          {/* Created By (Admin view) */}
-                          {task.createdByName && isUserAdmin && (
-                            <div className="hidden sm:flex items-center gap-1 text-slate-400 text-xs">
-                              <span>มอบหมายโดย: {task.createdByName}</span>
-                            </div>
-                          )}
-
-                          {/* Completion Info */}
-                          {isDone && (
-                            <div className="flex items-center gap-1.5 text-success-600 font-semibold text-xs">
-                              <CheckCircle2 size={13} />
-                              <span>{todayRecord?.completedByName ? `เสร็จโดย ${todayRecord.completedByName}` : 'เสร็จแล้ว'}</span>
-                              {(todayRecord?.note || task.completionNote) && (
-                                <span className="text-slate-500 font-normal italic">
-                                  &ldquo;{todayRecord?.note || task.completionNote}&rdquo;
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
                       </div>
+
+                      {/* Secondary actions: a row under the text on phones */}
+                      <div className="flex sm:hidden items-center -ml-2 mt-1">{actions}</div>
                     </div>
 
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-1 shrink-0 self-end sm:self-center pt-2 sm:pt-0">
-                      {/* In Progress Button for Assigned Tasks */}
-                      {!isRoutine && !isDone && task.status !== 'in_progress' && (
-                        <button
-                          onClick={() => handleSetInProgress(task)}
-                          className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-brand-500 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                          title="เริ่มทำภารกิจนี้"
-                        >
-                          <PlayCircle size={14} />
-                          <span className="hidden sm:inline">เริ่มทำ</span>
-                        </button>
-                      )}
-
-                      {/* Add Note Button */}
-                      <button
-                        onClick={() => setNoteModalConfig({ 
-                          isOpen: true, 
-                          task, 
-                          noteText: todayRecord?.note || task.completionNote || '' 
-                        })}
-                        className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        title="เพิ่ม/แก้ไขหมายเหตุ"
-                      >
-                        <MessageSquare size={16} />
-                      </button>
-
-                      {/* Edit Button (Admin or Creator) */}
-                      {(isUserAdmin || task.createdBy === user?.uid) && (
-                        <button
-                          onClick={() => {
-                            setEditingTask(task);
-                            setIsCreateModalOpen(true);
-                          }}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-brand-500 hover:bg-purple-50 transition-colors cursor-pointer"
-                          title="แก้ไขงานนี้"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                      )}
-
-                      {/* Delete Button (Admin only) */}
-                      {isUserAdmin && (
-                        <button
-                          onClick={() => setDeleteConfirmTask(task)}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="ลบงานนี้"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
+                    {/* Secondary actions: a column on the right on larger screens */}
+                    <div className="hidden sm:flex items-center shrink-0 -mr-0.5">{actions}</div>
                   </div>
                 );
               })}

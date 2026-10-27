@@ -31,6 +31,9 @@ const getFileIcon = (url = '', type, name = '') => {
   return <FileText size={20} className="text-gray-500" />;
 };
 
+// Official documents carry a number like GRN-20261012-VFES; that is what people search and scan for
+const docNumberOf = (name = '') => (name.match(/(?:GRN|GIS)-[A-Z0-9-]+/i) || [])[0] || '';
+
 const formatDate = (ts) => {
   if (!ts) return '';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
@@ -190,7 +193,7 @@ export default function TabDocuments({ user }) {
               onClick={() => setActiveCategory(cat.value)}
               className={`docs-cat-btn ${activeCategory === cat.value ? 'active' : ''}`}
             >
-              <span>{cat.icon}</span> {cat.label}
+              {cat.label}
             </button>
           ))}
         </div>
@@ -228,7 +231,7 @@ export default function TabDocuments({ user }) {
               className="hr-input"
             >
               {DOC_CATEGORIES.filter(c => c.value !== 'all').map(c => (
-                <option key={c.value} value={c.value}>{c.icon} {c.label}</option>
+                <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </select>
           </div>
@@ -243,7 +246,7 @@ export default function TabDocuments({ user }) {
             />
           </div>
           <button className="hr-submit-leave-btn" onClick={handleAdd} disabled={isSubmitting}>
-            {isSubmitting ? 'กำลังบันทึก...' : '💾 บันทึกเอกสาร'}
+            {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
           </button>
         </div>
       )}
@@ -261,56 +264,40 @@ export default function TabDocuments({ user }) {
           <span>เมื่อมีการรับเข้าหรือเบิกออก เอกสาร PDF ทางการจะถูกเก็บลงที่นี่ให้อัตโนมัติ</span>
         </div>
       ) : (
-        <div className="docs-grid">
+        <div className="space-y-2">
           {filtered.map(item => {
             const cat = catInfo(item.category);
+            const iconBtn = 'w-9 h-9 rounded-control flex items-center justify-center text-ink-subtle hover:bg-white/80 transition-colors';
             return (
-              <div 
-                key={item.id} 
-                className="docs-card cursor-pointer hover:border-brand-500/50 transition-all"
+              <div
+                key={item.id}
+                className="glass rounded-card pl-3 pr-1.5 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-white/80 transition-colors"
                 onClick={() => handleOpenDoc(item)}
               >
-                <div className="docs-card-top" onClick={e => e.stopPropagation()}>
-                  <div className="docs-file-icon">{getFileIcon(item.url, item.category, item.name)}</div>
-                  <div className="docs-card-actions">
-                    <button
-                      className={`docs-action-btn ${item.starred ? 'starred' : ''}`}
-                      onClick={() => handleToggleStar(item)}
-                      title="ปักหมุด"
-                    >
-                      <Star size={14} fill={item.starred ? '#f59e0b' : 'none'} color={item.starred ? '#f59e0b' : '#d1d5db'} />
+                <div className="w-10 h-10 rounded-control bg-white/80 flex items-center justify-center shrink-0">{getFileIcon(item.url, item.category, item.name)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-ink truncate">{docNumberOf(item.name) || (item.name || '').replace(/\.pdf$/i, '').replace(/_/g, ' ')}</p>
+                  <p className="text-xs text-ink-subtle truncate mt-0.5">{docNumberOf(item.name) ? `${cat.label} · ` : ''}{item.createdBy} · {formatDate(item.createdAt)}</p>
+                </div>
+                <div className="flex items-center shrink-0" onClick={e => e.stopPropagation()}>
+                  <button className={iconBtn} onClick={() => handleToggleStar(item)} aria-label={item.starred ? 'เลิกปักหมุด' : 'ปักหมุด'} aria-pressed={!!item.starred}>
+                    <Star size={17} fill={item.starred ? '#f59e0b' : 'none'} color={item.starred ? '#f59e0b' : 'currentColor'} />
+                  </button>
+                  {item.url && (
+                    <button className={`${iconBtn} hover:text-brand-600`} onClick={() => handleDownloadDoc(item)} aria-label="ดาวน์โหลด">
+                      <Download size={17} />
                     </button>
-                    {item.url && (
-                      <button className="docs-action-btn" onClick={() => handleDownloadDoc(item)} title="ดาวน์โหลด">
-                        <Download size={14} className="text-indigo-600" />
-                      </button>
-                    )}
-                    {item.url && (
-                      <button className="docs-action-btn" onClick={() => handleCopyLink(item.url)} title="คัดลอกลิงก์">
-                        <Copy size={14} />
-                      </button>
-                    )}
-                    {item.url && (
-                      <button className="docs-action-btn" onClick={() => handleOpenDoc(item)} title="เปิดดูเอกสาร">
-                        <Eye size={14} />
-                      </button>
-                    )}
-                    {user?.role === 'admin' && (
-                      <button className="docs-action-btn docs-delete-btn" onClick={() => handleDelete(item.id)} title="ลบ">
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="docs-card-body">
-                  <p className="docs-card-name">{item.name}</p>
-                  {item.note && <p className="docs-card-note">{item.note}</p>}
-                </div>
-
-                <div className="docs-card-footer">
-                  <span className="docs-cat-tag">{cat.icon} {cat.label}</span>
-                  <span className="docs-card-meta">{item.createdBy} · {formatDate(item.createdAt)}</span>
+                  )}
+                  {item.url && (
+                    <button className={`hidden sm:flex ${iconBtn} hover:text-ink`} onClick={() => handleCopyLink(item.url)} aria-label="คัดลอกลิงก์">
+                      <Copy size={17} />
+                    </button>
+                  )}
+                  {user?.role === 'admin' && (
+                    <button className={`${iconBtn} hover:text-danger-600 hover:bg-danger-50`} onClick={() => handleDelete(item.id)} aria-label="ลบเอกสาร">
+                      <Trash2 size={17} />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -321,7 +308,7 @@ export default function TabDocuments({ user }) {
       {/* In-App PDF / Document Viewer Modal */}
       {viewingDoc && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-ink/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[92vh] flex flex-col overflow-hidden animate-scale-in border border-gray-200">
+          <div className="glass-strong rounded-card w-full max-w-4xl h-[92vh] flex flex-col overflow-hidden animate-scale-in">
             {/* Modal Header */}
             <div className="p-3.5 sm:p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/90">
               <div className="flex items-center gap-2.5 min-w-0 pr-3">
