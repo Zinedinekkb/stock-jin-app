@@ -24,6 +24,7 @@ import SmartDashboardView from './components/SmartDashboardView';
 import SmartRightPanel from './components/SmartRightPanel';
 import ModernAuthView from './components/ModernAuthView';
 import ModernPendingApproval from './components/ModernPendingApproval';
+import { PageHeader } from './components/ui';
 import { hasPermission, isAdmin } from './utils/permissions';
 import * as Sentry from '@sentry/nextjs';
 
@@ -1017,14 +1018,14 @@ export default function StockJinApp() {
 
   // --- TAB TITLES (for desktop header) ---
   const tabTitles = {
-    dashboard: { title: 'แดชบอร์ดงานประจำวัน & ภาพรวม', desc: 'รายการงานประจำวันตามตำแหน่งงาน งานที่ได้รับมอบหมาย และสถิติสต็อก' },
-    stock: { title: 'จัดการวัตถุดิบและสินค้าคงคลัง', desc: 'ติดตามสต็อกสินค้า เพิ่ม/แก้ไข หมวดหมู่และรายการสินค้า' },
+    dashboard: { title: 'ภาพรวม', desc: 'งานประจำวันและสถิติสต็อก' },
+    stock: { title: 'คลังสินค้า', desc: 'ดูยอดคงเหลือ เพิ่มหรือแก้ไขสินค้าและหมวดหมู่' },
     transaction: { title: 'เบิก / รับสินค้า', desc: 'บันทึกรายการเบิกสินค้าออกหรือรับสินค้าเข้าคลัง' },
     status: { title: 'สถานะรายการ', desc: 'ตรวจสอบและยืนยันรายการที่รอดำเนินการ' },
     notifications: { title: 'ศูนย์แจ้งเตือน', desc: 'แจ้งเตือนสินค้าหมด การเคลื่อนไหว และคำขอสมัครสมาชิก' },
     hr: { title: 'เข้า-ออกงาน / ลาหยุด', desc: 'บันทึกเวลาทำงาน ยื่นใบลาหยุด และดูสถิติทีมงาน' },
     documents: { title: 'เอกสาร', desc: 'เก็บและจัดการเอกสารสำคัญต่างๆ เช่น ใบสั่งซื้อ ใบเสร็จ สัญญา' },
-    menu: { title: 'ตั้งค่าและบัญชีผู้ใช้', desc: 'จัดการบัญชี สิทธิ์การเข้าถึง และการตั้งค่าระบบ' },
+    menu: { title: 'บัญชีของฉัน', desc: 'โปรไฟล์ สิทธิ์ และการตั้งค่า' },
     users: { title: 'จัดการบัญชีผู้ใช้', desc: 'ตรวจสอบจำนวนบัญชี ดูพนักงานแต่ละหน่วยงาน และจัดการสิทธิ์' },
   };
 
@@ -1073,6 +1074,7 @@ export default function StockJinApp() {
           copyToClipboard={copyToClipboard}
           handleSendStockToLine={handleSendStockToLine}
           user={user}
+          searchQuery={searchQuery} setSearchQuery={setSearchQuery}
       />} 
       {activeTab === 'transaction' && user && <TabTransaction 
           products={products} categories={categories}
@@ -1112,10 +1114,7 @@ export default function StockJinApp() {
       )}
       {activeTab === 'documents' && <TabDocuments user={user} />}
       {activeTab === 'menu' && <TabMenu 
-          user={user} loginForm={loginForm} setLoginForm={setLoginForm} handleLogin={handleLogin} handleLogout={handleLogout} loginError={loginError}
-          isRegisterMode={isRegisterMode} setIsRegisterMode={setIsRegisterMode}
-          registerForm={registerForm} setRegisterForm={setRegisterForm}
-          handleRegister={handleRegister} registerError={registerError}
+          user={user} handleLogout={handleLogout}
           pendingUsers={pendingUsers} approvalHistory={approvalHistory} handleApproveUser={handleApproveUser} handleRejectUser={handleRejectUser}
           handleUpdateProfile={handleUpdateProfile}
       />}
@@ -1254,22 +1253,7 @@ export default function StockJinApp() {
                 </>
               ) : (
                 <div className="smart-tab-container">
-                  <div className="mb-4 pb-3 border-b border-gray-100 flex justify-between items-center">
-                    <div>
-                      <h2 className="text-xl font-black text-gray-800 tracking-tight">
-                        {tabTitles[activeTab]?.title || 'StockPro'}
-                      </h2>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {tabTitles[activeTab]?.desc || ''}
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => setActiveTab('dashboard')}
-                      className="text-xs font-bold text-[#6355d8] hover:underline"
-                    >
-                      ← กลับหน้าหลัก
-                    </button>
-                  </div>
+                  <PageHeader title={tabTitles[activeTab]?.title || 'StockPro'} description={tabTitles[activeTab]?.desc} />
                   {renderTabContent()}
                 </div>
               )}
