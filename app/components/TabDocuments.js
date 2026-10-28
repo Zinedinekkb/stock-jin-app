@@ -6,6 +6,8 @@ import {
   Image, File, Link2, X, ChevronDown, Download, Copy, Star, Eye
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
+import BusinessDocModal from './BusinessDocModal';
+import { BUSINESS_DOC_TYPES } from '../utils/businessDocTemplates';
 import {
   collection, addDoc, onSnapshot, deleteDoc, doc,
   query, orderBy, serverTimestamp, updateDoc
@@ -15,6 +17,8 @@ const DOC_CATEGORIES = [
   { value: 'all', label: 'ทั้งหมด', icon: '📁' },
   { value: 'order', label: 'ใบรับเข้า / สั่งของ', icon: '📥' },
   { value: 'receipt', label: 'ใบเบิก / ใบเสร็จ', icon: '📤' },
+  { value: 'sales', label: 'ใบเสนอราคา / ใบแจ้งหนี้', icon: '🧾' },
+  { value: 'payment', label: 'ใบสำคัญจ่าย / สำรองจ่าย', icon: '💸' },
   { value: 'leave', label: 'ใบลา / คำขอ', icon: '📋' },
   { value: 'contract', label: 'สัญญา', icon: '📝' },
   { value: 'image', label: 'รูปภาพ', icon: '🖼️' },
@@ -24,6 +28,8 @@ const DOC_CATEGORIES = [
 const getFileIcon = (url = '', type, name = '') => {
   if (type === 'order' || name?.includes('ใบรับสินค้า') || name?.includes('GRN')) return <FileText size={20} className="text-success-600" />;
   if (type === 'receipt' || name?.includes('ใบเบิก') || name?.includes('GIS')) return <FileText size={20} className="text-rose-600" />;
+  if (type === 'sales') return <FileText size={20} className="text-blue-700" />;
+  if (type === 'payment') return <FileText size={20} className="text-amber-700" />;
   if (type === 'leave' || name?.includes('ใบขอลา') || name?.includes('ใบลา')) return <FileText size={20} className="text-purple-600" />;
   if (type === 'image') return <Image size={20} className="text-blue-500" />;
   if (url.includes('drive.google')) return <File size={20} className="text-yellow-600" />;
@@ -32,7 +38,7 @@ const getFileIcon = (url = '', type, name = '') => {
 };
 
 // Official documents carry a number like GRN-20261012-VFES; that is what people search and scan for
-const docNumberOf = (name = '') => (name.match(/(?:GRN|GIS)-[A-Z0-9-]+/i) || [])[0] || '';
+const docNumberOf = (name = '') => (name.match(/(?:GRN|GIS|PO|QT|IV|RC|PV|AD)-\d{8}-[A-Z0-9]+/i) || [])[0] || '';
 
 const formatDate = (ts) => {
   if (!ts) return '';
@@ -51,6 +57,7 @@ export default function TabDocuments({ user }) {
   const [starredOnly, setStarredOnly] = useState(false);
   const [viewingDoc, setViewingDoc] = useState(null);
 
+  const [docTemplate, setDocTemplate] = useState(null); // business document type being created
   const showNote = (msg) => { setNotification(msg); setTimeout(() => setNotification(''), 2500); };
 
   useEffect(() => {
@@ -198,6 +205,40 @@ export default function TabDocuments({ user }) {
           ))}
         </div>
       </div>
+
+      {/* Create from a template: every business document the shop needs */}
+      <section className="mb-4">
+        <h3 className="text-xs font-bold uppercase tracking-wide text-ink-subtle px-1 mb-2">สร้างเอกสาร</h3>
+        <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
+          {BUSINESS_DOC_TYPES.map(dt => (
+            <button key={dt.key} onClick={() => setDocTemplate(dt.key)}
+              className="glass shrink-0 w-36 rounded-card p-2.5 text-left hover:bg-white/80 transition-colors">
+              {/* Mini A4 mockup */}
+              <span className="block bg-white rounded-md shadow-sm p-2 h-24 overflow-hidden">
+                <span className="flex justify-between items-start">
+                  <span className="block w-10 h-1.5 rounded bg-gray-200" />
+                  <span className="block w-8 h-2 rounded" style={{ background: dt.accent }} />
+                </span>
+                <span className="block h-0.5 my-1.5 rounded" style={{ background: dt.accent }} />
+                <span className="block w-14 h-1 rounded bg-gray-200" />
+                <span className="block mt-2 h-2 rounded-sm" style={{ background: dt.accent, opacity: 0.85 }} />
+                {[0, 1, 2].map(r => <span key={r} className="block mt-1 h-1 rounded bg-gray-100" />)}
+                <span className="flex justify-end mt-1.5"><span className="block w-10 h-2 rounded-sm" style={{ background: dt.accent }} /></span>
+              </span>
+              <span className="block mt-2 text-sm font-bold text-ink leading-tight">{dt.title}</span>
+              <span className="block text-xs text-ink-subtle leading-snug line-clamp-2 mt-0.5">{dt.desc}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <BusinessDocModal
+        isOpen={!!docTemplate}
+        initialType={docTemplate || 'PO'}
+        onClose={() => setDocTemplate(null)}
+        user={user}
+        showNotification={showNote}
+      />
 
       {/* Add Form */}
       {showAddForm && (

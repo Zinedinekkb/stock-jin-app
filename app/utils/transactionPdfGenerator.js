@@ -414,21 +414,15 @@ export function buildTransactionHtml(transaction, options = {}) {
 }
 
 /**
- * Generates jsPDF and Blob from transaction data via html2canvas
+ * Renders an A4 HTML string (794px wide, inline styles) into a jsPDF document via html2canvas.
+ * Shared by transaction documents and business document templates.
  */
-export async function generateTransactionPdfBlob(transaction, options = {}) {
+export async function renderHtmlToPdf(html) {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
-    throw new Error('generateTransactionPdfBlob must be run in browser environment');
+    throw new Error('renderHtmlToPdf must be run in browser environment');
   }
-
-  const docNumber = transaction.docNumber || generateDocNumber(transaction.type, transaction.id, transaction.timestamp);
-  const isModeIn = transaction.type === 'IN';
-  const prefix = isModeIn ? 'ใบรับสินค้า' : 'ใบเบิกสินค้า';
-  const fileName = `${prefix}_${docNumber}.pdf`;
-
-  // Create temporary off-screen container in DOM
+  // Temporary off-screen container in the DOM
   const container = document.createElement('div');
-  container.id = 'temp-transaction-pdf-container';
   container.style.position = 'fixed';
   container.style.left = '0';
   container.style.top = '0';
@@ -437,8 +431,7 @@ export async function generateTransactionPdfBlob(transaction, options = {}) {
   container.style.zIndex = '-99999';
   container.style.background = '#ffffff';
   container.style.width = '794px';
-  container.innerHTML = buildTransactionHtml({ ...transaction, docNumber }, options);
-
+  container.innerHTML = html;
   document.body.appendChild(container);
 
   try {
@@ -455,36 +448,63 @@ export async function generateTransactionPdfBlob(transaction, options = {}) {
     const pageHeight = pdf.internal.pageSize.getHeight(); // 297mm
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    if (pdfHeight <= pageHeight) {
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-    } else {
-      // Multi-page handling
-      let heightLeft = pdfHeight;
-      let position = 0;
+    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+    // Multi-page handling
+    let heightLeft = pdfHeight - pageHeight;
+    let position = 0;
+    while (heightLeft > 0) {
+      position -= pageHeight;
+      pdf.addPage();
       pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
       heightLeft -= pageHeight;
-      while (heightLeft > 0) {
-        position -= pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
-      }
     }
-
-    const pdfBlob = pdf.output('blob');
-    const pdfDataUri = pdf.output('datauristring');
-
-    return {
-      pdf,
-      blob: pdfBlob,
-      dataUri: pdfDataUri,
-      docNumber,
-      fileName,
-    };
+    return pdf;
   } finally {
-    if (container.parentNode) {
-      container.parentNode.removeChild(container);
-    }
+    if (container.parentNode) container.parentNode.removeChild(container);
+  }
+}
+
+/**
+ * Generates jsPDF and Blob from transaction data via html2canvas
+ */
+export async function generateTransactionPdfBlob(transaction, options = {}) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    throw new Error('generateTransactionPdfBlob must be run in browser environment');
+  }
+
+  const docNumber = transaction.docNumber || generateDocNumber(transaction.type, transaction.id, transaction.timestamp);
+  const isModeIn = transaction.type === 'IN';
+  const prefix = isModeIn ? 'ใบรับสินค้า' : 'ใบเบิกสินค้า';
+  const fileName = `${prefix}_${docNumber}.pdf`;
+
+  const pdf = await renderHtmlToPdf(buildTransactionHtml({ ...transaction, docNumber }, options));
+
+  return {
+    pdf,
+    blob: pdf.output('blob'),
+    dataUri: pdf.output('datauristring'),
+    docNumber,
+    fileName,
+  };
+}
+
+/**
+ * Uploads a PDF to Firebase Storage with a 2.5s timeout; falls back to the data URI so saving never blocks.
+ */
+export async function uploadPdfOrDataUri(blob, storagePath, dataUri) {
+  try {
+    const storageRef = ref(storage, storagePath);
+    const uploadTask = (async () => {
+      await uploadBytes(storageRef, blob, { contentType: 'application/pdf' });
+      return await getDownloadURL(storageRef);
+    })();
+    const timeoutTask = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Storage timeout')), 2500)
+    );
+    return await Promise.race([uploadTask, timeoutTask]);
+  } catch (storageErr) {
+    console.warn('Storage unavailable or timed out for PDF, using Data URI fallback:', storageErr);
+    return dataUri;
   }
 }
 
@@ -500,23 +520,7 @@ export async function uploadAndSaveTransactionDocument({ transaction, user, isVe
     const cleanDocNumber = docNumber;
     const storageFileName = `${fileName.replace(/\.pdf$/i, '')}_${Date.now()}.pdf`;
 
-    let downloadUrl = dataUri;
-
-    // Try uploading to Firebase Storage with a strict 2.5s timeout, falling back gracefully to dataUri
-    try {
-      const storageRef = ref(storage, `documents/transactions/${storageFileName}`);
-      const uploadTask = (async () => {
-        await uploadBytes(storageRef, blob, { contentType: 'application/pdf' });
-        return await getDownloadURL(storageRef);
-      })();
-      const timeoutTask = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Storage timeout')), 2500)
-      );
-      downloadUrl = await Promise.race([uploadTask, timeoutTask]);
-    } catch (storageErr) {
-      console.warn('Storage unavailable or timed out for transaction PDF, using Data URI fallback:', storageErr);
-      downloadUrl = dataUri;
-    }
+    const downloadUrl = await uploadPdfOrDataUri(blob, `documents/transactions/${storageFileName}`, dataUri);
 
     const itemCount = (transaction.items || []).length;
     const actionLabel = isModeIn ? 'รับเข้าสินค้า' : 'เบิกออกสินค้า';
