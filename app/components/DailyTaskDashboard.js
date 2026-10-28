@@ -7,9 +7,10 @@ import {
   ChevronRight, ChevronDown, Flame, Sparkles, ShieldCheck, 
   ArrowRight, RefreshCw, Briefcase, Package, ArrowRightLeft, 
   ClipboardList, MessageSquare, Loader2, PlayCircle, Eye,
-  BarChart3, CheckSquare, Layers, UserPlus
+  BarChart3, CheckSquare, Layers, UserPlus, ListChecks
 } from 'lucide-react';
 import { GlassCard, Button, Badge, SectionHeader } from './ui';
+import { getTaskSteps } from '../services/taskSteps';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { 
@@ -27,7 +28,9 @@ import {
   isTaskVisibleToUser,
   getUserCluster,
   POSITION_TABS,
-  DEFAULT_ROUTINE_TEMPLATES 
+  DEFAULT_ROUTINE_TEMPLATES ,
+  toggleTaskStep,
+  getDoneSteps
 } from '../services/taskService';
 import { isAdmin } from '../utils/permissions';
 import CreateTaskModal from './CreateTaskModal';
@@ -73,6 +76,7 @@ export default function DailyTaskDashboard({
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'routine' | 'assigned' | 'urgent' | 'completed'
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('tasks'); // 'tasks' | 'team'
+  const [expandedTaskId, setExpandedTaskId] = useState(null); // task whose instructions are open
   
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -294,6 +298,16 @@ export default function DailyTaskDashboard({
       );
     } catch (err) {
       console.error('Failed to toggle task:', err);
+    }
+  };
+
+  // Tick one instruction step; the last step completes the task
+  const handleToggleStep = async (task, stepIndex, totalSteps) => {
+    try {
+      const { allDone } = await toggleTaskStep(task, stepIndex, totalSteps, user);
+      if (allDone) showNotification('ทำครบทุกขั้นตอน งานนี้เสร็จแล้ว');
+    } catch (err) {
+      console.error('Failed to toggle step:', err);
     }
   };
 
@@ -603,6 +617,17 @@ export default function DailyTaskDashboard({
                       note: task.completionNote
                     } : null);
 
+                const steps = getTaskSteps(task);
+                const doneSteps = new Set(getDoneSteps(task, todayKey));
+                const stepsLeft = steps.length - steps.filter((_, i) => doneSteps.has(i)).length;
+                const isOpen = expandedTaskId === task.id;
+                const hasDetails = steps.length > 0 || Boolean(task.description);
+                const toggleOpen = () => setExpandedTaskId(isOpen ? null : task.id);
+                // With instructions left to do, the checkbox opens them instead of skipping straight to done
+                const onCheckbox = () => {
+                  if (!isDone && stepsLeft > 0) { setExpandedTaskId(task.id); return; }
+                  handleToggleTask(task);
+                };
                 const accent = isDone ? '' : (isOverdue || task.priority === 'urgent') ? 'bg-danger-500' : task.priority === 'high' ? 'bg-warning-500' : '';
                 const iconBtn = 'w-9 h-9 rounded-control flex items-center justify-center text-ink-subtle transition-colors';
                 const actions = (
@@ -634,13 +659,14 @@ export default function DailyTaskDashboard({
                 return (
                   <div
                     key={task.id}
-                    className={`glass rounded-card relative overflow-hidden pl-3 pr-2 py-3 flex items-start gap-3 ${isDone ? 'opacity-70' : ''}`}
+                    className={`glass rounded-card relative overflow-hidden pl-3 pr-2 py-3 ${isDone && !isOpen ? 'opacity-70' : ''} ${isOpen ? 'ring-2 ring-brand-200' : ''}`}
                   >
+                  <div className="flex items-start gap-3">
                     {accent && <span className={`absolute left-0 top-0 bottom-0 w-1 ${accent}`} />}
 
                     {/* Done toggle: a large target, since this is the most used action */}
                     <button
-                      onClick={() => handleToggleTask(task)}
+                      onClick={onCheckbox}
                       className="w-11 h-11 -my-1 flex items-center justify-center shrink-0"
                       aria-label={isDone ? `ยกเลิกเสร็จ: ${task.title}` : `ทำเครื่องหมายเสร็จ: ${task.title}`}
                       aria-pressed={isDone}
@@ -653,16 +679,27 @@ export default function DailyTaskDashboard({
                     </button>
 
                     <div className="flex-1 min-w-0">
-                      <h4 className={`text-[15px] font-bold leading-snug ${isDone ? 'line-through text-ink-subtle font-semibold' : 'text-ink'}`}>
-                        {task.title}
-                      </h4>
-
-                      {task.description && !isDone && (
-                        <p className="text-sm text-ink-muted mt-0.5 line-clamp-1">{task.description}</p>
-                      )}
+                      <button
+                        type="button"
+                        onClick={hasDetails ? toggleOpen : undefined}
+                        className={`block w-full text-left ${hasDetails ? 'cursor-pointer' : 'cursor-default'}`}
+                        aria-expanded={hasDetails ? isOpen : undefined}
+                      >
+                        <h4 className={`text-[15px] font-bold leading-snug ${isDone ? 'line-through text-ink-subtle font-semibold' : 'text-ink'}`}>
+                          {task.title}
+                        </h4>
+                        {task.description && !isDone && !isOpen && (
+                          <p className="text-sm text-ink-muted mt-0.5 line-clamp-1">{task.description}</p>
+                        )}
+                      </button>
 
                       {/* One metadata line: who · when · state */}
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-subtle mt-1.5">
+                        {steps.length > 0 && (
+                          <button type="button" onClick={toggleOpen} className={`flex items-center gap-1 font-bold ${stepsLeft === 0 ? 'text-success-700' : 'text-brand-600'} hover:underline`}>
+                            <ListChecks size={14} /> วิธีทำ {steps.length - stepsLeft}/{steps.length}
+                          </button>
+                        )}
                         <span className="flex items-center gap-1">
                           {task.targetType === 'user' ? <User size={13} /> : <Briefcase size={13} />}
                           {task.targetType === 'user' ? (task.targetUserName || 'พนักงาน') : (task.targetPosition || 'ทุกคน')}
@@ -688,6 +725,47 @@ export default function DailyTaskDashboard({
 
                     {/* Secondary actions: a column on the right on larger screens */}
                     <div className="hidden lg:flex items-center shrink-0 -mr-0.5">{actions}</div>
+                  </div>
+
+                    {/* Instructions: read and follow, ticking one step at a time */}
+                    {isOpen && (
+                      <div className="mt-3 ml-14 mr-1 space-y-2 animate-fade-in">
+                        {task.description && <p className="text-sm text-ink-muted leading-relaxed">{task.description}</p>}
+                        {steps.length > 0 && (
+                          <>
+                            <div className="h-1.5 rounded-full bg-brand-100 overflow-hidden" aria-hidden="true">
+                              <div className="h-full bg-brand-500 transition-all duration-300" style={{ width: `${((steps.length - stepsLeft) / steps.length) * 100}%` }} />
+                            </div>
+                            <ol className="space-y-1.5">
+                              {steps.map((step, i) => {
+                                const checked = doneSteps.has(i);
+                                return (
+                                  <li key={i}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStep(task, i, steps.length)}
+                                      aria-pressed={checked}
+                                      className={`w-full flex items-start gap-3 text-left rounded-control px-2.5 py-2 transition-colors ${checked ? 'bg-success-50' : 'bg-white/70 hover:bg-white'}`}
+                                    >
+                                      <span className={`mt-0.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-xs font-black ${checked ? 'bg-success-600 text-white' : 'bg-brand-50 text-brand-600'}`}>
+                                        {checked ? <Check size={14} strokeWidth={3} /> : i + 1}
+                                      </span>
+                                      <span className={`text-sm leading-snug ${checked ? 'text-ink-subtle line-through' : 'text-ink'}`}>{step}</span>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          </>
+                        )}
+                        {!isDone && stepsLeft > 0 && (
+                          <p className="text-xs text-ink-subtle">ติ๊กทีละขั้นตอน งานจะปิดเองเมื่อครบทุกข้อ{isUserAdmin && ' (แอดมินกด "ปิดงานเลย" ได้)'}</p>
+                        )}
+                        {!isDone && isUserAdmin && stepsLeft > 0 && (
+                          <Button size="sm" variant="ghost" icon={Check} onClick={() => handleToggleTask(task)}>ปิดงานเลย</Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}

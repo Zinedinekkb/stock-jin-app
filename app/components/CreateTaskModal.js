@@ -6,6 +6,7 @@ import {
   User, Users, Briefcase, Flame, Sparkles, Loader2
 } from 'lucide-react';
 import { createTask, updateTask, getTodayKey, notifyTaskAssigned } from '../services/taskService';
+import { getTaskSteps } from '../services/taskSteps';
 import { isAdmin } from '../utils/permissions';
 
 const POSITIONS = [
@@ -35,6 +36,7 @@ export default function CreateTaskModal({
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [stepsText, setStepsText] = useState(''); // one instruction step per line
   const [type, setType] = useState('assigned'); // 'routine' | 'assigned'
   const [targetType, setTargetType] = useState('position'); // 'position' | 'user' | 'all'
   const [targetPosition, setTargetPosition] = useState('พนักงานคุมสต็อก');
@@ -52,6 +54,7 @@ export default function CreateTaskModal({
     if (editingTask) {
       setTitle(editingTask.title || '');
       setDescription(editingTask.description || '');
+      setStepsText(getTaskSteps(editingTask).join('\n'));
       setType(editingTask.type || 'assigned');
       setTargetType(editingTask.targetType || 'position');
       setTargetPosition(editingTask.targetPosition || 'พนักงานคุมสต็อก');
@@ -62,6 +65,7 @@ export default function CreateTaskModal({
     } else {
       setTitle('');
       setDescription('');
+      setStepsText('');
       setType('assigned');
       if (isUserAdmin) {
         setTargetType('position');
@@ -126,6 +130,7 @@ export default function CreateTaskModal({
       const taskPayload = {
         title: title.trim(),
         description: description.trim(),
+        steps: stepsText.split('\n').map(line => line.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean),
         type,
         isRoutine: type === 'routine',
         category,
@@ -395,16 +400,32 @@ export default function CreateTaskModal({
             </div>
           </div>
 
-          {/* 6. Description / Notes */}
+          {/* 6. Step-by-step instructions: what staff read and tick one by one */}
           <div>
-            <label className="block text-xs font-black text-slate-700 mb-1.5">
-              รายละเอียด / ขั้นตอนการทำงาน (Instructions / Notes)
+            <label htmlFor="task-steps" className="block text-sm font-bold text-ink mb-1">
+              วิธีทำ (ทีละขั้นตอน)
+            </label>
+            <p className="text-xs text-ink-subtle mb-1.5">พิมพ์ 1 บรรทัดต่อ 1 ขั้นตอน พนักงานจะเห็นเป็นเช็คลิสต์ และงานจะปิดเองเมื่อทำครบทุกข้อ</p>
+            <textarea
+              id="task-steps"
+              rows={5}
+              value={stepsText}
+              onChange={(e) => setStepsText(e.target.value)}
+              placeholder={'เช่น\nนับเงินทอนในลิ้นชัก\nเทียบกับยอดมาตรฐาน\nจดยอดลงหมายเหตุ'}
+              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all"
+            />
+          </div>
+
+          {/* 7. Short description / notes */}
+          <div>
+            <label className="block text-sm font-bold text-ink mb-1.5">
+              รายละเอียดเพิ่มเติม / ข้อควรระวัง
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="ระบุข้อควรระวัง จุดตรวจเช็ค หรือข้อมูลเพิ่มเติม..."
+              placeholder="ระบุข้อควรระวัง หรือข้อมูลเพิ่มเติม (ถ้ามี)"
               className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-sm font-normal text-slate-800 placeholder-slate-400 outline-none transition-all resize-none"
             />
           </div>

@@ -645,6 +645,7 @@ export const createTask = async (taskData, currentUser) => {
   const newTask = {
     title: (taskData.title || '').trim(),
     description: (taskData.description || '').trim(),
+    steps: Array.isArray(taskData.steps) ? taskData.steps.map(step => String(step).trim()).filter(Boolean) : [],
     type: taskData.type || 'assigned',
     isRoutine: taskData.type === 'routine' || Boolean(taskData.isRoutine),
     category: taskData.category || 'general',
@@ -745,6 +746,32 @@ export const toggleTaskCompletion = async (task, currentUser, note = '') => {
       });
     }
   }
+};
+
+// Step progress: routine tasks restart every day, one-off tasks keep a single list
+export const getStepProgressKey = (task, todayKey = getTodayKey()) =>
+  (task?.isRoutine || task?.type === 'routine') ? todayKey : 'all';
+
+export const getDoneSteps = (task, todayKey = getTodayKey()) =>
+  task?.stepProgress?.[getStepProgressKey(task, todayKey)] || [];
+
+// Tick or untick one instruction step. Finishing the last step completes the task;
+// unticking a step on a completed task reopens it.
+export const toggleTaskStep = async (task, stepIndex, totalSteps, currentUser) => {
+  const todayKey = getTodayKey();
+  const key = getStepProgressKey(task, todayKey);
+  const done = new Set(getDoneSteps(task, todayKey));
+  if (done.has(stepIndex)) done.delete(stepIndex); else done.add(stepIndex);
+  const nextDone = [...done].sort((a, b) => a - b);
+
+  await updateDoc(doc(db, 'tasks', task.id), { [`stepProgress.${key}`]: nextDone, updatedAt: Date.now() });
+
+  const allDone = totalSteps > 0 && nextDone.length >= totalSteps;
+  const wasDone = isTaskDone(task, todayKey);
+  if (allDone !== wasDone) {
+    await toggleTaskCompletion(task, currentUser);
+  }
+  return { allDone, doneCount: nextDone.length };
 };
 
 // 4. เปลี่ยนสถานะงานเสริม (เช่น กำลังดำเนินการ)

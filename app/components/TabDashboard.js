@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import {
-  PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid
-} from 'recharts';
-import { Calendar, Send, FileText, TrendingUp, TrendingDown, Package, AlertCircle, Filter, Copy, CheckCircle2, ArrowRight, Download, FileSpreadsheet } from 'lucide-react';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import { Calendar, Send, FileText, Package, AlertCircle, Copy, FileSpreadsheet, Clock3 } from 'lucide-react';
+import { GlassCard, Button, Badge } from './ui';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 
 export default function TabDashboard({ transactions, products, categories, dateFilterType, setDateFilterType, setCustomStartDate, setCustomEndDate }) {
@@ -161,202 +160,248 @@ export default function TabDashboard({ transactions, products, categories, dateF
     }
   };
 
-  // --- LOGIC กราฟ (เหมือนเดิม) ---
-  const stats = useMemo(() => {
-    let filtered = transactions;
-    const now = new Date();
+  // --- ANALYTICS ---
+  // Validated pair (dataviz validate_palette.js, light surface): IN teal, OUT brand purple
+  const SERIES = { IN: '#0f9f8f', OUT: '#6355d8' };
+  const PERIODS = [
+    { key: 'today', label: 'วันนี้', days: 1 },
+    { key: '7days', label: '7 วัน', days: 7 },
+    { key: '30days', label: '30 วัน', days: 30 },
+  ];
+  const period = PERIODS.find(p => p.key === dateFilterType) || PERIODS[1];
 
-    if (dateFilterType === 'today') {
-      const start = new Date(now.setHours(0, 0, 0, 0)).getTime();
-      filtered = transactions.filter(t => t.timestamp >= start);
-    } else if (dateFilterType === '7days') {
-      const start = new Date(now.setDate(now.getDate() - 7)).getTime();
-      filtered = transactions.filter(t => t.timestamp >= start);
-    } else if (dateFilterType === '30days') {
-      const start = new Date(now.setDate(now.getDate() - 30)).getTime();
-      filtered = transactions.filter(t => t.timestamp >= start);
+  const analytics = useMemo(() => {
+    const qtyOf = (tx, item) => {
+      const actual = tx.actualItems?.[item.id];
+      return Number(actual !== undefined && actual !== null ? actual : item.qty) || 0;
+    };
+    const dayKey = (ts) => {
+      const d = new Date(ts);
+      return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    };
+
+    // Daily buckets: at least 7 so "today" still shows a trend
+    const chartDays = Math.max(7, period.days);
+    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
+    const buckets = [];
+    for (let i = chartDays - 1; i >= 0; i--) {
+      const d = new Date(startOfToday); d.setDate(d.getDate() - i);
+      buckets.push({ key: dayKey(d), label: d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }), IN: 0, OUT: 0 });
     }
+    const byKey = Object.fromEntries(buckets.map(b => [b.key, b]));
+    const periodStart = new Date(startOfToday); periodStart.setDate(periodStart.getDate() - (period.days - 1));
 
-    let countIn = 0;
-    let countOut = 0;
-
-    filtered.forEach(tx => {
-      if (tx.status === 'cancelled') return;
-      if (tx.type === 'IN') countIn++;
-      else countOut++;
+    const totals = { IN: 0, OUT: 0, bills: 0 };
+    const withdrawn = {};
+    // Only completed bills moved stock; pending ones are counted separately
+    transactions.forEach(tx => {
+      if (tx.status !== 'completed' || !tx.timestamp) return;
+      const type = tx.type === 'IN' ? 'IN' : 'OUT';
+      const bucket = byKey[dayKey(tx.timestamp)];
+      const inPeriod = tx.timestamp >= periodStart.getTime();
+      if (inPeriod) totals.bills += 1;
+      (tx.items || []).forEach(item => {
+        const q = qtyOf(tx, item);
+        if (bucket) bucket[type] += q;
+        if (inPeriod) {
+          totals[type] += q;
+          if (type === 'OUT') {
+            const k = item.id || item.name;
+            withdrawn[k] = withdrawn[k] || { name: item.name, unit: item.unit, qty: 0 };
+            withdrawn[k].qty += q;
+          }
+        }
+      });
     });
 
-    return { countIn, countOut, total: filtered.length };
-  }, [transactions, dateFilterType]);
+    const level = (p) => {
+      const s = Number(p.stock) || 0;
+      return s <= 0 ? 'out' : s <= (p.minStock || 5) ? 'low' : 'ok';
+    };
+    const lowList = products
+      .filter(p => level(p) !== 'ok')
+      .sort((a, b) => (Number(a.stock) || 0) - (Number(b.stock) || 0));
 
-  const dataPie = [
-    { name: 'รับเข้า', value: stats.countIn, color: '#22c55e' },
-    { name: 'เบิกออก', value: stats.countOut, color: '#ef4444' },
+    return {
+      buckets,
+      totals,
+      topWithdrawn: Object.values(withdrawn).sort((a, b) => b.qty - a.qty).slice(0, 5),
+      lowList,
+      lowCount: lowList.filter(p => level(p) === 'low').length,
+      outCount: lowList.filter(p => level(p) === 'out').length,
+      pendingCount: transactions.filter(tx => tx.status === 'pending').length,
+      hasMovement: buckets.some(b => b.IN > 0 || b.OUT > 0),
+    };
+  }, [transactions, products, period.days]);
+
+  const ChartTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="glass-strong rounded-control px-3 py-2 text-xs">
+        <p className="font-bold text-ink mb-1">{label}</p>
+        {payload.map(p => (
+          <p key={p.dataKey} className="flex items-center gap-2 text-ink-muted">
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: p.color }} />
+            {p.name} <span className="font-bold text-ink tabular-nums">{p.value.toLocaleString('th-TH')}</span>
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  const kpis = [
+    { label: 'สินค้าทั้งหมด', value: products.length, unit: 'รายการ', icon: Package, tone: 'text-brand-600 bg-brand-50' },
+    { label: 'ใกล้หมด', value: analytics.lowCount, unit: 'รายการ', icon: AlertCircle, tone: 'text-warning-700 bg-warning-50' },
+    { label: 'หมด / ติดลบ', value: analytics.outCount, unit: 'รายการ', icon: AlertCircle, tone: 'text-danger-600 bg-danger-50' },
+    { label: 'บิลรอตรวจ', value: analytics.pendingCount, unit: 'บิล', icon: Clock3, tone: 'text-brand-600 bg-brand-50' },
   ];
+  const maxWithdrawn = analytics.topWithdrawn[0]?.qty || 1;
 
   return (
-    <div className="space-y-6 pb-20 animate-fade-in">
-
-      {/* ส่วนหัว Dashboard */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <TrendingUp className="text-orange-500" /> ภาพรวมสต็อก
-        </h2>
-
-        <div className="flex bg-gray-100 p-1 rounded-lg mt-4 text-xs font-bold">
-          <button onClick={() => setDateFilterType('today')} className={`flex-1 py-2 rounded-md transition-all ${dateFilterType === 'today' ? 'bg-white shadow text-success-700' : 'text-gray-400'}`}>วันนี้</button>
-          <button onClick={() => setDateFilterType('7days')} className={`flex-1 py-2 rounded-md transition-all ${dateFilterType === '7days' ? 'bg-white shadow text-success-700' : 'text-gray-400'}`}>7 วัน</button>
-          <button onClick={() => setDateFilterType('30days')} className={`flex-1 py-2 rounded-md transition-all ${dateFilterType === '30days' ? 'bg-white shadow text-success-700' : 'text-gray-400'}`}>30 วัน</button>
-        </div>
-      </div>
-
-      {/* --- [UPDATE] กล่องรายงาน (เลือกช่วงเวลาได้) --- */}
-      <div className="bg-gradient-to-br from-blue-50 to-white p-4 rounded-2xl shadow-sm border border-blue-100">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2">
-            <Calendar size={18} /> รายงานสรุป (ช่วงเวลา)
-          </h3>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          {/* เลือกวันที่ (ตั้งแต่ - ถึง) */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1">
-              <p className="text-xs text-blue-500 mb-1 ml-1 font-bold">ตั้งแต่</p>
-              <input
-                type="date"
-                value={reportStartDate}
-                onChange={(e) => {
-                  setReportStartDate(e.target.value);
-                  if (e.target.value > reportEndDate) setReportEndDate(e.target.value);
-                }}
-                className="w-full bg-white border border-blue-200 text-gray-700 text-xs rounded-lg px-2 py-2 outline-none focus:border-blue-500"
-              />
-            </div>
-            <div className="text-blue-300 pt-4"><ArrowRight size={16} /></div>
-            <div className="flex-1">
-              <p className="text-xs text-blue-500 mb-1 ml-1 font-bold">ถึงวันที่</p>
-              <input
-                type="date"
-                value={reportEndDate}
-                min={reportStartDate}
-                onChange={(e) => setReportEndDate(e.target.value)}
-                className="w-full bg-white border border-blue-200 text-gray-700 text-xs rounded-lg px-2 py-2 outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* เลือกประเภทรายงาน */}
-          <select
-            value={reportType}
-            onChange={(e) => setReportType(e.target.value)}
-            className="bg-white border border-blue-200 text-gray-700 text-sm rounded-lg px-2 py-2 outline-none focus:border-blue-500 font-bold w-full"
-          >
-            <option value="ALL">รวมทั้งหมด (รับ+เบิก)</option>
-            <option value="IN">📥 เฉพาะยอดรับเข้า</option>
-            <option value="OUT">📤 เฉพาะยอดเบิกออก</option>
-          </select>
-
-          <div className="flex gap-2">
-            {/* ปุ่มส่งไลน์ */}
-            <button
-              onClick={handleSendDailyReport}
-              disabled={isSending}
-              className={`flex-1 py-2.5 rounded-lg text-sm font-bold shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 text-white
-                        ${reportType === 'IN' ? 'bg-success-600 shadow-green-200' :
-                  reportType === 'OUT' ? 'bg-red-500 shadow-red-200' :
-                    'bg-blue-600 shadow-blue-200'}`
-              }
-            >
-              {isSending ? '...' : <><Send size={16} /> ส่งไลน์</>}
+    <div className="space-y-5 pb-20 animate-fade-in">
+      {/* Period filter: one control drives every number below */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="glass grid grid-cols-3 p-1 rounded-2xl" role="tablist" aria-label="ช่วงเวลา">
+          {PERIODS.map(p => (
+            <button key={p.key} role="tab" aria-selected={period.key === p.key} onClick={() => setDateFilterType(p.key)}
+              className={`h-9 px-4 rounded-xl text-sm font-bold transition-colors ${period.key === p.key ? 'bg-white text-brand-600 shadow-sm' : 'text-ink-muted hover:text-ink'}`}>
+              {p.label}
             </button>
-
-            {/* ปุ่มคัดลอก */}
-            <button
-              onClick={handleCopyReport}
-              className="flex-1 py-2.5 rounded-lg text-sm font-bold bg-yellow-400 text-yellow-900 shadow-md shadow-yellow-200 active:scale-95 transition-all flex items-center justify-center gap-2 border border-yellow-500"
-            >
-              <Copy size={16} /> คัดลอก
-            </button>
-          </div>
-
-          {/* --- ปุ่ม Export Excel & PDF --- */}
-          <div className="export-section">
-            <p className="text-xs text-gray-500 font-bold mb-2 flex items-center gap-1">
-              <Download size={12} /> ดาวน์โหลดรายงาน
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={handleExportExcel}
-                disabled={isExporting}
-                className="export-btn export-btn-excel"
-              >
-                <FileSpreadsheet size={16} />
-                <span>Export Excel</span>
-              </button>
-              <button
-                onClick={handleExportPDF}
-                disabled={isExporting}
-                className="export-btn export-btn-pdf"
-              >
-                <FileText size={16} />
-                <span>Export PDF</span>
-              </button>
-            </div>
-            <p className="text-xs text-gray-400 text-center mt-1.5">Excel = ตารางแก้ไขได้ | PDF = รายงานทางการ</p>
-          </div>
-
-          <p className="text-xs text-gray-400 text-center">* เลือกช่วงเวลาที่ต้องการสรุปยอดได้เลย</p>
+          ))}
         </div>
+        <p className="text-xs text-ink-subtle">นับเฉพาะบิลที่ยืนยันแล้ว</p>
       </div>
 
-      {/* Cards สรุปตัวเลข (เหมือนเดิม) */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-success-500 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs text-gray-400 font-bold">รับเข้า (รายการ)</p>
-              <h3 className="text-2xl font-black text-success-700">{stats.countIn}</h3>
-            </div>
-            <div className="bg-success-100 p-2 rounded-full text-success-600"><Package size={20} /></div>
-          </div>
-          <p className="text-xs text-gray-300 mt-2">ในช่วงเวลาที่เลือก (ด้านบน)</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-red-500 flex flex-col justify-between">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs text-gray-400 font-bold">เบิกออก (รายการ)</p>
-              <h3 className="text-2xl font-black text-red-700">{stats.countOut}</h3>
-            </div>
-            <div className="bg-red-100 p-2 rounded-full text-red-600"><TrendingDown size={20} /></div>
-          </div>
-          <p className="text-xs text-gray-300 mt-2">ในช่วงเวลาที่เลือก (ด้านบน)</p>
-        </div>
+      {/* KPI tiles: a single number each, no chart needed */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        {kpis.map(({ label, value, unit, icon: Icon, tone }) => (
+          <GlassCard key={label} className="p-4">
+            <span className={`w-9 h-9 rounded-control flex items-center justify-center ${value > 0 ? tone : 'bg-white/70 text-ink-subtle'}`}><Icon size={18} /></span>
+            <p className="mt-2 text-2xl font-black text-ink tabular-nums">{value.toLocaleString('th-TH')}<span className="text-xs font-semibold text-ink-subtle"> {unit}</span></p>
+            <p className="text-sm text-ink-muted">{label}</p>
+          </GlassCard>
+        ))}
       </div>
 
-      {/* Chart */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 min-h-[250px] flex flex-col items-center justify-center">
-        <h3 className="text-sm font-bold text-gray-600 mb-4 w-full text-left">สัดส่วนการเคลื่อนไหว</h3>
-        {stats.total > 0 ? (
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={dataPie} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                {dataPie.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend verticalAlign="bottom" height={36} />
-            </PieChart>
-          </ResponsiveContainer>
+      {/* Movement over time: IN vs OUT quantity per day */}
+      <GlassCard className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+          <div>
+            <h3 className="text-base font-bold text-ink">การเคลื่อนไหวสต็อกรายวัน</h3>
+            <p className="text-xs text-ink-subtle">จำนวนชิ้น {analytics.buckets.length} วันล่าสุด</p>
+          </div>
+          <div className="flex items-center gap-4 text-sm">
+            <span className="flex items-center gap-1.5 text-ink-muted"><span className="w-3 h-3 rounded-sm" style={{ background: SERIES.IN }} /> รับเข้า <b className="text-ink tabular-nums">{analytics.totals.IN.toLocaleString('th-TH')}</b></span>
+            <span className="flex items-center gap-1.5 text-ink-muted"><span className="w-3 h-3 rounded-sm" style={{ background: SERIES.OUT }} /> เบิกออก <b className="text-ink tabular-nums">{analytics.totals.OUT.toLocaleString('th-TH')}</b></span>
+          </div>
+        </div>
+        {analytics.hasMovement ? (
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={analytics.buckets} barGap={2} barCategoryGap={analytics.buckets.length > 14 ? '20%' : '30%'} margin={{ top: 4, right: 4, bottom: 0, left: -18 }}>
+                <CartesianGrid vertical={false} stroke="#e8e5fc" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#6b6788' }} interval={analytics.buckets.length > 14 ? 4 : 0} />
+                <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#6b6788' }} />
+                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(99,85,216,0.06)' }} />
+                <Bar dataKey="IN" name="รับเข้า" fill={SERIES.IN} radius={[4, 4, 0, 0]} maxBarSize={18} />
+                <Bar dataKey="OUT" name="เบิกออก" fill={SERIES.OUT} radius={[4, 4, 0, 0]} maxBarSize={18} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         ) : (
-          <div className="text-gray-300 flex flex-col items-center">
-            <AlertCircle size={40} className="mb-2 opacity-50" />
-            <p className="text-xs">ไม่มีข้อมูลในช่วงนี้</p>
+          <div className="h-40 flex flex-col items-center justify-center text-ink-subtle text-sm">
+            <AlertCircle size={28} className="mb-2 text-brand-300" /> ยังไม่มีบิลที่ยืนยันในช่วงนี้
           </div>
         )}
+      </GlassCard>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Top withdrawn items: ranked magnitude, one hue */}
+        <GlassCard className="p-4 sm:p-5">
+          <h3 className="text-base font-bold text-ink">เบิกออกมากที่สุด</h3>
+          <p className="text-xs text-ink-subtle mb-3">{period.label}</p>
+          {analytics.topWithdrawn.length === 0 ? (
+            <p className="text-sm text-ink-subtle py-6 text-center">ยังไม่มีการเบิกออก</p>
+          ) : (
+            <ol className="space-y-2.5">
+              {analytics.topWithdrawn.map((item, i) => (
+                <li key={item.name}>
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="text-ink font-semibold truncate"><span className="text-ink-subtle tabular-nums">{i + 1}.</span> {item.name}</span>
+                    <span className="text-ink font-bold tabular-nums shrink-0">{item.qty.toLocaleString('th-TH')} <span className="text-xs font-normal text-ink-subtle">{item.unit}</span></span>
+                  </div>
+                  <div className="h-2 mt-1 rounded-full bg-brand-50 overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${(item.qty / maxWithdrawn) * 100}%`, background: SERIES.OUT }} />
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </GlassCard>
+
+        {/* What needs reordering */}
+        <GlassCard className="p-4 sm:p-5">
+          <h3 className="text-base font-bold text-ink">ต้องสั่งเพิ่ม</h3>
+          <p className="text-xs text-ink-subtle mb-3">สินค้าที่ต่ำกว่าขั้นต่ำ เรียงจากน้อยไปมาก</p>
+          {analytics.lowList.length === 0 ? (
+            <p className="text-sm text-ink-subtle py-6 text-center">สต็อกพอทุกรายการ</p>
+          ) : (
+            <ul className="divide-y divide-white/70 max-h-72 overflow-y-auto -mx-1">
+              {analytics.lowList.slice(0, 12).map(p => {
+                const out = (Number(p.stock) || 0) <= 0;
+                return (
+                  <li key={p.id} className="flex items-center justify-between gap-3 px-1 py-2 text-sm">
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-ink truncate">{p.name}</span>
+                      <span className="block text-xs text-ink-subtle">{p.category || 'ไม่มีหมวด'} · ขั้นต่ำ {p.minStock || 5}</span>
+                    </span>
+                    <span className="flex items-center gap-2 shrink-0">
+                      <span className={`font-black tabular-nums ${out ? 'text-danger-600' : 'text-warning-700'}`}>{p.stock} <span className="text-xs font-normal text-ink-subtle">{p.unit}</span></span>
+                      <Badge tone={out ? 'danger' : 'warning'}>{out ? 'หมด' : 'ใกล้หมด'}</Badge>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {analytics.lowList.length > 12 && <p className="text-xs text-ink-subtle mt-2">และอีก {analytics.lowList.length - 12} รายการ ดูทั้งหมดในหน้าคลังสินค้า (ตัวกรอง “ใกล้หมด”)</p>}
+        </GlassCard>
       </div>
 
+      {/* Reports: send, copy, export for any date range */}
+      <GlassCard className="p-4 sm:p-5 space-y-3">
+        <div>
+          <h3 className="text-base font-bold text-ink flex items-center gap-2"><Calendar size={18} className="text-brand-500" /> รายงานสรุปตามช่วงวันที่</h3>
+          <p className="text-xs text-ink-subtle">ส่งเข้า LINE คัดลอก หรือดาวน์โหลดเป็น Excel / PDF</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <label className="block">
+            <span className="block text-xs font-bold text-ink-muted mb-1">ตั้งแต่</span>
+            <input type="date" value={reportStartDate}
+              onChange={(e) => { setReportStartDate(e.target.value); if (e.target.value > reportEndDate) setReportEndDate(e.target.value); }}
+              className="w-full h-11 px-3 rounded-control bg-white/80 border border-white text-sm text-ink outline-none focus:ring-2 focus:ring-brand-200" />
+          </label>
+          <label className="block">
+            <span className="block text-xs font-bold text-ink-muted mb-1">ถึง</span>
+            <input type="date" value={reportEndDate} min={reportStartDate} onChange={(e) => setReportEndDate(e.target.value)}
+              className="w-full h-11 px-3 rounded-control bg-white/80 border border-white text-sm text-ink outline-none focus:ring-2 focus:ring-brand-200" />
+          </label>
+        </div>
+        <div className="glass grid grid-cols-3 p-1 rounded-2xl" role="tablist" aria-label="ประเภทรายงาน">
+          {[{ key: 'ALL', label: 'ทั้งหมด' }, { key: 'IN', label: 'รับเข้า' }, { key: 'OUT', label: 'เบิกออก' }].map(t => (
+            <button key={t.key} role="tab" aria-selected={reportType === t.key} onClick={() => setReportType(t.key)}
+              className={`h-9 rounded-xl text-sm font-bold transition-colors ${reportType === t.key ? 'bg-white text-brand-600 shadow-sm' : 'text-ink-muted hover:text-ink'}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          <Button icon={Send} loading={isSending} onClick={handleSendDailyReport}>ส่งเข้า LINE</Button>
+          <Button variant="secondary" icon={Copy} onClick={handleCopyReport}>คัดลอก</Button>
+          <Button variant="secondary" icon={FileSpreadsheet} disabled={isExporting} onClick={handleExportExcel}>Excel</Button>
+          <Button variant="secondary" icon={FileText} disabled={isExporting} onClick={handleExportPDF}>PDF</Button>
+        </div>
+      </GlassCard>
     </div>
   );
 }
