@@ -184,7 +184,7 @@ export default function TabTransaction({
               <p className="mt-2 text-sm font-bold text-ink-muted">ไม่พบสินค้า</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5">
               {filteredProducts.map(p => {
                 const catObj = categories.find(c => c.name === p.category) || {};
                 const inCart = cartQtyById[p.id];

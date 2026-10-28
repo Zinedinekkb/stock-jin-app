@@ -143,6 +143,14 @@ export default function StockJinApp() {
   const [pendingLeaves, setPendingLeaves] = useState([]);
   const [approvalHistory, setApprovalHistory] = useState([]);
 
+  // --- DEV ONLY: preview the app as a staff member (UI only; Firestore still sees the real admin) ---
+  const isDevBuild = process.env.NODE_ENV === 'development';
+  const [previewAsStaff, setPreviewAsStaff] = useState(false);
+  const viewUser = useMemo(
+    () => (isDevBuild && previewAsStaff && user) ? { ...user, role: 'staff', position: 'พนักงานคุมสต็อก' } : user,
+    [isDevBuild, previewAsStaff, user]
+  );
+
   // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState([]);
 
@@ -1074,7 +1082,7 @@ export default function StockJinApp() {
       {activeTab === 'dashboard' && user && (
         (dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
           <SmartDashboardView 
-            user={user}
+            user={viewUser}
             products={products}
             transactions={transactions}
             categories={categories}
@@ -1112,7 +1120,7 @@ export default function StockJinApp() {
           handleReorderStock={handleReorderStock}
           copyToClipboard={copyToClipboard}
           handleSendStockToLine={handleSendStockToLine}
-          user={user}
+          user={viewUser}
           searchQuery={searchQuery} setSearchQuery={setSearchQuery}
       />} 
       {activeTab === 'transaction' && user && <TabTransaction 
@@ -1131,13 +1139,13 @@ export default function StockJinApp() {
           copyToClipboard={copyToClipboard} generateSummaryText={generateSummaryText}
           handleVoidTransaction={handleVoidTransaction}
           handleEditCompletedTx={handleEditCompletedTx}
-          user={user}
+          user={viewUser}
           handleDeleteHistory={handleDeleteHistory}
           products={products}
           onOpenTransactionDoc={handleOpenTransactionDoc}
       />}
       {activeTab === 'notifications' && user && <TabNotifications
-          user={user}
+          user={viewUser}
           notifications={notifications}
           onMarkAsRead={handleMarkAsRead}
           onMarkAllAsRead={handleMarkAllAsRead}
@@ -1146,19 +1154,20 @@ export default function StockJinApp() {
       />}
       {activeTab === 'hr' && user && (
         <TabHR 
-          user={user} 
+          user={viewUser} 
           initialView={hrInitialView} 
           initialSubTab={hrInitialSubTab} 
         />
       )}
-      {activeTab === 'documents' && <TabDocuments user={user} />}
+      {activeTab === 'documents' && <TabDocuments user={viewUser} />}
       {activeTab === 'menu' && <TabMenu 
-          user={user} handleLogout={handleLogout}
+          user={viewUser} handleLogout={handleLogout}
+          canPreviewAsStaff={isDevBuild && isAdmin(user) && !previewAsStaff} onPreviewAsStaff={() => { setPreviewAsStaff(true); setActiveTab('dashboard'); }}
           stockOnlyMode={stockOnlyMode} onToggleStockOnlyMode={handleToggleStockOnlyMode}
           pendingUsers={pendingUsers} approvalHistory={approvalHistory} handleApproveUser={handleApproveUser} handleRejectUser={handleRejectUser}
           handleUpdateProfile={handleUpdateProfile}
       />}
-      {activeTab === 'users' && user && isAdmin(user) && <TabUserDirectory user={user} />}
+      {activeTab === 'users' && user && isAdmin(viewUser) && <TabUserDirectory user={viewUser} />}
     </>
   );
 
@@ -1178,7 +1187,7 @@ export default function StockJinApp() {
   if (user && user.status === 'pending') {
     return (
       <ModernPendingApproval 
-        user={user} 
+        user={viewUser} 
         handleLogout={handleLogout} 
         onCheckStatus={handleCheckUserStatus} 
       />
@@ -1215,7 +1224,7 @@ export default function StockJinApp() {
         <DesktopSidebar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
-          user={user} 
+          user={viewUser} 
           handleLogout={handleLogout}
           unreadNotifCount={unreadNotifCount}
           onNavigateWithSub={handleNavigateWithSub}
@@ -1226,7 +1235,7 @@ export default function StockJinApp() {
         <div className="smart-main-wrapper flex-1 flex flex-col min-h-screen overflow-x-hidden">
           {/* Top Header */}
           <TopHeader 
-            user={user}
+            user={viewUser}
             unreadNotifCount={unreadNotifCount}
             setActiveTab={setActiveTab}
             handleLogout={handleLogout}
@@ -1266,7 +1275,7 @@ export default function StockJinApp() {
 
                   {(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
                     <SmartDashboardView 
-                      user={user}
+                      user={viewUser}
                       products={products}
                       transactions={transactions}
                       categories={categories}
@@ -1304,7 +1313,7 @@ export default function StockJinApp() {
             {activeTab === 'dashboard' && !stockOnlyMode && (
               <div className="hidden xl:block shrink-0">
                 <SmartRightPanel 
-                  user={user}
+                  user={viewUser}
                   transactions={transactions}
                   products={products}
                 />
@@ -1314,6 +1323,12 @@ export default function StockJinApp() {
         </div>
 
         <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} busy={modalConfig.busy} onCancel={() => setModalConfig(prev => prev.busy ? prev : ({ ...prev, isOpen: false }))} />
+        {previewAsStaff && (
+          <div role="status" className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-[80] flex items-center gap-3 pl-4 pr-1.5 py-1.5 rounded-full bg-ink text-white text-sm font-semibold shadow-glass-lg">
+            <span>กำลังดูแบบพนักงาน (เฉพาะในเครื่อง)</span>
+            <button onClick={() => setPreviewAsStaff(false)} className="h-9 px-3.5 rounded-full bg-white text-ink font-bold">กลับเป็นแอดมิน</button>
+          </div>
+        )}
         {showToast && <div role="status" aria-live="polite" className="fixed top-6 left-1/2 -translate-x-1/2 w-max max-w-[calc(100%-32px)] bg-ink/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl text-sm font-semibold shadow-glass-lg z-[70] flex items-center gap-3 animate-bounce-in border border-white/10"><div className="bg-brand-500 rounded-full p-0.5 text-white shrink-0"><Check size={14} strokeWidth={3}/></div> <span>{toastMsg}</span></div>}
       </div>
     );
@@ -1376,7 +1391,7 @@ export default function StockJinApp() {
               {(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
                 <>
                   <SmartDashboardView 
-                    user={user}
+                    user={viewUser}
                     products={products}
                     transactions={transactions}
                     categories={categories}
@@ -1442,7 +1457,7 @@ export default function StockJinApp() {
           dashboardPosTab={dashboardPosTab}
           dashboardSubTab={dashboardSubTab}
           stockOnlyMode={stockOnlyMode}
-          user={user}
+          user={viewUser}
           unreadNotifCount={unreadNotifCount}
           handleLogout={handleLogout}
         />
@@ -1461,6 +1476,12 @@ export default function StockJinApp() {
           onSuccessSave={(msg) => showNotification(msg)}
         />
 
+        {previewAsStaff && (
+          <div role="status" className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-[80] flex items-center gap-3 pl-4 pr-1.5 py-1.5 rounded-full bg-ink text-white text-sm font-semibold shadow-glass-lg">
+            <span>กำลังดูแบบพนักงาน (เฉพาะในเครื่อง)</span>
+            <button onClick={() => setPreviewAsStaff(false)} className="h-9 px-3.5 rounded-full bg-white text-ink font-bold">กลับเป็นแอดมิน</button>
+          </div>
+        )}
         {showToast && <div role="status" aria-live="polite" className="absolute top-24 left-1/2 -translate-x-1/2 w-max max-w-[calc(100%-32px)] bg-ink/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl text-sm font-semibold shadow-glass-lg z-[70] flex items-center gap-3 animate-bounce-in border border-white/10"><div className="bg-brand-500 rounded-full p-0.5 text-white shrink-0"><Check size={14} strokeWidth={3}/></div> <span>{toastMsg}</span></div>}
       </div>
     </div>

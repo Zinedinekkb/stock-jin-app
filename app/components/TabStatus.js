@@ -165,13 +165,13 @@ export default function TabStatus({
                       e.stopPropagation();
                       if (onOpenTransactionDoc) onOpenTransactionDoc(tx);
                     }}
-                    className="w-10 h-10 sm:w-auto sm:px-3 rounded-control bg-white/70 hover:bg-white text-brand-600 text-sm font-bold flex items-center justify-center gap-1.5 transition-colors"
+                    className="w-10 h-10 lg:w-auto lg:px-3 rounded-control bg-white/70 hover:bg-white text-brand-600 text-sm font-bold flex items-center justify-center gap-1.5 transition-colors"
                     title="ดูเอกสารทางการ PDF"
                   >
                     <FileText size={15} />
-                    <span className="hidden sm:inline">เอกสาร PDF</span>
+                    <span className="hidden lg:inline">เอกสาร PDF</span>
                   </button>
-                  <ChevronRight size={18} className="text-ink-subtle hidden sm:block"/>
+                  <ChevronRight size={18} className="text-ink-subtle hidden lg:block"/>
                 </div>
               </div>
             ))

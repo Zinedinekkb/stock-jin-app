@@ -414,7 +414,7 @@ export default function DailyTaskDashboard({
 
       {/* 3. Empty state: no tasks yet */}
       {tasks.length === 0 && !loading && (
-        <GlassCard className="p-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+        <GlassCard className="p-5 flex flex-col lg:flex-row items-center justify-between gap-4 text-center lg:text-left">
           <div>
             <h4 className="text-base font-bold text-ink">ยังไม่มีรายการงาน</h4>
             <p className="text-sm text-ink-muted mt-0.5 max-w-md">
@@ -450,8 +450,9 @@ export default function DailyTaskDashboard({
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-2.5">
-          <div className="glass flex p-1 rounded-2xl gap-1 overflow-x-auto scrollbar-hide">
+        {/* Wraps instead of using sm: breakpoints, because the phone layout is a narrow column even on wide screens */}
+        <div className="flex flex-wrap gap-2.5">
+          <div className="glass flex p-1 rounded-2xl gap-1 overflow-x-auto scrollbar-hide max-w-full">
             {STATUS_FILTERS.map(f => (
               <button
                 key={f.key}
@@ -462,7 +463,7 @@ export default function DailyTaskDashboard({
               </button>
             ))}
           </div>
-          <label className="relative flex-1 sm:max-w-xs">
+          <label className="relative flex-1 min-w-[200px]">
             <span className="sr-only">ค้นหางาน</span>
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none" />
             <input
@@ -682,11 +683,11 @@ export default function DailyTaskDashboard({
                       </div>
 
                       {/* Secondary actions: a row under the text on phones */}
-                      <div className="flex sm:hidden items-center -ml-2 mt-1">{actions}</div>
+                      <div className="flex lg:hidden items-center -ml-2 mt-1">{actions}</div>
                     </div>
 
                     {/* Secondary actions: a column on the right on larger screens */}
-                    <div className="hidden sm:flex items-center shrink-0 -mr-0.5">{actions}</div>
+                    <div className="hidden lg:flex items-center shrink-0 -mr-0.5">{actions}</div>
                   </div>
                 );
               })}

@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import {
   User, Settings, Smartphone, LogOut, ShieldCheck, Check, X, History, Briefcase,
-  ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone, Boxes
+  ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone, Boxes, Eye
 } from 'lucide-react';
 import { GlassCard, Button, Badge, SectionHeader, ListRow } from './ui';
 
@@ -21,6 +21,8 @@ export default function TabMenu({
   user, handleLogout,
   // Shop-wide stock-only mode (admin switch)
   stockOnlyMode = false, onToggleStockOnlyMode,
+  // Dev-only: preview the UI as a staff member
+  canPreviewAsStaff = false, onPreviewAsStaff,
   // Props สำหรับแอดมินอนุมัติ
   pendingUsers = [], approvalHistory = [], handleApproveUser, handleRejectUser,
   // Props สำหรับแก้ไขโปรไฟล์
@@ -265,6 +267,14 @@ export default function TabMenu({
                     <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-[left] duration-150 ${stockOnlyMode ? 'left-6' : 'left-1'}`} />
                   </span>
                 }
+              />
+            )}
+            {canPreviewAsStaff && onPreviewAsStaff && (
+              <ListRow
+                icon={Eye}
+                label="ดูแบบพนักงาน"
+                description="ตรวจหน้าจอตามที่พนักงานเห็น (เฉพาะตอนรันในเครื่อง)"
+                onClick={onPreviewAsStaff}
               />
             )}
             <ListRow icon={Smartphone} label="เกี่ยวกับแอป" description="StockPro · ระบบคลังสินค้าและบุคลากร" trailing={<Badge tone="neutral">v2.2</Badge>} />

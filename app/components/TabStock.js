@@ -315,7 +315,7 @@ export default function TabStock({
             </label>
             {canEdit && !isEditingStock && (
               <Button icon={Plus} onClick={() => { setNewProductMode(true); setShowCatManager(false); }} aria-label="เพิ่มสินค้า">
-                <span className="hidden sm:inline">เพิ่มสินค้า</span>
+                <span className="hidden lg:inline">เพิ่มสินค้า</span>
               </Button>
             )}
           </div>
@@ -508,7 +508,7 @@ export default function TabStock({
                     </DndContext>
                   ) : (
                     /* === VIEW MODE: มือถือ 1 คอลัมน์, จอใหญ่ 2-3 คอลัมน์ === */
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
                       {catProducts.map((p) => (
                         <ProductCard key={p.id} product={p} cat={cat} onClick={canEdit ? () => openEditModal(p) : undefined} />
                       ))}
@@ -533,7 +533,7 @@ export default function TabStock({
                <AlertTriangle size={20} className="text-warning-600 shrink-0" />
                <div><h3 className="font-bold text-warning-700 text-sm">สินค้าไม่มีหมวดหมู่ ({uncategorized.length})</h3><p className="text-xs text-warning-700/80">แตะเพื่อระบุหมวดหมู่</p></div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2.5">
                {uncategorized.map((p) => (
                   <ProductCard key={p.id} product={p} cat={null} onClick={() => openEditModal(p)} />
                ))}

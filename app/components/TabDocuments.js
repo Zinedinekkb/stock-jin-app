@@ -289,7 +289,7 @@ export default function TabDocuments({ user }) {
                     </button>
                   )}
                   {item.url && (
-                    <button className={`hidden sm:flex ${iconBtn} hover:text-ink`} onClick={() => handleCopyLink(item.url)} aria-label="คัดลอกลิงก์">
+                    <button className={`hidden lg:flex ${iconBtn} hover:text-ink`} onClick={() => handleCopyLink(item.url)} aria-label="คัดลอกลิงก์">
                       <Copy size={17} />
                     </button>
                   )}
