@@ -2,28 +2,27 @@
 'use client';
 import React, { useState, useRef } from 'react';
 import {
-  User, Settings, ChevronRight, Smartphone, LogOut, UserPlus,
-  ShieldCheck, Check, X, History, Briefcase, ChevronDown, ChevronUp, Clock,
-  Camera, Pencil, Loader2, Save, Trash2
+  User, Settings, Smartphone, LogOut, ShieldCheck, Check, X, History, Briefcase,
+  ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone, Boxes, Eye
 } from 'lucide-react';
+import { GlassCard, Button, Badge, SectionHeader, ListRow } from './ui';
 
 const PRESET_POSITIONS = [
-  { label: 'เชฟ / แม่ครัว', emoji: '👨‍🍳' },
-  { label: 'ผู้ช่วยเชฟ', emoji: '🧑‍🍳' },
-  { label: 'พนักงานเสิร์ฟ', emoji: '🍱' },
-  { label: 'พนักงานแคชเชียร์', emoji: '💵' },
-  { label: 'พนักงานคุมสต็อก', emoji: '📦' },
-  { label: 'ผู้จัดการร้าน', emoji: '👔' },
-  { label: 'ผู้ดูแลระบบ', emoji: '👑' },
+  { label: 'เชฟ / แม่ครัว' },
+  { label: 'ผู้ช่วยเชฟ' },
+  { label: 'พนักงานเสิร์ฟ' },
+  { label: 'พนักงานแคชเชียร์' },
+  { label: 'พนักงานคุมสต็อก' },
+  { label: 'ผู้จัดการร้าน' },
+  { label: 'ผู้ดูแลระบบ' },
 ];
 
 export default function TabMenu({ 
-  user, loginForm, setLoginForm, 
-  handleLogin, handleLogout, loginError,
-  // Props สำหรับสมัครสมาชิก
-  isRegisterMode, setIsRegisterMode,
-  registerForm, setRegisterForm,
-  handleRegister, registerError,
+  user, handleLogout,
+  // Shop-wide stock-only mode (admin switch)
+  stockOnlyMode = false, onToggleStockOnlyMode,
+  // Dev-only: preview the UI as a staff member
+  canPreviewAsStaff = false, onPreviewAsStaff,
   // Props สำหรับแอดมินอนุมัติ
   pendingUsers = [], approvalHistory = [], handleApproveUser, handleRejectUser,
   // Props สำหรับแก้ไขโปรไฟล์
@@ -142,282 +141,175 @@ export default function TabMenu({
     });
   };
 
+  if (!user) return null;
+
+  const isUserAdmin = user.role === 'admin';
+  const providerLabel = (provider = '') => provider.includes('google') ? 'Google' : provider.includes('github') ? 'GitHub' : 'Email';
+
   return (
-      <div className="space-y-4 pb-20 animate-fade-in-slide p-2">
-        <h2 className="text-2xl font-bold text-green-900 px-2 pt-2">บัญชีผู้ใช้</h2>
-        
-        {user ? (
-          /* --- ส่วนของคนที่ล็อกอินผ่านแล้ว --- */
-          <div className="space-y-6">
-            <div className="bg-gradient-to-r from-green-800 to-green-600 p-5 rounded-3xl shadow-xl text-white flex items-center gap-4 border border-green-500">
-              <div className="w-16 h-16 rounded-full bg-yellow-400 border-4 border-green-900 shadow-inner overflow-hidden flex items-center justify-center text-green-900 font-bold text-2xl">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
-                  user.name?.charAt(0) || 'U'
-                )}
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-xl text-yellow-300">{user.name}</h3>
-                <p className="text-xs text-green-100 opacity-80">{user.email}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="text-[10px] bg-green-900/50 px-2 py-0.5 rounded text-green-200 border border-green-700 font-bold">
-                    สิทธิ์: {user.role === 'admin' ? '👑 ผู้ดูแลระบบ' : '✅ พนักงาน'}
-                  </span>
-                  {user.position && (
-                    <span className="text-[10px] bg-yellow-500/30 px-2 py-0.5 rounded text-yellow-200 border border-yellow-500/50 font-bold">
-                      ตำแหน่ง: {user.position}
-                    </span>
-                  )}
-                </div>
-                <button onClick={openProfileEdit} className="profile-edit-trigger mt-2">
-                  <Pencil size={12} /> แก้ไขโปรไฟล์
-                </button>
-              </div>
-            </div>
-
-            {/* --- ส่วนของแอดมิน: อนุมัติสมาชิกใหม่ (แสดงเฉพาะ Admin) --- */}
-            {user.role === 'admin' && (
-              <div className="space-y-4">
-                {pendingUsers && pendingUsers.length > 0 && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 animate-scale-in">
-                    <h3 className="font-bold text-orange-800 flex items-center gap-2 mb-3">
-                      <UserPlus size={20}/> คำขอสมัครสมาชิก ({pendingUsers.length})
-                    </h3>
-                    <div className="space-y-2">
-                      {pendingUsers.map(u => (
-                        <div key={u.id} className="bg-white p-3 rounded-xl border border-orange-100 shadow-sm flex justify-between items-center gap-2">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center overflow-hidden border border-orange-200 shrink-0">
-                              {u.photoURL ? (
-                                <img src={u.photoURL} alt={u.name} className="w-full h-full object-cover" />
-                              ) : (
-                                (u.name?.charAt(0) || 'U').toUpperCase()
-                              )}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <p className="font-bold text-gray-800 text-sm truncate">{u.name}</p>
-                                {u.provider && (
-                                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-purple-100 text-[#6355d8] border border-purple-200">
-                                    {u.provider.includes('google') ? 'Google' : u.provider.includes('github') ? 'GitHub' : 'Email'}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-500 truncate">{u.email}</p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <button onClick={() => handleRejectUser(u)} className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 active:scale-95 transition-all" title="ปฏิเสธ">
-                              <X size={16}/>
-                            </button>
-                            <button onClick={() => openApproveModal(u)} className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 active:scale-95 transition-all text-xs font-bold flex items-center gap-1 shadow-sm">
-                              <Check size={16}/> ตอบรับ / ระบุตำแหน่ง
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* --- ปุ่ม/กล่อง แสดงประวัติการอนุมัติสมาชิก --- */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                  <button
-                    onClick={() => setShowHistory(!showHistory)}
-                    className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-purple-50 text-purple-600 border border-purple-100">
-                        <History size={20} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-sm text-gray-800">ประวัติการตอบรับ/อนุมัติสมาชิก</h4>
-                        <p className="text-[11px] text-gray-400">ดูประวัติการอนุมัติและระบุตำแหน่งผู้ใช้</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                        {approvalHistory.length} รายการ
-                      </span>
-                      {showHistory ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
-                    </div>
-                  </button>
-
-                  {showHistory && (
-                    <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-2.5 max-h-80 overflow-y-auto">
-                      {approvalHistory.length === 0 ? (
-                        <div className="text-center py-6 text-xs text-gray-400 italic">ยังไม่มีประวัติการตอบรับ</div>
-                      ) : (
-                        approvalHistory.map((item, idx) => (
-                          <div key={item.id || idx} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-start gap-2">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm text-gray-800">{item.userName}</span>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                  item.action === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                                }`}>
-                                  {item.action === 'approved' ? '✅ อนุมัติแล้ว' : '❌ ปฏิเสธ'}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-500">{item.userEmail}</p>
-                              {item.action === 'approved' && (
-                                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                  <span className="text-[10px] bg-yellow-50 text-yellow-800 border border-yellow-200 px-2 py-0.5 rounded font-medium flex items-center gap-1">
-                                    <Briefcase size={10} /> {item.position || 'พนักงานทั่วไป'}
-                                  </span>
-                                  <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded font-medium">
-                                    {item.role === 'admin' ? '👑 ผู้ดูแลระบบ' : '👤 พนักงาน'}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="text-right text-[10px] text-gray-400 whitespace-nowrap">
-                              <div className="flex items-center justify-end gap-1"><Clock size={10}/> {formatDate(item.timestamp)}</div>
-                              <div className="mt-1">โดย: {item.approvedBy || 'Admin'}</div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* --- ข้อมูลส่วนบุคคล ในหน้าการตั้งค่าก่อนออกจากระบบ --- */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-2">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">ข้อมูลส่วนบุคคล & บัญชีผู้ใช้</p>
-                <button
-                  type="button"
-                  onClick={openProfileEdit}
-                  className="text-xs font-bold text-[#6355d8] hover:text-[#4f42c2] flex items-center gap-1 transition-colors"
-                >
-                  <Pencil size={12} /> แก้ไขข้อมูล
-                </button>
-              </div>
-
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3">
-                <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                  <div>
-                    <span className="text-[11px] text-gray-400 block">ชื่อ-นามสกุลจริง (สำหรับเอกสาร)</span>
-                    <span className="text-sm font-bold text-gray-800">
-                      {user.name || <span className="text-amber-600 font-normal">ยังไม่ได้ระบุชื่อจริง</span>}
-                    </span>
-                  </div>
-                  {user.nickname && (
-                    <div className="text-right">
-                      <span className="text-[11px] text-gray-400 block">ชื่อเล่น</span>
-                      <span className="text-sm font-semibold text-gray-700">{user.nickname}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5 text-xs">
-                  <div>
-                    <span className="text-gray-400 block text-[11px]">ตำแหน่งงาน</span>
-                    <span className="font-bold text-gray-800">{user.position || 'พนักงานทั่วไป'}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400 block text-[11px]">ฝ่าย / สังกัด</span>
-                    <span className="font-bold text-gray-800">{user.department || 'ฝ่ายคลังสินค้าและการจัดส่ง'}</span>
-                  </div>
-                  <div className="col-span-2 pt-1 border-t border-gray-50">
-                    <span className="text-gray-400 block text-[11px]">อีเมลบัญชี</span>
-                    <span className="font-medium text-gray-600 truncate block">{user.email}</span>
-                  </div>
-                  {user.phone && (
-                    <div className="col-span-2">
-                      <span className="text-gray-400 block text-[11px]">เบอร์โทรศัพท์ติดต่อ</span>
-                      <span className="font-bold text-gray-700">{user.phone}</span>
-                    </div>
-                  )}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={openProfileEdit}
-                  className="w-full mt-1 py-2 px-3 bg-purple-50 hover:bg-purple-100 text-[#6355d8] rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-purple-100 cursor-pointer"
-                >
-                  <Pencil size={13} /> แก้ไขชื่อ-นามสกุล / ข้อมูลส่วนตัว
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs font-bold text-gray-400 px-2 uppercase tracking-wider">เมนูหลัก</p>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="flex items-center justify-between p-4 border-b border-gray-100 active:bg-gray-50 cursor-pointer"><div className="flex items-center gap-3"><Settings size={20} className="text-green-600"/><span className="text-sm font-medium text-gray-700">ตั้งค่าร้านค้า</span></div><ChevronRight size={16} className="text-gray-300"/></div>
-                <div className="flex items-center justify-between p-4 active:bg-gray-50 cursor-pointer"><div className="flex items-center gap-3"><Smartphone size={20} className="text-green-600"/><span className="text-sm font-medium text-gray-700">เกี่ยวกับแอป</span></div><span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">v2.2 Admin</span></div>
-              </div>
-            </div>
-            
-            <button onClick={handleLogout} className="w-full bg-red-50 text-red-600 py-3.5 rounded-2xl font-bold flex justify-center items-center gap-2 mt-6 active:scale-95 transition-transform border border-red-100 cursor-pointer"><LogOut size={20} /> ออกจากระบบ</button>
-          </div>
-        ) : (
-          /* --- ส่วน Login / Register --- */
-          <div className="bg-gradient-to-br from-slate-800 to-gray-900 p-6 rounded-3xl shadow-xl text-white animate-scale-in border-t-4 border-indigo-500">
-            <div className="flex items-center gap-3 mb-4"><div className="bg-white/10 p-3 rounded-2xl"><User size={28} className="text-indigo-400"/></div><div><h3 className="font-bold text-xl text-indigo-300">StockPro</h3><p className="text-xs text-slate-400">ระบบจัดการคลังสินค้าและบุคลากร</p></div></div>
-            
-            <div className="space-y-3 bg-black/20 p-4 rounded-2xl backdrop-blur-sm border border-white/5">
-              {/* Toggle Login/Register */}
-              <div className="flex bg-black/30 p-1 rounded-xl mb-4">
-                 <button onClick={() => setIsRegisterMode(false)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${!isRegisterMode ? 'bg-indigo-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}>เข้าสู่ระบบ</button>
-                 <button onClick={() => setIsRegisterMode(true)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${isRegisterMode ? 'bg-indigo-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}>สมัครสมาชิก</button>
-              </div>
-
-              {!isRegisterMode ? (
-                /* Login Form */
-                <>
-                  <input placeholder="อีเมล (เช่น admin@stockpro.com)" className="w-full bg-white/10 border-0 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-400/50 focus:bg-white/20 outline-none transition-all" value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} />
-                  <input type="password" placeholder="รหัสผ่าน" className="w-full bg-white/10 border-0 rounded-xl px-4 py-3 text-sm text-white placeholder-green-200/50 focus:bg-white/20 outline-none transition-all" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} />
-                  {loginError && <p className="text-red-400 text-xs text-center font-bold bg-red-900/30 py-1 rounded">{loginError}</p>}
-                  <button onClick={handleLogin} className="w-full bg-indigo-500 text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-transform hover:bg-indigo-400">เข้าสู่ระบบ</button>
-                </>
+      <div className="space-y-5 pb-24 animate-fade-in-slide">
+        {/* Profile: the single place that shows who you are, with one edit action */}
+        <GlassCard strong className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-brand-100 text-brand-600 ring-4 ring-white shadow-glass overflow-hidden flex items-center justify-center font-black text-2xl shrink-0">
+              {user.photoURL ? (
+                <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
               ) : (
-                /* Register Form */
-                <>
-                  <input placeholder="ชื่อพนักงาน / ชื่อเล่น" className="w-full bg-white/10 border-0 rounded-xl px-4 py-3 text-sm text-white placeholder-green-200/50 focus:bg-white/20 outline-none transition-all" value={registerForm.name} onChange={e => setRegisterForm({...registerForm, name: e.target.value})} />
-                  <input placeholder="อีเมล" className="w-full bg-white/10 border-0 rounded-xl px-4 py-3 text-sm text-white placeholder-green-200/50 focus:bg-white/20 outline-none transition-all" value={registerForm.email} onChange={e => setRegisterForm({...registerForm, email: e.target.value})} />
-                  <input type="password" placeholder="รหัสผ่าน (6 ตัวขึ้นไป)" className="w-full bg-white/10 border-0 rounded-xl px-4 py-3 text-sm text-white placeholder-green-200/50 focus:bg-white/20 outline-none transition-all" value={registerForm.password} onChange={e => setRegisterForm({...registerForm, password: e.target.value})} />
-                  <input type="password" placeholder="ยืนยันรหัสผ่าน" className="w-full bg-white/10 border-0 rounded-xl px-4 py-3 text-sm text-white placeholder-green-200/50 focus:bg-white/20 outline-none transition-all" value={registerForm.confirmPassword} onChange={e => setRegisterForm({...registerForm, confirmPassword: e.target.value})} />
-                  
-                  {registerError && <p className="text-red-400 text-xs text-center font-bold bg-red-900/30 py-1 rounded">{registerError}</p>}
-                  
-                  <button onClick={handleRegister} className="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-transform hover:bg-green-500 border border-green-500">สมัครสมาชิก</button>
-                  <p className="text-[10px] text-yellow-300/90 text-center mt-2 bg-yellow-900/30 py-1.5 px-2 rounded-lg">⚠️ สมัครแล้วต้องรอแอดมินอนุมัติก่อนจึงจะเข้าใช้งานได้</p>
-                </>
+                user.name?.charAt(0) || 'U'
               )}
             </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-black text-lg text-ink truncate">
+                {user.name}
+                {user.nickname && <span className="font-semibold text-ink-muted"> ({user.nickname})</span>}
+              </h3>
+              <p className="text-sm text-ink-muted truncate">{user.email}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <Badge tone={isUserAdmin ? 'brand' : 'neutral'} icon={isUserAdmin ? Crown : User}>{isUserAdmin ? 'ผู้ดูแลระบบ' : 'พนักงาน'}</Badge>
+                {user.position && <Badge tone="neutral" icon={Briefcase}>{user.position}</Badge>}
+                {user.department && <Badge tone="neutral" icon={Building2}>{user.department}</Badge>}
+              </div>
+            </div>
           </div>
+          {user.phone && (
+            <p className="mt-4 text-sm text-ink-muted flex items-center gap-2"><Phone size={14} className="text-brand-400" /> {user.phone}</p>
+          )}
+          {!(user.name || '').trim().includes(' ') && (
+            <p className="mt-4 text-sm text-warning-700 bg-warning-50 border border-warning-100 rounded-control px-3 py-2">
+              ยังไม่ได้ระบุชื่อ-นามสกุลจริง ซึ่งต้องใช้พิมพ์ในใบลาและเอกสาร
+            </p>
+          )}
+          <Button variant="secondary" icon={Pencil} block className="mt-4" onClick={openProfileEdit}>
+            แก้ไขโปรไฟล์
+          </Button>
+        </GlassCard>
+
+        {/* Admin: pending sign-ups need action, so they come first */}
+        {isUserAdmin && pendingUsers.length > 0 && (
+          <section>
+            <SectionHeader title={`คำขอสมัครสมาชิก (${pendingUsers.length})`} />
+            <GlassCard className="divide-y divide-white/70 overflow-hidden">
+              {pendingUsers.map(u => (
+                <div key={u.id} className="p-3.5 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-warning-50 text-warning-700 font-bold flex items-center justify-center overflow-hidden shrink-0">
+                    {u.photoURL ? <img src={u.photoURL} alt={u.name} className="w-full h-full object-cover" /> : (u.name?.charAt(0) || 'U').toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-bold text-ink text-sm truncate">{u.name}</p>
+                      {u.provider && <Badge tone="neutral">{providerLabel(u.provider)}</Badge>}
+                    </div>
+                    <p className="text-xs text-ink-muted truncate">{u.email}</p>
+                  </div>
+                  <button onClick={() => handleRejectUser(u)} className="w-10 h-10 rounded-control text-danger-600 hover:bg-danger-50 flex items-center justify-center shrink-0" aria-label={`ปฏิเสธ ${u.name}`}>
+                    <X size={18}/>
+                  </button>
+                  <Button size="sm" icon={Check} onClick={() => openApproveModal(u)} className="shrink-0">อนุมัติ</Button>
+                </div>
+              ))}
+            </GlassCard>
+          </section>
         )}
+
+        <section>
+          <SectionHeader title="บัญชีและระบบ" />
+          <GlassCard className="divide-y divide-white/70 overflow-hidden">
+            {isUserAdmin && (
+              <>
+                <ListRow
+                  icon={History}
+                  label="ประวัติการอนุมัติสมาชิก"
+                  description="ใครอนุมัติใคร และให้ตำแหน่งอะไร"
+                  onClick={() => setShowHistory(prev => !prev)}
+                  trailing={
+                    <span className="flex items-center gap-2 shrink-0">
+                      <Badge>{approvalHistory.length}</Badge>
+                      <ChevronDown size={16} className={`text-ink-subtle transition-transform duration-200 ${showHistory ? 'rotate-180' : ''}`} />
+                    </span>
+                  }
+                />
+                {showHistory && (
+                  <div className="px-4 py-3 space-y-2 max-h-80 overflow-y-auto bg-white/40">
+                    {approvalHistory.length === 0 ? (
+                      <p className="text-center py-6 text-sm text-ink-subtle">ยังไม่มีประวัติ</p>
+                    ) : (
+                      approvalHistory.map((item, idx) => (
+                        <div key={item.id || idx} className="bg-white/80 p-3 rounded-control flex justify-between items-start gap-3">
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-sm text-ink">{item.userName}</span>
+                              <Badge tone={item.action === 'approved' ? 'success' : 'danger'}>{item.action === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ'}</Badge>
+                            </div>
+                            <p className="text-xs text-ink-muted truncate">{item.userEmail}</p>
+                            {item.action === 'approved' && (
+                              <p className="text-xs text-ink-muted">{item.position || 'พนักงานทั่วไป'} · {item.role === 'admin' ? 'ผู้ดูแลระบบ' : 'พนักงาน'}</p>
+                            )}
+                          </div>
+                          <div className="text-right text-xs text-ink-subtle whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1"><Clock size={12}/> {formatDate(item.timestamp)}</div>
+                            <div className="mt-1">โดย {item.approvedBy || 'Admin'}</div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+            {isUserAdmin && onToggleStockOnlyMode && (
+              <ListRow
+                icon={Boxes}
+                label="โหมดเฉพาะสต็อก"
+                description="ซ่อนเข้า-ออกงาน/ลา และรายการงานประจำวัน สำหรับทุกคนในร้าน"
+                onClick={() => onToggleStockOnlyMode(!stockOnlyMode)}
+                trailing={
+                  <span role="switch" aria-checked={stockOnlyMode} className={`relative w-12 h-7 rounded-full shrink-0 transition-colors ${stockOnlyMode ? 'bg-brand-500' : 'bg-ink-subtle/30'}`}>
+                    <span className={`absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-[left] duration-150 ${stockOnlyMode ? 'left-6' : 'left-1'}`} />
+                  </span>
+                }
+              />
+            )}
+            {canPreviewAsStaff && onPreviewAsStaff && (
+              <ListRow
+                icon={Eye}
+                label="ดูแบบพนักงาน"
+                description="ตรวจหน้าจอตามที่พนักงานเห็น (เฉพาะตอนรันในเครื่อง)"
+                onClick={onPreviewAsStaff}
+              />
+            )}
+            <ListRow icon={Smartphone} label="เกี่ยวกับแอป" description="StockPro · ระบบคลังสินค้าและบุคลากร" trailing={<Badge tone="neutral">v2.2</Badge>} />
+          </GlassCard>
+        </section>
+
+        <Button variant="danger-ghost" icon={LogOut} block onClick={handleLogout}>
+          ออกจากระบบ
+        </Button>
 
         {/* --- MODAL ตอบรับอนุมัติสมาชิก และระบุตำแหน่ง --- */}
         {userToApprove && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-6 transform transition-all animate-scale-in border-4 border-green-100">
-              <div className="flex justify-between items-center mb-4 border-b pb-3">
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <ShieldCheck size={24} className="text-green-600" /> อนุมัติสมาชิก & ระบุตำแหน่ง
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm animate-fade-in">
+            <div className="glass-strong w-full max-w-md rounded-card p-6 animate-scale-in">
+              <div className="flex justify-between items-center mb-4 pb-3 border-b border-brand-100">
+                <h3 className="text-lg font-bold text-ink flex items-center gap-2">
+                  <ShieldCheck size={22} className="text-brand-500" /> อนุมัติสมาชิก
                 </h3>
-                <button onClick={() => setUserToApprove(null)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setUserToApprove(null)} className="w-9 h-9 rounded-control flex items-center justify-center text-ink-subtle hover:bg-white/70" aria-label="ปิด">
                   <X size={20} />
                 </button>
               </div>
 
               <div className="space-y-4">
                 {/* ข้อมูลผู้สมัคร */}
-                <div className="bg-green-50 p-3.5 rounded-2xl border border-green-200">
-                  <p className="text-xs font-bold text-green-800">ผู้ขอสมัครใช้งาน:</p>
-                  <p className="text-base font-black text-gray-800 mt-0.5">{userToApprove.name}</p>
-                  <p className="text-xs text-gray-500">{userToApprove.email}</p>
+                <div className="bg-brand-50/70 p-3.5 rounded-control">
+                  <p className="text-xs font-bold text-brand-700">ผู้ขอสมัครใช้งาน</p>
+                  <p className="text-base font-black text-ink mt-0.5">{userToApprove.name}</p>
+                  <p className="text-sm text-ink-muted">{userToApprove.email}</p>
                 </div>
 
                 {/* เลือกตำแหน่ง */}
                 <div>
-                  <label className="text-xs font-bold text-gray-700 flex items-center gap-1 mb-2">
-                    <Briefcase size={14} className="text-green-600" /> เลือกตำแหน่งงาน:
+                  <label className="text-sm font-bold text-ink flex items-center gap-1.5 mb-2">
+                    <Briefcase size={15} className="text-brand-500" /> ตำแหน่งงาน
                   </label>
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     {PRESET_POSITIONS.map(p => (
@@ -425,14 +317,13 @@ export default function TabMenu({
                         key={p.label}
                         type="button"
                         onClick={() => { setSelectedPosition(p.label); setCustomPosition(''); }}
-                        className={`p-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all ${
+                        className={`min-h-[44px] px-3 rounded-control border text-sm font-bold text-left transition-colors ${
                           (selectedPosition === p.label && !customPosition)
-                            ? 'bg-green-700 text-yellow-300 border-green-800 shadow-md scale-[1.02]'
-                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+                            ? 'bg-brand-500 text-white border-brand-500'
+                            : 'bg-white/70 text-ink border-white hover:bg-white'
                         }`}
                       >
-                        <span>{p.emoji}</span>
-                        <span>{p.label}</span>
+                        {p.label}
                       </button>
                     ))}
                   </div>
@@ -443,53 +334,43 @@ export default function TabMenu({
                     placeholder="หรือระบุตำแหน่งอื่นๆ..."
                     value={customPosition}
                     onChange={(e) => setCustomPosition(e.target.value)}
-                    className="w-full border border-gray-200 bg-gray-50 rounded-xl p-3 text-xs focus:bg-white focus:ring-2 focus:ring-green-200 outline-none"
+                    className="w-full border border-white bg-white/70 rounded-control px-3 h-11 text-sm focus:bg-white focus:ring-2 focus:ring-brand-200 outline-none"
                   />
                 </div>
 
                 {/* เลือกสิทธิ์ (Role) */}
                 <div>
-                  <label className="text-xs font-bold text-gray-700 mb-1.5 block">สิทธิ์การเข้าถึงระบบ:</label>
+                  <label className="text-sm font-bold text-ink mb-2 block">สิทธิ์การเข้าถึงระบบ</label>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setSelectedRole('staff')}
-                      className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                      className={`flex-1 h-11 rounded-control border text-sm font-bold transition-colors ${
                         selectedRole === 'staff'
-                          ? 'bg-blue-600 text-white border-blue-700 shadow-md'
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                          ? 'bg-brand-500 text-white border-brand-500'
+                          : 'bg-white/70 text-ink-muted border-white'
                       }`}
                     >
-                      👤 พนักงาน (Staff)
+                      พนักงาน
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelectedRole('admin')}
-                      className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                      className={`flex-1 h-11 rounded-control border text-sm font-bold transition-colors ${
                         selectedRole === 'admin'
-                          ? 'bg-green-800 text-yellow-300 border-green-900 shadow-md'
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
+                          ? 'bg-brand-500 text-white border-brand-500'
+                          : 'bg-white/70 text-ink-muted border-white'
                       }`}
                     >
-                      👑 ผู้ดูแลระบบ (Admin)
+                      ผู้ดูแลระบบ
                     </button>
                   </div>
                 </div>
 
                 {/* ปุ่ม Action */}
                 <div className="flex gap-3 pt-3">
-                  <button
-                    onClick={() => setUserToApprove(null)}
-                    className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold text-xs hover:bg-gray-200"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    onClick={confirmApprove}
-                    className="flex-[2] bg-green-700 text-white py-3 rounded-xl font-bold text-xs shadow-lg hover:bg-green-800 active:scale-95 transition-transform flex items-center justify-center gap-1.5"
-                  >
-                    <Check size={16} /> ยืนยันการอนุมัติ
-                  </button>
+                  <Button variant="secondary" className="flex-1" onClick={() => setUserToApprove(null)}>ยกเลิก</Button>
+                  <Button icon={Check} className="flex-[2]" onClick={confirmApprove}>ยืนยันการอนุมัติ</Button>
                 </div>
               </div>
             </div>
@@ -503,7 +384,7 @@ export default function TabMenu({
               {/* Pinned Header */}
               <div className="profile-modal-header">
                 <div className="profile-modal-header-info">
-                  <h3>✏️ แก้ไขโปรไฟล์</h3>
+                  <h3>แก้ไขโปรไฟล์</h3>
                   <p>เปลี่ยนข้อมูลส่วนตัวและอัปโหลดรูปประจำตัว</p>
                 </div>
                 <button
@@ -556,7 +437,7 @@ export default function TabMenu({
 
                   <div className="profile-form-group">
                     <label className="profile-form-label">
-                      <User size={14} className="text-green-600" /> ชื่อจริง - นามสกุล (สำหรับพิมพ์ในเอกสาร) <span className="text-red-500">*</span>
+                      <User size={14} className="text-brand-500" /> ชื่อจริง - นามสกุล (สำหรับพิมพ์ในเอกสาร) <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -566,12 +447,12 @@ export default function TabMenu({
                       placeholder="เช่น สมชาย ใจดี"
                       maxLength={70}
                     />
-                    <p className="text-[10px] text-gray-400 mt-1">ต้องระบุทั้งชื่อและนามสกุลจริง เพื่อใช้พิมพ์ลงในใบลาและเอกสารราชการ/บริษัท</p>
+                    <p className="text-xs text-ink-subtle mt-1">ต้องระบุทั้งชื่อและนามสกุลจริง เพื่อใช้พิมพ์ลงในใบลาและเอกสารราชการ/บริษัท</p>
                   </div>
 
                   <div className="profile-form-group">
                     <label className="profile-form-label">
-                      <User size={14} className="text-indigo-500" /> ชื่อเล่น
+                      <User size={14} className="text-brand-500" /> ชื่อเล่น
                     </label>
                     <input
                       type="text"
@@ -585,7 +466,7 @@ export default function TabMenu({
 
                   <div className="profile-form-group">
                     <label className="profile-form-label">
-                      <Briefcase size={14} className="text-blue-500" /> แผนก / ฝ่ายสังกัด
+                      <Briefcase size={14} className="text-brand-500" /> แผนก / ฝ่ายสังกัด
                     </label>
                     <input
                       type="text"
@@ -599,7 +480,7 @@ export default function TabMenu({
 
                   <div className="profile-form-group">
                     <label className="profile-form-label">
-                      <Smartphone size={14} className="text-emerald-500" /> เบอร์โทรศัพท์ติดต่อ
+                      <Smartphone size={14} className="text-brand-500" /> เบอร์โทรศัพท์ติดต่อ
                     </label>
                     <input
                       type="tel"

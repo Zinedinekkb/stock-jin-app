@@ -1,24 +1,28 @@
 // app/components/ConfirmModal.js
 import React from 'react';
 import { AlertTriangle, Info } from 'lucide-react';
+import { Button } from './ui';
 
-export default function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, type = 'danger' }) {
+export default function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, type = 'danger', busy = false }) {
   if (!isOpen) return null;
+  const isDanger = type === 'danger';
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className={`bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden transform transition-all scale-100 border-2 ${type === 'danger' ? 'border-red-100' : 'border-green-100'}`}>
-        <div className={`p-4 flex items-center gap-3 ${type === 'danger' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-800'}`}>
-          {type === 'danger' ? <AlertTriangle size={24} /> : <Info size={24} />}
-          <h3 className="text-lg font-bold">{title}</h3>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <div className="glass-strong rounded-card w-full max-w-sm overflow-hidden animate-scale-in">
+        <div className="p-5 pb-0 flex items-start gap-3">
+          <span className={`w-10 h-10 rounded-control flex items-center justify-center shrink-0 ${isDanger ? 'bg-danger-50 text-danger-600' : 'bg-brand-50 text-brand-500'}`}>
+            {isDanger ? <AlertTriangle size={20} /> : <Info size={20} />}
+          </span>
+          <div className="min-w-0 pt-1.5">
+            <h3 id="confirm-title" className="text-base font-bold text-ink">{title}</h3>
+            <p className="text-sm text-ink-muted leading-relaxed whitespace-pre-line mt-1.5">{message}</p>
+          </div>
         </div>
-        <div className="p-6">
-          <p className="text-gray-700 text-sm leading-relaxed">{message}</p>
-        </div>
-        <div className="p-4 bg-gray-50 flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl font-bold text-gray-500 hover:bg-gray-200 transition-colors">ยกเลิก</button>
-          <button onClick={onConfirm} className={`flex-1 py-2.5 rounded-xl font-bold text-white shadow-lg ${type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-700 hover:bg-green-800'}`}>
-            ยืนยัน
-          </button>
+        <div className="p-5 flex gap-2.5">
+          <Button variant="secondary" className="flex-1" onClick={onCancel} disabled={busy}>ยกเลิก</Button>
+          <Button variant={isDanger ? 'danger' : 'primary'} className="flex-1" onClick={onConfirm} loading={busy}>
+            {busy ? 'กำลังดำเนินการ' : 'ยืนยัน'}
+          </Button>
         </div>
       </div>
     </div>

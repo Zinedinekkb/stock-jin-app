@@ -6,6 +6,8 @@ import {
   Image, File, Link2, X, ChevronDown, Download, Copy, Star, Eye
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
+import BusinessDocModal from './BusinessDocModal';
+import { BUSINESS_DOC_TYPES } from '../utils/businessDocTemplates';
 import {
   collection, addDoc, onSnapshot, deleteDoc, doc,
   query, orderBy, serverTimestamp, updateDoc
@@ -15,6 +17,8 @@ const DOC_CATEGORIES = [
   { value: 'all', label: 'ทั้งหมด', icon: '📁' },
   { value: 'order', label: 'ใบรับเข้า / สั่งของ', icon: '📥' },
   { value: 'receipt', label: 'ใบเบิก / ใบเสร็จ', icon: '📤' },
+  { value: 'sales', label: 'ใบเสนอราคา / ใบแจ้งหนี้', icon: '🧾' },
+  { value: 'payment', label: 'ใบสำคัญจ่าย / สำรองจ่าย', icon: '💸' },
   { value: 'leave', label: 'ใบลา / คำขอ', icon: '📋' },
   { value: 'contract', label: 'สัญญา', icon: '📝' },
   { value: 'image', label: 'รูปภาพ', icon: '🖼️' },
@@ -22,14 +26,19 @@ const DOC_CATEGORIES = [
 ];
 
 const getFileIcon = (url = '', type, name = '') => {
-  if (type === 'order' || name?.includes('ใบรับสินค้า') || name?.includes('GRN')) return <FileText size={20} className="text-emerald-600" />;
+  if (type === 'order' || name?.includes('ใบรับสินค้า') || name?.includes('GRN')) return <FileText size={20} className="text-success-600" />;
   if (type === 'receipt' || name?.includes('ใบเบิก') || name?.includes('GIS')) return <FileText size={20} className="text-rose-600" />;
+  if (type === 'sales') return <FileText size={20} className="text-blue-700" />;
+  if (type === 'payment') return <FileText size={20} className="text-amber-700" />;
   if (type === 'leave' || name?.includes('ใบขอลา') || name?.includes('ใบลา')) return <FileText size={20} className="text-purple-600" />;
   if (type === 'image') return <Image size={20} className="text-blue-500" />;
   if (url.includes('drive.google')) return <File size={20} className="text-yellow-600" />;
-  if (url.includes('line') || url.includes('chat')) return <Link2 size={20} className="text-green-600" />;
+  if (url.includes('line') || url.includes('chat')) return <Link2 size={20} className="text-success-600" />;
   return <FileText size={20} className="text-gray-500" />;
 };
+
+// Official documents carry a number like GRN-20261012-VFES; that is what people search and scan for
+const docNumberOf = (name = '') => (name.match(/(?:GRN|GIS|PO|QT|IV|RC|PV|AD)-\d{8}-[A-Z0-9]+/i) || [])[0] || '';
 
 const formatDate = (ts) => {
   if (!ts) return '';
@@ -48,6 +57,7 @@ export default function TabDocuments({ user }) {
   const [starredOnly, setStarredOnly] = useState(false);
   const [viewingDoc, setViewingDoc] = useState(null);
 
+  const [docTemplate, setDocTemplate] = useState(null); // business document type being created
   const showNote = (msg) => { setNotification(msg); setTimeout(() => setNotification(''), 2500); };
 
   useEffect(() => {
@@ -190,11 +200,45 @@ export default function TabDocuments({ user }) {
               onClick={() => setActiveCategory(cat.value)}
               className={`docs-cat-btn ${activeCategory === cat.value ? 'active' : ''}`}
             >
-              <span>{cat.icon}</span> {cat.label}
+              {cat.label}
             </button>
           ))}
         </div>
       </div>
+
+      {/* Create from a template: every business document the shop needs */}
+      <section className="mb-4">
+        <h3 className="text-xs font-bold uppercase tracking-wide text-ink-subtle px-1 mb-2">สร้างเอกสาร</h3>
+        <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
+          {BUSINESS_DOC_TYPES.map(dt => (
+            <button key={dt.key} onClick={() => setDocTemplate(dt.key)}
+              className="glass shrink-0 w-36 rounded-card p-2.5 text-left hover:bg-white/80 transition-colors">
+              {/* Mini A4 mockup */}
+              <span className="block bg-white rounded-md shadow-sm p-2 h-24 overflow-hidden">
+                <span className="flex justify-between items-start">
+                  <span className="block w-10 h-1.5 rounded bg-gray-200" />
+                  <span className="block w-8 h-2 rounded" style={{ background: dt.accent }} />
+                </span>
+                <span className="block h-0.5 my-1.5 rounded" style={{ background: dt.accent }} />
+                <span className="block w-14 h-1 rounded bg-gray-200" />
+                <span className="block mt-2 h-2 rounded-sm" style={{ background: dt.accent, opacity: 0.85 }} />
+                {[0, 1, 2].map(r => <span key={r} className="block mt-1 h-1 rounded bg-gray-100" />)}
+                <span className="flex justify-end mt-1.5"><span className="block w-10 h-2 rounded-sm" style={{ background: dt.accent }} /></span>
+              </span>
+              <span className="block mt-2 text-sm font-bold text-ink leading-tight">{dt.title}</span>
+              <span className="block text-xs text-ink-subtle leading-snug line-clamp-2 mt-0.5">{dt.desc}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <BusinessDocModal
+        isOpen={!!docTemplate}
+        initialType={docTemplate || 'PO'}
+        onClose={() => setDocTemplate(null)}
+        user={user}
+        showNotification={showNote}
+      />
 
       {/* Add Form */}
       {showAddForm && (
@@ -228,7 +272,7 @@ export default function TabDocuments({ user }) {
               className="hr-input"
             >
               {DOC_CATEGORIES.filter(c => c.value !== 'all').map(c => (
-                <option key={c.value} value={c.value}>{c.icon} {c.label}</option>
+                <option key={c.value} value={c.value}>{c.label}</option>
               ))}
             </select>
           </div>
@@ -243,7 +287,7 @@ export default function TabDocuments({ user }) {
             />
           </div>
           <button className="hr-submit-leave-btn" onClick={handleAdd} disabled={isSubmitting}>
-            {isSubmitting ? 'กำลังบันทึก...' : '💾 บันทึกเอกสาร'}
+            {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกเอกสาร'}
           </button>
         </div>
       )}
@@ -261,56 +305,40 @@ export default function TabDocuments({ user }) {
           <span>เมื่อมีการรับเข้าหรือเบิกออก เอกสาร PDF ทางการจะถูกเก็บลงที่นี่ให้อัตโนมัติ</span>
         </div>
       ) : (
-        <div className="docs-grid">
+        <div className="space-y-2">
           {filtered.map(item => {
             const cat = catInfo(item.category);
+            const iconBtn = 'w-9 h-9 rounded-control flex items-center justify-center text-ink-subtle hover:bg-white/80 transition-colors';
             return (
-              <div 
-                key={item.id} 
-                className="docs-card cursor-pointer hover:border-[#6355d8]/50 transition-all"
+              <div
+                key={item.id}
+                className="glass rounded-card pl-3 pr-1.5 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-white/80 transition-colors"
                 onClick={() => handleOpenDoc(item)}
               >
-                <div className="docs-card-top" onClick={e => e.stopPropagation()}>
-                  <div className="docs-file-icon">{getFileIcon(item.url, item.category, item.name)}</div>
-                  <div className="docs-card-actions">
-                    <button
-                      className={`docs-action-btn ${item.starred ? 'starred' : ''}`}
-                      onClick={() => handleToggleStar(item)}
-                      title="ปักหมุด"
-                    >
-                      <Star size={14} fill={item.starred ? '#f59e0b' : 'none'} color={item.starred ? '#f59e0b' : '#d1d5db'} />
+                <div className="w-10 h-10 rounded-control bg-white/80 flex items-center justify-center shrink-0">{getFileIcon(item.url, item.category, item.name)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-ink truncate">{docNumberOf(item.name) || (item.name || '').replace(/\.pdf$/i, '').replace(/_/g, ' ')}</p>
+                  <p className="text-xs text-ink-subtle truncate mt-0.5">{docNumberOf(item.name) ? `${cat.label} · ` : ''}{item.createdBy} · {formatDate(item.createdAt)}</p>
+                </div>
+                <div className="flex items-center shrink-0" onClick={e => e.stopPropagation()}>
+                  <button className={iconBtn} onClick={() => handleToggleStar(item)} aria-label={item.starred ? 'เลิกปักหมุด' : 'ปักหมุด'} aria-pressed={!!item.starred}>
+                    <Star size={17} fill={item.starred ? '#f59e0b' : 'none'} color={item.starred ? '#f59e0b' : 'currentColor'} />
+                  </button>
+                  {item.url && (
+                    <button className={`${iconBtn} hover:text-brand-600`} onClick={() => handleDownloadDoc(item)} aria-label="ดาวน์โหลด">
+                      <Download size={17} />
                     </button>
-                    {item.url && (
-                      <button className="docs-action-btn" onClick={() => handleDownloadDoc(item)} title="ดาวน์โหลด">
-                        <Download size={14} className="text-indigo-600" />
-                      </button>
-                    )}
-                    {item.url && (
-                      <button className="docs-action-btn" onClick={() => handleCopyLink(item.url)} title="คัดลอกลิงก์">
-                        <Copy size={14} />
-                      </button>
-                    )}
-                    {item.url && (
-                      <button className="docs-action-btn" onClick={() => handleOpenDoc(item)} title="เปิดดูเอกสาร">
-                        <Eye size={14} />
-                      </button>
-                    )}
-                    {user?.role === 'admin' && (
-                      <button className="docs-action-btn docs-delete-btn" onClick={() => handleDelete(item.id)} title="ลบ">
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="docs-card-body">
-                  <p className="docs-card-name">{item.name}</p>
-                  {item.note && <p className="docs-card-note">{item.note}</p>}
-                </div>
-
-                <div className="docs-card-footer">
-                  <span className="docs-cat-tag">{cat.icon} {cat.label}</span>
-                  <span className="docs-card-meta">{item.createdBy} · {formatDate(item.createdAt)}</span>
+                  )}
+                  {item.url && (
+                    <button className={`hidden lg:flex ${iconBtn} hover:text-ink`} onClick={() => handleCopyLink(item.url)} aria-label="คัดลอกลิงก์">
+                      <Copy size={17} />
+                    </button>
+                  )}
+                  {user?.role === 'admin' && (
+                    <button className={`${iconBtn} hover:text-danger-600 hover:bg-danger-50`} onClick={() => handleDelete(item.id)} aria-label="ลบเอกสาร">
+                      <Trash2 size={17} />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -320,17 +348,17 @@ export default function TabDocuments({ user }) {
 
       {/* In-App PDF / Document Viewer Modal */}
       {viewingDoc && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[92vh] flex flex-col overflow-hidden animate-scale-in border border-gray-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-ink/40 backdrop-blur-sm animate-fade-in">
+          <div className="glass-strong rounded-card w-full max-w-4xl h-[92vh] flex flex-col overflow-hidden animate-scale-in">
             {/* Modal Header */}
             <div className="p-3.5 sm:p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/90">
               <div className="flex items-center gap-2.5 min-w-0 pr-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-[#6355d8] flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-brand-500 flex items-center justify-center shrink-0">
                   <FileText size={20} />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-bold text-sm text-gray-800 truncate">{viewingDoc.name}</h3>
-                  <p className="text-[11px] text-gray-500 truncate">{viewingDoc.note || 'เอกสารทางการคลังพัสดุ'}</p>
+                  <p className="text-xs text-gray-500 truncate">{viewingDoc.note || 'เอกสารทางการคลังพัสดุ'}</p>
                 </div>
               </div>
 
@@ -338,7 +366,7 @@ export default function TabDocuments({ user }) {
                 <button
                   type="button"
                   onClick={() => handleDownloadDoc(viewingDoc)}
-                  className="px-3.5 py-1.5 bg-[#6355d8] hover:bg-[#5244c9] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                  className="px-3.5 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
                 >
                   <Download size={14} /> <span>ดาวน์โหลด</span>
                 </button>

@@ -7,8 +7,10 @@ import {
   ChevronRight, ChevronDown, Flame, Sparkles, ShieldCheck, 
   ArrowRight, RefreshCw, Briefcase, Package, ArrowRightLeft, 
   ClipboardList, MessageSquare, Loader2, PlayCircle, Eye,
-  BarChart3, CheckSquare, Layers
+  BarChart3, CheckSquare, Layers, UserPlus, ListChecks
 } from 'lucide-react';
+import { GlassCard, Button, Badge, SectionHeader } from './ui';
+import { getTaskSteps } from '../services/taskSteps';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { 
@@ -26,7 +28,9 @@ import {
   isTaskVisibleToUser,
   getUserCluster,
   POSITION_TABS,
-  DEFAULT_ROUTINE_TEMPLATES 
+  DEFAULT_ROUTINE_TEMPLATES ,
+  toggleTaskStep,
+  getDoneSteps
 } from '../services/taskService';
 import { isAdmin } from '../utils/permissions';
 import CreateTaskModal from './CreateTaskModal';
@@ -72,6 +76,7 @@ export default function DailyTaskDashboard({
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'routine' | 'assigned' | 'urgent' | 'completed'
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('tasks'); // 'tasks' | 'team'
+  const [expandedTaskId, setExpandedTaskId] = useState(null); // task whose instructions are open
   
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -296,6 +301,16 @@ export default function DailyTaskDashboard({
     }
   };
 
+  // Tick one instruction step; the last step completes the task
+  const handleToggleStep = async (task, stepIndex, totalSteps) => {
+    try {
+      const { allDone } = await toggleTaskStep(task, stepIndex, totalSteps, user);
+      if (allDone) showNotification('ทำครบทุกขั้นตอน งานนี้เสร็จแล้ว');
+    } catch (err) {
+      console.error('Failed to toggle step:', err);
+    }
+  };
+
   // Change status to 'in_progress'
   const handleSetInProgress = async (task) => {
     try {
@@ -332,296 +347,147 @@ export default function DailyTaskDashboard({
     }
   };
 
+  // "Needs attention" items for admins: only rows with something to do are emphasised
+  const attentionItems = isUserAdmin ? [
+    { key: 'tx', icon: ClipboardList, label: 'เบิก/รับรอยืนยัน', count: pendingTxCount, unit: 'รายการ', tone: 'brand', onClick: () => setActiveTab('status') },
+    { key: 'leave', icon: Calendar, label: 'คำขอลารอพิจารณา', count: pendingLeaves.length, unit: 'ใบ', tone: 'warning', onClick: handlePendingLeavesClick },
+    { key: 'stock', icon: AlertTriangle, label: 'สินค้าใกล้หมด', count: lowStockCount, unit: 'ชนิด', tone: 'danger', onClick: () => setActiveTab('stock') },
+    { key: 'users', icon: UserPlus, label: 'ผู้ใช้รออนุมัติ', count: pendingUsers.length, unit: 'คน', tone: 'warning', onClick: () => setActiveTab('users') },
+  ] : [];
+  const TONE = {
+    brand: 'bg-brand-50 text-brand-600',
+    warning: 'bg-warning-50 text-warning-700',
+    danger: 'bg-danger-50 text-danger-600',
+  };
+  const STATUS_FILTERS = [
+    { key: 'all', label: 'ทั้งหมด' },
+    { key: 'pending', label: 'ยังไม่เสร็จ' },
+    { key: 'urgent', label: 'ด่วน' },
+    { key: 'completed', label: 'เสร็จแล้ว' },
+  ];
+  const chipClass = (active) => `h-9 px-3.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors shrink-0 flex items-center gap-1.5 ${active ? 'bg-brand-500 text-white' : 'bg-white/70 text-ink-muted hover:bg-white'}`;
+
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      {/* ========================================================================= */}
-      {/* 1. HERO GREETING BANNER */}
-      {/* ========================================================================= */}
-      <div className="smart-hero-banner relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-[#4638a8] text-white p-6 sm:p-7 rounded-3xl shadow-sm border border-slate-800">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-white/15 backdrop-blur-md rounded-full text-[11px] font-bold tracking-wide text-white border border-white/20">
-                {isUserAdmin ? '👑 ผู้ดูแลระบบ (Admin)' : 'พนักงานประจำ'}
-              </span>
-              <span className="px-2.5 py-0.5 bg-purple-500/25 backdrop-blur-md rounded-full text-[11px] font-medium text-purple-200 border border-purple-300/20">
-                {user?.position || (isUserAdmin ? 'ผู้จัดการ / Admin' : 'พนักงานทั่วไป')}
-              </span>
+    <div className="space-y-5 animate-fade-in pb-10">
+      {/* 1. Greeting + today's progress + one main action */}
+      <GlassCard strong className="p-5">
+        <p className="text-sm text-ink-muted">{thaiDateStr}</p>
+        <h1 className="text-xl sm:text-2xl font-black text-ink tracking-tight mt-0.5">สวัสดี {user?.name?.split(' ')[0] || 'ทีมงาน'}</h1>
+        <p className="text-sm text-ink-muted">{user?.position || (isUserAdmin ? 'ผู้ดูแลระบบ' : 'พนักงาน')}</p>
+
+        <div className="mt-4 flex items-end justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-ink tabular-nums">{stats.completed}<span className="text-lg text-ink-subtle">/{stats.total}</span></span>
+              <span className="text-sm font-semibold text-ink-muted">งานวันนี้เสร็จแล้ว</span>
             </div>
-            
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              <span>สวัสดีคุณ {user?.name || 'ทีมงาน StockJin'}</span>
-              <span>👋</span>
-            </h1>
-            
-            <p className="text-xs text-slate-300 font-normal">
-              📅 {thaiDateStr} &bull; สรุปภารกิจประจำวันและรายการงานที่ต้องดำเนินการ
+            <div className="w-full h-2 bg-brand-100 rounded-full overflow-hidden mt-2" role="progressbar" aria-valuenow={stats.percent} aria-valuemin={0} aria-valuemax={100}>
+              <div className="h-full bg-brand-500 rounded-full transition-all duration-500" style={{ width: `${stats.percent}%` }} />
+            </div>
+          </div>
+          {stats.urgentPending > 0 && <Badge tone="danger" icon={Flame}>ด่วน {stats.urgentPending}</Badge>}
+        </div>
+
+        <Button
+          icon={Plus}
+          block
+          className="mt-4 sm:w-auto"
+          onClick={() => { setEditingTask(null); setIsCreateModalOpen(true); }}
+        >
+          {isUserAdmin ? 'สั่งงานใหม่' : 'เพิ่มงานของฉัน'}
+        </Button>
+      </GlassCard>
+
+      {/* 2. Admin: what needs attention, in one compact list */}
+      {isUserAdmin && (
+        <section>
+          <SectionHeader
+            title="ต้องจัดการ"
+            action={
+              <button onClick={() => setViewMode(viewMode === 'tasks' ? 'team' : 'tasks')} className="text-sm font-bold text-brand-600 hover:underline flex items-center gap-1">
+                <Users size={15} /> {viewMode === 'team' ? 'กลับไปดูรายการงาน' : 'ดูงานรายคน'}
+              </button>
+            }
+          />
+          <GlassCard className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-white/70 overflow-hidden">
+            {attentionItems.map(({ key, icon: Icon, label, count, unit, tone, onClick }) => (
+              <button key={key} onClick={onClick} className="p-3.5 text-left hover:bg-white/60 transition-colors min-h-[88px] flex flex-col justify-between">
+                <span className={`w-9 h-9 rounded-control flex items-center justify-center ${count > 0 ? TONE[tone] : 'bg-white/70 text-ink-subtle'}`}>
+                  <Icon size={18} />
+                </span>
+                <span className="mt-2">
+                  <span className={`text-xl font-black tabular-nums ${count > 0 ? 'text-ink' : 'text-ink-subtle'}`}>{count}</span>
+                  <span className="text-xs text-ink-subtle"> {unit}</span>
+                  <span className="block text-sm font-semibold text-ink-muted leading-tight">{label}</span>
+                </span>
+              </button>
+            ))}
+          </GlassCard>
+        </section>
+      )}
+
+      {/* 3. Empty state: no tasks yet */}
+      {tasks.length === 0 && !loading && (
+        <GlassCard className="p-5 flex flex-col lg:flex-row items-center justify-between gap-4 text-center lg:text-left">
+          <div>
+            <h4 className="text-base font-bold text-ink">ยังไม่มีรายการงาน</h4>
+            <p className="text-sm text-ink-muted mt-0.5 max-w-md">
+              {isUserAdmin
+                ? 'โหลดชุดงานประจำวันเริ่มต้น 24 รายการ (สต็อก ครัว การเงิน จัดส่ง บริหาร หน้าร้าน) เพื่อเริ่มใช้ได้ทันที'
+                : 'ยังไม่มีงานที่ได้รับมอบหมาย เพิ่มงานของคุณเองได้เลย'}
             </p>
           </div>
-
-          {/* Quick Action Button & Summary Card */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-2.5 px-4 min-w-[140px]">
-              <div className="flex items-center justify-between text-[11px] text-purple-200 font-medium">
-                <span>ความคืบหน้า</span>
-                <span className="font-bold text-white">{stats.percent}%</span>
-              </div>
-              <div className="text-base font-bold text-white mt-0.5">
-                {stats.completed}/{stats.total} <span className="text-[11px] font-normal text-purple-200">งาน</span>
-              </div>
-              <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden mt-1.5">
-                <div 
-                  className="h-full bg-emerald-400 rounded-full transition-all duration-500" 
-                  style={{ width: `${stats.percent}%` }}
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                setEditingTask(null);
-                setIsCreateModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-white text-[#6355d8] hover:bg-purple-50 font-bold text-xs shadow-sm transition-all active:scale-95 cursor-pointer"
-            >
-              <Plus size={16} strokeWidth={2.5} />
-              <span>{isUserAdmin ? 'สั่งงานใหม่ / มอบหมาย' : 'เพิ่มบันทึกงานของฉัน'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Decorative subtle background glow */}
-        <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-purple-500/10 rounded-full blur-2xl pointer-events-none" />
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 2. ADMIN EXECUTIVE OPERATIONAL STRIP (FOR ADMIN / OWNER ONLY) */}
-      {/* ========================================================================= */}
-      {isUserAdmin && (
-        <div className="bg-white rounded-3xl p-5 border border-slate-100 shadow-xs space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-base">👔</span>
-              <h3 className="text-sm font-black text-slate-800">
-                ระบบจัดการสำหรับผู้บริหาร (Executive Fast-Track)
-              </h3>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setViewMode(viewMode === 'tasks' ? 'team' : 'tasks')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                  viewMode === 'team'
-                    ? 'bg-[#6355d8] text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <Users size={14} />
-                <span>{viewMode === 'team' ? 'ดูรายการงาน' : '👥 ตรวจสอบงานทีมงาน'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 4 Bottleneck Metric Cards with Direct Jumps */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Card 1: Pending Users */}
-            <button
-              onClick={() => setActiveTab('users')}
-              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xl">👥</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                  pendingUsers.length > 0 ? 'bg-amber-100 text-amber-700 animate-pulse' : 'bg-slate-200 text-slate-600'
-                }`}>
-                  {pendingUsers.length} คน
-                </span>
-              </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-[#6355d8]">
-                ผู้ใช้รออนุมัติ
-              </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">เปิดแท็บบัญชีผู้ใช้ →</div>
-            </button>
-
-            {/* Card 2: Pending Leaves */}
-            <button
-              onClick={handlePendingLeavesClick}
-              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group cursor-pointer"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xl">⏱️</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                  pendingLeaves.length > 0 ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-slate-200 text-slate-600'
-                }`}>
-                  {pendingLeaves.length} ใบ
-                </span>
-              </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-[#6355d8]">
-                คำขอลารอพิจารณา
-              </div>
-              <div className="text-[10px] text-purple-600 font-semibold mt-0.5">
-                {pendingLeaves.length > 0 ? '📄 คลิกตรวจเอกสาร & อนุมัติ →' : 'ไม่มีคำขอค้าง'}
-              </div>
-            </button>
-
-            {/* Card 3: Pending Transactions */}
-            <button
-              onClick={() => setActiveTab('status')}
-              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xl">📋</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                  pendingTxCount > 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-200 text-slate-600'
-                }`}>
-                  {pendingTxCount} รายการ
-                </span>
-              </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-[#6355d8]">
-                รายการเบิก/รับรอยืนยัน
-              </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">เปิดแท็บสถานะรายการ →</div>
-            </button>
-
-            {/* Card 4: Low Stock Alert */}
-            <button
-              onClick={() => setActiveTab('stock')}
-              className="p-3.5 rounded-2xl bg-slate-50 hover:bg-purple-50/70 border border-slate-200/80 hover:border-purple-200 text-left transition-all group"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xl">⚠️</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
-                  lowStockCount > 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
-                }`}>
-                  {lowStockCount} ชนิด
-                </span>
-              </div>
-              <div className="text-xs font-bold text-slate-800 mt-2 group-hover:text-[#6355d8]">
-                สินค้าใกล้หมดสต็อก
-              </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">เปิดคลังสินค้า →</div>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 3. SEED ROUTINE CHECKLIST PROMPT (When 0 tasks exist and Admin is logged in) */}
-      {/* ========================================================================= */}
-      {tasks.length === 0 && !loading && (
-        <div className="p-6 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-3xl flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4 text-center sm:text-left">
-            <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center text-2xl shrink-0">
-              ⚡
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-purple-950">
-                ยังไม่มีรายการงานในระบบ
-              </h4>
-              <p className="text-xs text-purple-700 mt-0.5 max-w-md">
-                {isUserAdmin 
-                  ? 'ต้องการโหลดชุดงานประจำวันเริ่มต้นสำหรับทุกตำแหน่งงาน (สต็อก, ครัว, การเงิน, จัดส่ง, บริหาร, หน้าร้าน 24 รายการ) หรือไม่?'
-                  : 'ยังไม่มีภารกิจที่ถูกมอบหมาย คุณสามารถคลิกเพิ่มงานส่วนตัวของคุณได้ทันที'}
-              </p>
-            </div>
-          </div>
           {isUserAdmin ? (
-            <button
-              onClick={handleSeedTemplates}
-              disabled={isSeeding}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all shrink-0 disabled:opacity-50"
-            >
-              {isSeeding ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-              <span>{isSeeding ? 'กำลังโหลดข้อมูล...' : '⚡ โหลดชุดงานประจำวันเริ่มต้น (24 รายการ)'}</span>
-            </button>
+            <Button icon={Sparkles} loading={isSeeding} onClick={handleSeedTemplates} className="shrink-0">
+              {isSeeding ? 'กำลังโหลด' : 'โหลดชุดงานเริ่มต้น'}
+            </Button>
           ) : (
-            <button
-              onClick={() => {
-                setEditingTask(null);
-                setIsCreateModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all shrink-0"
-            >
-              <Plus size={16} />
-              <span>เพิ่มงานของฉัน</span>
-            </button>
+            <Button icon={Plus} className="shrink-0" onClick={() => { setEditingTask(null); setIsCreateModalOpen(true); }}>เพิ่มงานของฉัน</Button>
           )}
-        </div>
+        </GlassCard>
       )}
 
-      {/* ========================================================================= */}
-      {/* 4. POSITION TABS & STATUS FILTER STRIP */}
-      {/* ========================================================================= */}
-      <div className="space-y-3">
-        {/* Row 1: Position Tabs (Strictly scoped: Staff only sees own + team tab; Admin sees all) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-          {visiblePositionTabs.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => handleSelectPosTab(tab.key)}
-              className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
-                selectedPosTab === tab.key
-                  ? 'bg-[#6355d8] text-white shadow-xs scale-[1.01]'
-                  : 'bg-white hover:bg-slate-50 text-slate-600 border border-slate-200/80 font-semibold'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              <span>{tab.label}</span>
-              {tab.key === 'my' && (
-                <span className={`ml-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold ${
-                  selectedPosTab === tab.key ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                }`}>
-                  {tasks.filter(t => isTaskVisibleToUser(user, t) && matchesUserPosition(user, t) && !isTaskDone(t, todayKey)).length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+      {/* 4. Filters: team chips, status chips, search */}
+      <div className="space-y-2.5">
+        {visiblePositionTabs.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            {visiblePositionTabs.map(tab => (
+              <button key={tab.key} onClick={() => handleSelectPosTab(tab.key)} className={chipClass(selectedPosTab === tab.key)}>
+                {tab.label}
+                {tab.key === 'my' && (
+                  <span className={selectedPosTab === tab.key ? 'opacity-80' : 'text-ink-subtle'}>
+                    {tasks.filter(t => isTaskVisibleToUser(user, t) && matchesUserPosition(user, t) && !isTaskDone(t, todayKey)).length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
 
-        {/* Row 2: Status Sub-Filter & Search Box */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/70 shadow-xs">
-          {/* Status Sub-Filters */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide text-xs font-semibold">
-            {[
-              { key: 'all', label: 'ทั้งหมด' },
-              { key: 'pending', label: '⏳ รอดำเนินการ' },
-              { key: 'urgent', label: '🔥 งานด่วน' },
-              { key: 'routine', label: '🔄 ประจำวัน' },
-              { key: 'assigned', label: '⚡ งานสั่งเสริม' },
-              { key: 'completed', label: '✅ เสร็จแล้ว' },
-            ].map(f => (
+        {/* Wraps instead of using sm: breakpoints, because the phone layout is a narrow column even on wide screens */}
+        <div className="flex flex-wrap gap-2.5">
+          <div className="glass flex p-1 rounded-2xl gap-1 overflow-x-auto scrollbar-hide max-w-full">
+            {STATUS_FILTERS.map(f => (
               <button
                 key={f.key}
                 onClick={() => setStatusFilter(f.key)}
-                className={`px-3 py-1.5 rounded-xl transition-all shrink-0 cursor-pointer ${
-                  statusFilter === f.key
-                    ? 'bg-[#6355d8]/10 text-[#6355d8] font-bold'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100/60'
-                }`}
+                className={`h-9 px-3.5 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${statusFilter === f.key ? 'bg-white text-brand-600 shadow-sm' : 'text-ink-muted hover:text-ink'}`}
               >
                 {f.label}
               </button>
             ))}
           </div>
-
-          {/* Search Box */}
-          <div className="relative min-w-[200px] max-w-xs">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <label className="relative flex-1 min-w-[200px]">
+            <span className="sr-only">ค้นหางาน</span>
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none" />
             <input
-              type="text"
+              type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ค้นหางาน, ผู้รับผิดชอบ..."
-              className="w-full pl-9 pr-8 py-1.5 text-xs font-medium rounded-xl border border-slate-200 focus:border-[#6355d8] outline-none text-slate-800 bg-slate-50/50"
+              placeholder="ค้นหางานหรือชื่อคน"
+              className="glass w-full h-11 pl-9 pr-3 text-sm rounded-control text-ink outline-none focus:ring-2 focus:ring-brand-200"
             />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
+          </label>
         </div>
       </div>
 
@@ -632,7 +498,7 @@ export default function DailyTaskDashboard({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
-              <Users size={16} className="text-[#6355d8]" />
+              <Users size={16} className="text-brand-500" />
               <span>ติดตามสถานะภารกิจทีมงานรายบุคคล ({usersList.length} คน)</span>
             </h3>
             <span className="text-xs text-slate-400 font-medium">คลิกที่พนักงานเพื่อดูกรองงานเฉพาะบุคคล</span>
@@ -657,7 +523,7 @@ export default function DailyTaskDashboard({
                     className="p-4 bg-white rounded-2xl border border-slate-100 hover:border-purple-300 shadow-xs hover:shadow-md transition-all cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#6355d8] to-purple-400 text-white font-bold flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-500 to-purple-400 text-white font-bold flex items-center justify-center overflow-hidden shrink-0">
                         {member.photoURL ? (
                           <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover" />
                         ) : (
@@ -666,16 +532,16 @@ export default function DailyTaskDashboard({
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <h4 className="text-xs font-black text-slate-800 truncate group-hover:text-[#6355d8]">
+                          <h4 className="text-xs font-black text-slate-800 truncate group-hover:text-brand-500">
                             {member.name || 'พนักงาน'}
                           </h4>
                           {member.role === 'admin' && (
-                            <span className="text-[10px] px-1.5 py-0.2 bg-purple-100 text-[#6355d8] font-bold rounded-md">
+                            <span className="text-xs px-1.5 py-0.2 bg-purple-100 text-brand-500 font-bold rounded-md">
                               Admin
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                        <p className="text-xs text-slate-400 truncate mt-0.5">
                           {member.position || 'พนักงานทั่วไป'}
                         </p>
                       </div>
@@ -683,16 +549,16 @@ export default function DailyTaskDashboard({
 
                     {/* Workload Progress Bar */}
                     <div className="mt-3.5 pt-3 border-t border-slate-50 space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold">
+                      <div className="flex items-center justify-between text-xs font-bold">
                         <span className="text-slate-500">ความคืบหน้างาน</span>
-                        <span className={memPercent === 100 && memTotal > 0 ? 'text-emerald-600' : 'text-[#6355d8]'}>
+                        <span className={memPercent === 100 && memTotal > 0 ? 'text-success-600' : 'text-brand-500'}>
                           {memDone}/{memTotal} งาน ({memPercent}%)
                         </span>
                       </div>
                       <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                         <div 
                           className={`h-full rounded-full transition-all duration-500 ${
-                            memPercent === 100 && memTotal > 0 ? 'bg-emerald-500' : 'bg-[#6355d8]'
+                            memPercent === 100 && memTotal > 0 ? 'bg-success-500' : 'bg-brand-500'
                           }`}
                           style={{ width: `${memPercent}%` }}
                         />
@@ -710,12 +576,12 @@ export default function DailyTaskDashboard({
         <div className="space-y-3">
           {loading ? (
             <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border border-slate-100">
-              <Loader2 size={32} className="animate-spin text-[#6355d8]" />
+              <Loader2 size={32} className="animate-spin text-brand-500" />
               <p className="text-xs text-slate-500 font-bold mt-3">กำลังโหลดข้อมูลภารกิจ...</p>
             </div>
           ) : filteredTasks.length === 0 ? (
             <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 space-y-3">
-              <div className="w-16 h-16 rounded-full bg-purple-50 text-[#6355d8] text-3xl flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 rounded-full bg-purple-50 text-brand-500 text-3xl flex items-center justify-center mx-auto">
                 🎉
               </div>
               <h4 className="text-base font-black text-slate-800">
@@ -729,7 +595,7 @@ export default function DailyTaskDashboard({
                   setEditingTask(null);
                   setIsCreateModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#6355d8] text-white text-xs font-bold shadow-md hover:bg-[#5244c4] transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-500 text-white text-xs font-bold shadow-md hover:bg-[#5244c4] transition-all"
               >
                 <Plus size={16} />
                 <span>{isUserAdmin ? 'สั่งงานใหม่' : 'เพิ่มงานส่วนตัว'}</span>
@@ -751,186 +617,155 @@ export default function DailyTaskDashboard({
                       note: task.completionNote
                     } : null);
 
+                const steps = getTaskSteps(task);
+                const doneSteps = new Set(getDoneSteps(task, todayKey));
+                const stepsLeft = steps.length - steps.filter((_, i) => doneSteps.has(i)).length;
+                const isOpen = expandedTaskId === task.id;
+                const hasDetails = steps.length > 0 || Boolean(task.description);
+                const toggleOpen = () => setExpandedTaskId(isOpen ? null : task.id);
+                // With instructions left to do, the checkbox opens them instead of skipping straight to done
+                const onCheckbox = () => {
+                  if (!isDone && stepsLeft > 0) { setExpandedTaskId(task.id); return; }
+                  handleToggleTask(task);
+                };
+                const accent = isDone ? '' : (isOverdue || task.priority === 'urgent') ? 'bg-danger-500' : task.priority === 'high' ? 'bg-warning-500' : '';
+                const iconBtn = 'w-9 h-9 rounded-control flex items-center justify-center text-ink-subtle transition-colors';
+                const actions = (
+                  <>
+                      {!isRoutine && !isDone && task.status !== 'in_progress' && (
+                        <button onClick={() => handleSetInProgress(task)} className={`${iconBtn} hover:text-brand-600 hover:bg-brand-50`} aria-label="เริ่มทำ">
+                          <PlayCircle size={18} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setNoteModalConfig({ isOpen: true, task, noteText: todayRecord?.note || task.completionNote || '' })}
+                        className={`${iconBtn} hover:text-ink hover:bg-white/70`}
+                        aria-label="หมายเหตุ"
+                      >
+                        <MessageSquare size={17} />
+                      </button>
+                      {(isUserAdmin || task.createdBy === user?.uid) && (
+                        <button onClick={() => { setEditingTask(task); setIsCreateModalOpen(true); }} className={`${iconBtn} hover:text-brand-600 hover:bg-brand-50`} aria-label="แก้ไขงาน">
+                          <Edit3 size={17} />
+                        </button>
+                      )}
+                      {isUserAdmin && (
+                        <button onClick={() => setDeleteConfirmTask(task)} className={`${iconBtn} hover:text-danger-600 hover:bg-danger-50`} aria-label="ลบงาน">
+                          <Trash2 size={17} />
+                        </button>
+                      )}
+                  </>
+                );
                 return (
                   <div
                     key={task.id}
-                    className={`group rounded-2xl border transition-all duration-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 ${
-                      isDone
-                        ? 'bg-slate-50/70 border-slate-200/60 opacity-75'
-                        : isOverdue
-                          ? 'bg-white border-rose-200 border-l-4 border-l-rose-500 shadow-xs'
-                          : task.priority === 'urgent'
-                            ? 'bg-white border-slate-200 border-l-4 border-l-rose-500 shadow-xs hover:border-slate-300 hover:shadow-sm'
-                            : task.priority === 'high'
-                              ? 'bg-white border-slate-200 border-l-4 border-l-amber-500 shadow-xs hover:border-slate-300 hover:shadow-sm'
-                              : 'bg-white border-slate-200/80 shadow-xs hover:border-slate-300 hover:shadow-sm'
-                    }`}
+                    className={`glass rounded-card relative overflow-hidden pl-3 pr-2 py-3 ${isDone && !isOpen ? 'opacity-70' : ''} ${isOpen ? 'ring-2 ring-brand-200' : ''}`}
                   >
-                    {/* Left: Checkbox & Content */}
-                    <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                      {/* Checkbox Button */}
+                  <div className="flex items-start gap-3">
+                    {accent && <span className={`absolute left-0 top-0 bottom-0 w-1 ${accent}`} />}
+
+                    {/* Done toggle: a large target, since this is the most used action */}
+                    <button
+                      onClick={onCheckbox}
+                      className="w-11 h-11 -my-1 flex items-center justify-center shrink-0"
+                      aria-label={isDone ? `ยกเลิกเสร็จ: ${task.title}` : `ทำเครื่องหมายเสร็จ: ${task.title}`}
+                      aria-pressed={isDone}
+                    >
+                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                        isDone ? 'bg-success-600 text-white' : 'border-2 border-brand-200 bg-white text-transparent hover:border-brand-500'
+                      }`}>
+                        <Check size={16} strokeWidth={3} />
+                      </span>
+                    </button>
+
+                    <div className="flex-1 min-w-0">
                       <button
-                        onClick={() => handleToggleTask(task)}
-                        className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                          isDone
-                            ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
-                            : 'border-2 border-slate-300 hover:border-[#6355d8] text-transparent hover:text-[#6355d8]/30 bg-white'
-                        }`}
-                        title={isDone ? 'คลิกเพื่อยกเลิก' : 'คลิกเพื่อทำเครื่องหมายเสร็จสิ้น'}
+                        type="button"
+                        onClick={hasDetails ? toggleOpen : undefined}
+                        className={`block w-full text-left ${hasDetails ? 'cursor-pointer' : 'cursor-default'}`}
+                        aria-expanded={hasDetails ? isOpen : undefined}
                       >
-                        <Check size={14} strokeWidth={3} />
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        {/* Line 1: Title & Key Badges */}
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h4 className={`text-sm font-bold tracking-tight ${
-                            isDone ? 'line-through text-slate-400 font-normal' : 'text-slate-800'
-                          }`}>
-                            {task.title}
-                          </h4>
-
-                          {/* Routine vs Assigned Tag */}
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${
-                            isRoutine 
-                              ? 'bg-slate-100 text-slate-600' 
-                              : 'bg-purple-50 text-[#6355d8] border border-purple-100'
-                          }`}>
-                            {isRoutine ? '🔄 ประจำวัน' : '⚡ สั่งเสริม'}
-                          </span>
-
-                          {/* Priority Badge - ONLY shown if urgent or high to eliminate clutter! */}
-                          {task.priority === 'urgent' && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                              🔥 ด่วนมาก
-                            </span>
-                          )}
-                          {task.priority === 'high' && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                              🟡 สำคัญ
-                            </span>
-                          )}
-
-                          {/* Due / Overdue alerts */}
-                          {isOverdue && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-600 text-white shadow-2xs">
-                              ⚠️ เกินกำหนด ({task.dueDate})
-                            </span>
-                          )}
-                          {isDueToday && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                              📅 ครบกำหนดวันนี้
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Line 2: Description */}
-                        {task.description && (
-                          <p className={`text-xs mt-1 leading-relaxed line-clamp-2 ${isDone ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {task.description}
-                          </p>
+                        <h4 className={`text-[15px] font-bold leading-snug ${isDone ? 'line-through text-ink-subtle font-semibold' : 'text-ink'}`}>
+                          {task.title}
+                        </h4>
+                        {task.description && !isDone && !isOpen && (
+                          <p className="text-sm text-ink-muted mt-0.5 line-clamp-1">{task.description}</p>
                         )}
-
-                        {/* Line 3: Clean Metadata Row */}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-slate-400 mt-2">
-                          {/* Assignment Target */}
-                          <div className="flex items-center gap-1.5 text-slate-600">
-                            {task.targetType === 'user' ? (
-                              <>
-                                <User size={13} className="text-[#6355d8]" />
-                                <span className="font-bold text-[#6355d8]">{task.targetUserName || 'พนักงาน'}</span>
-                              </>
-                            ) : (
-                              <>
-                                <Briefcase size={13} className="text-slate-400" />
-                                <span>{task.targetPosition || 'ทุกคน'}</span>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Due Time */}
-                          {task.dueTime && (
-                            <div className="flex items-center gap-1 text-slate-500">
-                              <Clock size={13} />
-                              <span>ก่อน {task.dueTime} น.</span>
-                            </div>
-                          )}
-
-                          {/* Created By (Admin view) */}
-                          {task.createdByName && isUserAdmin && (
-                            <div className="hidden sm:flex items-center gap-1 text-slate-400 text-[10px]">
-                              <span>มอบหมายโดย: {task.createdByName}</span>
-                            </div>
-                          )}
-
-                          {/* Completion Info */}
-                          {isDone && (
-                            <div className="flex items-center gap-1.5 text-emerald-600 font-semibold text-[11px]">
-                              <CheckCircle2 size={13} />
-                              <span>{todayRecord?.completedByName ? `เสร็จโดย ${todayRecord.completedByName}` : 'เสร็จแล้ว'}</span>
-                              {(todayRecord?.note || task.completionNote) && (
-                                <span className="text-slate-500 font-normal italic">
-                                  &ldquo;{todayRecord?.note || task.completionNote}&rdquo;
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-1 shrink-0 self-end sm:self-center pt-2 sm:pt-0">
-                      {/* In Progress Button for Assigned Tasks */}
-                      {!isRoutine && !isDone && task.status !== 'in_progress' && (
-                        <button
-                          onClick={() => handleSetInProgress(task)}
-                          className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#6355d8] text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                          title="เริ่มทำภารกิจนี้"
-                        >
-                          <PlayCircle size={14} />
-                          <span className="hidden sm:inline">เริ่มทำ</span>
-                        </button>
-                      )}
-
-                      {/* Add Note Button */}
-                      <button
-                        onClick={() => setNoteModalConfig({ 
-                          isOpen: true, 
-                          task, 
-                          noteText: todayRecord?.note || task.completionNote || '' 
-                        })}
-                        className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        title="เพิ่ม/แก้ไขหมายเหตุ"
-                      >
-                        <MessageSquare size={16} />
                       </button>
 
-                      {/* Edit Button (Admin or Creator) */}
-                      {(isUserAdmin || task.createdBy === user?.uid) && (
-                        <button
-                          onClick={() => {
-                            setEditingTask(task);
-                            setIsCreateModalOpen(true);
-                          }}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-[#6355d8] hover:bg-purple-50 transition-colors cursor-pointer"
-                          title="แก้ไขงานนี้"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                      )}
+                      {/* One metadata line: who · when · state */}
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-subtle mt-1.5">
+                        {steps.length > 0 && (
+                          <button type="button" onClick={toggleOpen} className={`flex items-center gap-1 font-bold ${stepsLeft === 0 ? 'text-success-700' : 'text-brand-600'} hover:underline`}>
+                            <ListChecks size={14} /> วิธีทำ {steps.length - stepsLeft}/{steps.length}
+                          </button>
+                        )}
+                        <span className="flex items-center gap-1">
+                          {task.targetType === 'user' ? <User size={13} /> : <Briefcase size={13} />}
+                          {task.targetType === 'user' ? (task.targetUserName || 'พนักงาน') : (task.targetPosition || 'ทุกคน')}
+                        </span>
+                        {task.dueTime && <span className="flex items-center gap-1"><Clock size={13} /> ก่อน {task.dueTime} น.</span>}
+                        {!isRoutine && <span>งานสั่งเพิ่ม</span>}
+                        {task.priority === 'urgent' && !isDone && <span className="font-bold text-danger-600">ด่วน</span>}
+                        {task.priority === 'high' && !isDone && <span className="font-bold text-warning-700">สำคัญ</span>}
+                        {isOverdue && <span className="font-bold text-danger-600">เกินกำหนด {task.dueDate}</span>}
+                        {isDueToday && !isDone && <span className="font-bold text-brand-600">ครบกำหนดวันนี้</span>}
+                        {task.status === 'in_progress' && !isDone && <span className="font-bold text-brand-600">กำลังทำ</span>}
+                        {isDone && (
+                          <span className="font-semibold text-success-700">
+                            {todayRecord?.completedByName ? `เสร็จโดย ${todayRecord.completedByName}` : 'เสร็จแล้ว'}
+                            {(todayRecord?.note || task.completionNote) && <span className="font-normal text-ink-subtle"> · “{todayRecord?.note || task.completionNote}”</span>}
+                          </span>
+                        )}
+                      </div>
 
-                      {/* Delete Button (Admin only) */}
-                      {isUserAdmin && (
-                        <button
-                          onClick={() => setDeleteConfirmTask(task)}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="ลบงานนี้"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
+                      {/* Secondary actions: a row under the text on phones */}
+                      <div className="flex lg:hidden items-center -ml-2 mt-1">{actions}</div>
                     </div>
+
+                    {/* Secondary actions: a column on the right on larger screens */}
+                    <div className="hidden lg:flex items-center shrink-0 -mr-0.5">{actions}</div>
+                  </div>
+
+                    {/* Instructions: read and follow, ticking one step at a time */}
+                    {isOpen && (
+                      <div className="mt-3 ml-14 mr-1 space-y-2 animate-fade-in">
+                        {task.description && <p className="text-sm text-ink-muted leading-relaxed">{task.description}</p>}
+                        {steps.length > 0 && (
+                          <>
+                            <div className="h-1.5 rounded-full bg-brand-100 overflow-hidden" aria-hidden="true">
+                              <div className="h-full bg-brand-500 transition-all duration-300" style={{ width: `${((steps.length - stepsLeft) / steps.length) * 100}%` }} />
+                            </div>
+                            <ol className="space-y-1.5">
+                              {steps.map((step, i) => {
+                                const checked = doneSteps.has(i);
+                                return (
+                                  <li key={i}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleStep(task, i, steps.length)}
+                                      aria-pressed={checked}
+                                      className={`w-full flex items-start gap-3 text-left rounded-control px-2.5 py-2 transition-colors ${checked ? 'bg-success-50' : 'bg-white/70 hover:bg-white'}`}
+                                    >
+                                      <span className={`mt-0.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-xs font-black ${checked ? 'bg-success-600 text-white' : 'bg-brand-50 text-brand-600'}`}>
+                                        {checked ? <Check size={14} strokeWidth={3} /> : i + 1}
+                                      </span>
+                                      <span className={`text-sm leading-snug ${checked ? 'text-ink-subtle line-through' : 'text-ink'}`}>{step}</span>
+                                    </button>
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          </>
+                        )}
+                        {!isDone && stepsLeft > 0 && (
+                          <p className="text-xs text-ink-subtle">ติ๊กทีละขั้นตอน งานจะปิดเองเมื่อครบทุกข้อ{isUserAdmin && ' (แอดมินกด "ปิดงานเลย" ได้)'}</p>
+                        )}
+                        {!isDone && isUserAdmin && stepsLeft > 0 && (
+                          <Button size="sm" variant="ghost" icon={Check} onClick={() => handleToggleTask(task)}>ปิดงานเลย</Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -960,7 +795,7 @@ export default function DailyTaskDashboard({
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
-                <MessageSquare size={16} className="text-[#6355d8]" />
+                <MessageSquare size={16} className="text-brand-500" />
                 <span>บันทึกหมายเหตุการทำงาน</span>
               </h3>
               <button 
@@ -980,7 +815,7 @@ export default function DailyTaskDashboard({
               value={noteModalConfig.noteText}
               onChange={(e) => setNoteModalConfig(prev => ({ ...prev, noteText: e.target.value }))}
               placeholder="ระบุข้อความ เช่น นับแล้วขาด 2 ชิ้น, ส่ง Kerry รอบบ่ายแล้ว 12 กล่อง..."
-              className="w-full p-3 rounded-2xl border border-slate-200 focus:border-[#6355d8] text-xs font-medium text-slate-800 outline-none resize-none"
+              className="w-full p-3 rounded-2xl border border-slate-200 focus:border-brand-500 text-xs font-medium text-slate-800 outline-none resize-none"
             />
 
             <div className="flex justify-end gap-2 pt-2">
@@ -992,7 +827,7 @@ export default function DailyTaskDashboard({
               </button>
               <button
                 onClick={handleSaveNote}
-                className="px-5 py-2 rounded-xl bg-[#6355d8] text-white text-xs font-bold hover:bg-[#5244c4] shadow-sm"
+                className="px-5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold hover:bg-[#5244c4] shadow-sm"
               >
                 บันทึกหมายเหตุ
               </button>
@@ -1039,7 +874,7 @@ export default function DailyTaskDashboard({
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-[#6355d8] flex items-center justify-center font-bold text-lg">
+                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-brand-500 flex items-center justify-center font-bold text-lg">
                   📄
                 </div>
                 <div>
@@ -1066,7 +901,7 @@ export default function DailyTaskDashboard({
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-slate-800 truncate">{lv.userName}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">
+                      <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">
                         {lv.type === 'sick' ? 'ลาป่วย' : lv.type === 'personal' ? 'ลากิจ' : 'ลาพักร้อน'}
                       </span>
                     </div>
@@ -1084,7 +919,7 @@ export default function DailyTaskDashboard({
                       setLeaveDocModalOpen(true);
                       setPendingLeavesListModalOpen(false);
                     }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-xs transition-all shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-xs transition-all shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
                   >
                     <span>📄 ตรวจเอกสาร</span>
                   </button>

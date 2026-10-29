@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   LayoutDashboard, ArrowRightLeft, Package, ClipboardList, Menu, Check, Loader2, Bell, ShieldAlert, Users
 } from 'lucide-react';
@@ -24,6 +24,7 @@ import SmartDashboardView from './components/SmartDashboardView';
 import SmartRightPanel from './components/SmartRightPanel';
 import ModernAuthView from './components/ModernAuthView';
 import ModernPendingApproval from './components/ModernPendingApproval';
+import { PageHeader } from './components/ui';
 import { hasPermission, isAdmin } from './utils/permissions';
 import * as Sentry from '@sentry/nextjs';
 
@@ -36,7 +37,7 @@ import { compressImageFile, blobToDataUrl } from '@/app/utils/cameraUtils';
 import { db, auth, storage } from '@/lib/firebase';
 import { 
   collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc, getDocs,
-  serverTimestamp, query, orderBy, where, writeBatch
+  serverTimestamp, query, orderBy, where, writeBatch, increment, runTransaction
 } from 'firebase/firestore';
 import { 
   signInWithEmailAndPassword, signOut, onAuthStateChanged, createUserWithEmailAndPassword,
@@ -49,7 +50,11 @@ export default function StockJinApp() {
   const [isDesktop, setIsDesktop] = useState(false);
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [dashboardSubTab, setDashboardSubTab] = useState('tasks'); // 'tasks' | 'analytics'
+  const [dashboardSubTabState, setDashboardSubTab] = useState('tasks'); // 'tasks' | 'analytics'
+  // Shop-wide settings (settings/app). stockOnlyMode hides HR and daily-task features for small shops.
+  const [appSettings, setAppSettings] = useState({});
+  const stockOnlyMode = Boolean(appSettings.stockOnlyMode);
+  const dashboardSubTab = stockOnlyMode ? 'analytics' : dashboardSubTabState;
   const [dashboardPosTab, setDashboardPosTab] = useState('my'); // 'my' | 'warehouse' | 'kitchen' | 'finance' | 'service' | 'shipping' | 'management' | 'all'
   const [hrInitialView, setHrInitialView] = useState('my');
   const [hrInitialSubTab, setHrInitialSubTab] = useState('attendance');
@@ -138,6 +143,14 @@ export default function StockJinApp() {
   const [pendingLeaves, setPendingLeaves] = useState([]);
   const [approvalHistory, setApprovalHistory] = useState([]);
 
+  // --- DEV ONLY: preview the app as a staff member (UI only; Firestore still sees the real admin) ---
+  const isDevBuild = process.env.NODE_ENV === 'development';
+  const [previewAsStaff, setPreviewAsStaff] = useState(false);
+  const viewUser = useMemo(
+    () => (isDevBuild && previewAsStaff && user) ? { ...user, role: 'staff', position: 'พนักงานคุมสต็อก' } : user,
+    [isDevBuild, previewAsStaff, user]
+  );
+
   // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState([]);
 
@@ -217,27 +230,27 @@ export default function StockJinApp() {
     return () => unsubscribe();
   }, []);
 
-  // --- REAL-TIME STATUS LISTENER FOR PENDING USERS ---
+  // --- REAL-TIME LISTENER: status/role changes apply immediately ---
   useEffect(() => {
-    if (!user?.uid || user?.status !== 'pending') return;
+    if (!user?.uid) return;
     const unsubUser = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        if (data.status && data.status !== user.status) {
+        if ((data.status && data.status !== user.status) || (data.role && data.role !== user.role) || (data.position && data.position !== user.position)) {
           setUser(prev => ({
             ...prev,
             status: data.status,
             role: data.role || prev?.role || 'staff',
             position: data.position || prev?.position || 'พนักงานทั่วไป'
           }));
-          if (data.status === 'approved') {
-            showNotification('บัญชีของคุณได้รับการอนุมัติเรียบร้อยแล้ว! ยินดีต้อนรับสู่ระบบ 🎉');
+          if (user.status === 'pending' && data.status === 'approved') {
+            showNotification('บัญชีได้รับการอนุมัติแล้ว ยินดีต้อนรับ');
           }
         }
       }
     });
     return () => unsubUser();
-  }, [user?.uid, user?.status]);
+  }, [user?.uid, user?.status, user?.role, user?.position]);
 
   const handleCheckUserStatus = async () => {
     if (!user?.uid) return;
@@ -303,15 +316,55 @@ export default function StockJinApp() {
       });
     }
 
-    return () => { unsubProd(); unsubCat(); unsubTx(); unsubPending(); unsubLeaves(); unsubHist(); };
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'app'), (snap) => {
+      setAppSettings(snap.exists() ? snap.data() : {});
+    }, (error) => console.error('Settings listener error:', error));
+
+    return () => { unsubProd(); unsubCat(); unsubTx(); unsubPending(); unsubLeaves(); unsubHist(); unsubSettings(); };
   }, [user]);
 
-  // --- HELPER FUNCTIONS ---
-  const showConfirm = (title, message, onConfirm, type = 'danger') => {
-    setModalConfig({ isOpen: true, title, message, type, onConfirm: () => { onConfirm(); setModalConfig(prev => ({ ...prev, isOpen: false })); }});
+  // Admin toggles stock-only mode for the whole shop
+  const handleToggleStockOnlyMode = async (enabled) => {
+    try {
+      await setDoc(doc(db, 'settings', 'app'), { stockOnlyMode: enabled, updatedBy: user?.name || '', updatedAt: serverTimestamp() }, { merge: true });
+      showNotification(enabled ? 'เปิดโหมดเฉพาะสต็อกแล้ว' : 'ปิดโหมดเฉพาะสต็อกแล้ว');
+    } catch (error) {
+      console.error('Save settings error:', error);
+      showNotification('บันทึกการตั้งค่าไม่สำเร็จ (ตรวจสิทธิ์ Firestore ของ settings)');
+    }
   };
 
-  const showNotification = (msg) => { setToastMsg(msg); setShowToast(true); setTimeout(() => setShowToast(false), 2000); };
+  // In stock-only mode the HR tab is hidden; send anyone who lands there to the dashboard
+  if (stockOnlyMode && activeTab === 'hr') setActiveTab('dashboard');
+
+  // --- HELPER FUNCTIONS ---
+  const stockError = (userMessage) => Object.assign(new Error(userMessage), { userMessage });
+
+  const showConfirm = (title, message, onConfirm, type = 'danger') => {
+    // ล็อกปุ่มระหว่างทำงาน กันกดยืนยันซ้ำ (เช่น ตัดสต็อกสองรอบ)
+    let running = false;
+    setModalConfig({ isOpen: true, busy: false, title, message, type, onConfirm: async () => {
+      if (running) return;
+      running = true;
+      setModalConfig(prev => ({ ...prev, busy: true }));
+      try {
+        await onConfirm();
+      } catch (error) {
+        console.error(error);
+        showNotification(error?.userMessage || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+      } finally {
+        setModalConfig(prev => ({ ...prev, isOpen: false, busy: false }));
+      }
+    }});
+  };
+
+  // Toast: a new message restarts the timer so it is never cut short by an older one
+  const toastTimerRef = useRef(null);
+  const showNotification = (msg) => {
+    setToastMsg(msg); setShowToast(true);
+    clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setShowToast(false), 4000);
+  };
   const toggleCollapse = (catName) => setCollapsedCats(prev => ({ ...prev, [catName]: !prev[catName] }));
   const copyToClipboard = (text) => navigator.clipboard.writeText(text).then(() => showNotification('คัดลอกแล้ว!')).catch(() => showNotification('คัดลอกไม่สำเร็จ'));
 
@@ -331,32 +384,36 @@ export default function StockJinApp() {
   };
 
   // --- LOGIC: Void/Edit/Reorder ---
-  const revertStock = async (tx) => {
-    const reversePromises = (tx.items || []).map(async (item) => {
-       const qtyUsed = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : 0;
-       if (qtyUsed > 0) {
-         const productRef = doc(db, 'products', item.id);
-         const productSnap = await getDoc(productRef);
-         if (productSnap.exists()) {
-            const currentStock = productSnap.data().stock || 0;
-            let revertedStock = currentStock;
-            if (tx.type === 'IN') revertedStock = currentStock - qtyUsed;
-            else revertedStock = currentStock + qtyUsed;
-            await updateDoc(productRef, { stock: Math.max(0, revertedStock) });
-         }
-       }
-    });
-    await Promise.all(reversePromises);
-  };
+  // คืนค่าสต็อกของบิลที่ "สำเร็จ" แล้ว พร้อมอัปเดตสถานะบิลในธุรกรรมเดียว
+  // อ่านสถานะล่าสุดจากฐานข้อมูล กันการคืนสต็อกซ้ำเมื่อมีคนกดพร้อมกัน
+  const revertStock = (tx, txUpdate, allowedStatuses) => runTransaction(db, async (t) => {
+    const txRef = doc(db, 'transactions', tx.id);
+    const txSnap = await t.get(txRef);
+    if (!txSnap.exists()) throw stockError('ไม่พบรายการนี้แล้ว');
+    const live = txSnap.data();
+    if (!allowedStatuses.includes(live.status)) throw stockError('รายการนี้ถูกเปลี่ยนสถานะไปแล้ว กรุณารีเฟรช');
+
+    const reverts = [];
+    if (live.status === 'completed') {
+      for (const item of live.items || []) {
+        const qtyUsed = parseInt(live.actualItems?.[item.id]) || 0;
+        if (qtyUsed <= 0) continue;
+        const productRef = doc(db, 'products', item.id);
+        const productSnap = await t.get(productRef);
+        if (productSnap.exists()) reverts.push({ productRef, delta: live.type === 'IN' ? -qtyUsed : qtyUsed });
+      }
+    }
+    reverts.forEach(({ productRef, delta }) => t.update(productRef, { stock: increment(delta) }));
+    t.update(txRef, txUpdate);
+  });
 
   const handleVoidTransaction = (tx) => {
     showConfirm('ยืนยันยกเลิกบิล?', 'ระบบจะทำการคืนค่าสต็อกสินค้า และเปลี่ยนสถานะเป็น "ยกเลิก"', async () => {
-       await revertStock(tx);
-       await updateDoc(doc(db, 'transactions', tx.id), {
+       await revertStock(tx, {
           status: 'cancelled',
           cancelledBy: user.name,
           cancelledAt: new Date().toLocaleString('th-TH')
-       });
+       }, ['pending', 'completed']);
        setVerifyingTx(null); showNotification('ยกเลิกบิลและคืนค่าสต็อกแล้ว');
     }, 'danger');
   };
@@ -376,8 +433,7 @@ export default function StockJinApp() {
 
   const handleEditCompletedTx = (tx) => {
     showConfirm('ต้องการแก้ไขรายการ?', 'สต็อกจะถูกคืนค่าเดิม และรายการนี้จะกลับไปสถานะ "รอตรวจสอบ"', async () => {
-       await revertStock(tx);
-       await updateDoc(doc(db, 'transactions', tx.id), { status: 'pending', actualItems: null, verifiedBy: null, verifiedAt: null });
+       await revertStock(tx, { status: 'pending', actualItems: null, verifiedBy: null, verifiedAt: null }, ['completed']);
        setStatusFilter('pending'); 
        const initialActual = {};
        (tx.items || []).forEach(item => { initialActual[item.id] = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : item.qty; });
@@ -429,7 +485,7 @@ export default function StockJinApp() {
             const res = await submitTransactionService({ cart, transMode, note, user });
             setCart([]); setNote('');
             const docInfo = res?.docNumber ? ` (เลขที่ ${res.docNumber})` : '';
-            showNotification(`ส่งคำขอและออกเอกสาร PDF ทางการ${docInfo} เก็บลงคลังเอกสารเรียบร้อยแล้ว! 📄✨`);
+            showNotification(`ส่งคำขอแล้ว${docInfo} · รอตรวจสอบ`);
             setActiveTab('status');
         } catch (error) {
             console.error(error); showNotification('เกิดข้อผิดพลาด กรุณาลองใหม่');
@@ -445,41 +501,53 @@ export default function StockJinApp() {
     setActualQty(initialActual);
   };
 
-  const handleVerifyAndSave = async (extraItems = []) => {
-    if (!verifyingTx) return;
+  // ยืนยันบิล: ตัดสต็อกตามยอด qtyMap และเปลี่ยนสถานะเป็นสำเร็จ (ใช้ทั้งหน้าตรวจละเอียดและปุ่มอนุมัติด่วน)
+  const confirmVerifyTransaction = (tx, qtyMap, extraItems = [], { title, intro }) => {
+    // เตือนก่อนถ้าเบิกเกินสต็อกที่มี (ไม่ปัดเป็น 0 แบบเงียบ ๆ อีกต่อไป)
+    const overdrawn = tx.type === 'OUT'
+      ? products.filter(p => (parseInt(qtyMap[p.id]) || 0) > (p.stock || 0))
+      : [];
+    const overdrawnText = overdrawn.length > 0
+      ? `\n\n⚠️ เบิกเกินสต็อกที่มี: ${overdrawn.map(p => `${p.name} (มี ${p.stock || 0}, เบิก ${parseInt(qtyMap[p.id]) || 0})`).join(', ')} สต็อกจะติดลบ`
+      : '';
     showConfirm(
-      'ยืนยันยอดจริงถูกต้อง?', 'สต็อกจะถูกอัปเดตตามยอดนี้ สถานะจะเปลี่ยนเป็นสำเร็จ และระบบจะปรับปรุงเอกสาร PDF ฉบับอนุมัติลงคลังเอกสารอัตโนมัติ',
+      title, `${intro}${overdrawnText}`,
       async () => {
-        const finalItems = [...(verifyingTx.items || []), ...extraItems];
-        const updatePromises = products.map(async (p) => {
-          if (actualQty[p.id] !== undefined) {
-             const finalQty = parseInt(actualQty[p.id]) || 0;
-             if (finalQty > 0) {
-               const newStock = verifyingTx.type === 'IN' ? p.stock + finalQty : p.stock - finalQty;
-               const productRef = doc(db, 'products', p.id);
-               await updateDoc(productRef, { stock: Math.max(0, newStock) });
-             }
-          }
-        });
-        await Promise.all(updatePromises);
-        const txRef = doc(db, 'transactions', verifyingTx.id);
+        const finalItems = [...(tx.items || []), ...extraItems];
+        const txRef = doc(db, 'transactions', tx.id);
         const verifiedAtDate = new Date().toLocaleString('th-TH');
-        await updateDoc(txRef, { 
-            status: 'completed', 
+        await runTransaction(db, async (t) => {
+          const txSnap = await t.get(txRef);
+          if (!txSnap.exists()) throw stockError('ไม่พบรายการนี้แล้ว');
+          if (txSnap.data().status !== 'pending') throw stockError('รายการนี้ถูกตรวจสอบหรือยกเลิกไปแล้ว');
+
+          const updates = [];
+          for (const item of finalItems) {
+            const finalQty = parseInt(qtyMap[item.id]) || 0;
+            if (finalQty <= 0) continue;
+            const productRef = doc(db, 'products', item.id);
+            const productSnap = await t.get(productRef);
+            if (!productSnap.exists()) throw stockError(`ไม่พบสินค้า "${item.name}" ในคลังแล้ว`);
+            updates.push({ productRef, delta: tx.type === 'IN' ? finalQty : -finalQty });
+          }
+          updates.forEach(({ productRef, delta }) => t.update(productRef, { stock: increment(delta) }));
+          t.update(txRef, {
+            status: 'completed',
             items: finalItems,
-            actualItems: actualQty, 
-            verifiedBy: user ? user.name : 'Admin', 
-            verifiedAt: verifiedAtDate 
+            actualItems: qtyMap,
+            verifiedBy: user ? user.name : 'Admin',
+            verifiedAt: verifiedAtDate
+          });
         });
 
         // สร้าง/อัปเดตเอกสารทางการฉบับสมบูรณ์ (Approved PDF) เก็บลงคลังเอกสารอัตโนมัติ
         try {
           await uploadAndSaveTransactionDocument({
             transaction: {
-              ...verifyingTx,
+              ...tx,
               status: 'completed',
               items: finalItems,
-              actualItems: actualQty,
+              actualItems: qtyMap,
               verifiedBy: user ? user.name : 'Admin',
               verifiedAt: verifiedAtDate,
             },
@@ -490,10 +558,29 @@ export default function StockJinApp() {
           console.error("Auto PDF Generation on Verify Error:", pdfErr);
         }
 
-        setVerifyingTx(null); 
-        showNotification('อัปเดตสต็อกและบันทึกเอกสาร PDF ฉบับอนุมัติลงคลังเอกสารเรียบร้อย! 📄✅');
+        setVerifyingTx(null);
+        showNotification('ยืนยันแล้ว สต็อกอัปเดตเรียบร้อย');
       }, 'info'
     );
+  };
+
+  const handleVerifyAndSave = (extraItems = []) => {
+    if (!verifyingTx) return;
+    confirmVerifyTransaction(verifyingTx, actualQty, extraItems, {
+      title: 'ยืนยันยอดจริงถูกต้อง?',
+      intro: 'สต็อกจะถูกอัปเดตตามยอดนี้ และสถานะจะเปลี่ยนเป็นสำเร็จ',
+    });
+  };
+
+  // อนุมัติด่วน: ยอดจริง = ยอดที่ขอ ไม่ต้องเปิดบิลหรือพิมพ์ตัวเลข
+  const handleQuickApprove = (tx) => {
+    const qtyMap = {};
+    (tx.items || []).forEach(item => { qtyMap[item.id] = parseInt(item.qty) || 0; });
+    const summary = (tx.items || []).map(item => `• ${item.name} ${item.qty} ${item.unit || ''}`.trim()).join('\n');
+    confirmVerifyTransaction(tx, qtyMap, [], {
+      title: `อนุมัติ${tx.type === 'IN' ? 'รับเข้า' : 'เบิกออก'}ตามที่ขอ?`,
+      intro: `${summary}\n\nสต็อกจะ${tx.type === 'IN' ? 'เพิ่ม' : 'ลด'}ตามยอดนี้ทันที`,
+    });
   };
 
   // --- [ฟังก์ชันใหม่] ส่งสต็อกเข้า LINE (รองรับการเลือกหมวดหมู่) ---
@@ -536,13 +623,14 @@ export default function StockJinApp() {
             const items = tx.items || [];
             items.forEach(item => {
                 const qty = (tx.actualItems && tx.actualItems[item.id] !== undefined) 
-                            ? parseInt(tx.actualItems[item.id]) 
+                            ? (parseInt(tx.actualItems[item.id]) || 0) 
                             : item.qty;
                 
-                if (itemsMap[item.name]) {
-                    itemsMap[item.name].totalQty += qty;
+                const key = item.id || item.name;
+                if (itemsMap[key]) {
+                    itemsMap[key].totalQty += qty;
                 } else {
-                    itemsMap[item.name] = { ...item, totalQty: qty };
+                    itemsMap[key] = { ...item, totalQty: qty };
                 }
             });
         });
@@ -551,7 +639,7 @@ export default function StockJinApp() {
         return Object.values(itemsMap)
             .filter(i => i.totalQty > 0)
             .map(item => {
-                const realProduct = products.find(p => p.name === item.name); 
+                const realProduct = products.find(p => p.id === item.id) || products.find(p => p.name === item.name);
                 return { 
                     ...item, 
                     currentStock: realProduct ? realProduct.stock : 0 
@@ -590,7 +678,14 @@ export default function StockJinApp() {
     await updateDoc(doc(db, 'products', editingProduct.id), { ...editFormData, stock: parseInt(editFormData.stock), minStock: parseInt(editFormData.minStock)||5 });
     setEditingProduct(null); showNotification('แก้ไขแล้ว');
   };
-  const handleDeleteProduct = async () => { await deleteDoc(doc(db, 'products', editingProduct.id)); setEditingProduct(null); showNotification('ลบแล้ว'); };
+  const handleDeleteProduct = () => {
+    const target = editingProduct;
+    if (!target) return;
+    showConfirm('ลบสินค้านี้?', `"${target.name}" จะถูกลบออกจากคลังถาวร (ประวัติรายการเดิมยังอยู่)`, async () => {
+      await deleteDoc(doc(db, 'products', target.id));
+      setEditingProduct(null); showNotification('ลบแล้ว');
+    }, 'danger');
+  };
   
   const handleSaveCategory = async () => {
     if(!newCatData.name) return showNotification('ใส่ชื่อหมวดด้วย!');
@@ -622,7 +717,7 @@ export default function StockJinApp() {
 
   // Cart Functions
   const handleAddToCart = (p) => setCart(prev => { const ex=prev.find(x=>x.id===p.id); return ex?prev.map(x=>x.id===p.id?{...x,qty:x.qty+1}:x):[...prev,{...p,qty:1}] });
-  const handleAdjustQty = (id, d) => setCart(prev => prev.map(i=>i.id===id?{...i,qty:Math.max(1,i.qty+d)}:i).filter(i=>i.qty>0));
+  const handleAdjustQty = (id, d) => setCart(prev => prev.map(i=>i.id===id?{...i,qty:i.qty+d}:i).filter(i=>i.qty>0));
   const handleRemoveItem = (id) => setCart(prev => prev.filter(i=>i.id!==id));
   const handleCartQtyChange = (id, val) => { const qty = parseInt(val) || 0; if (qty <= 0) return handleRemoveItem(id); setCart(prev => prev.map(i => i.id === id ? { ...i, qty } : i)); };
 
@@ -970,14 +1065,14 @@ export default function StockJinApp() {
 
   // --- TAB TITLES (for desktop header) ---
   const tabTitles = {
-    dashboard: { title: 'แดชบอร์ดงานประจำวัน & ภาพรวม', desc: 'รายการงานประจำวันตามตำแหน่งงาน งานที่ได้รับมอบหมาย และสถิติสต็อก' },
-    stock: { title: 'จัดการวัตถุดิบและสินค้าคงคลัง', desc: 'ติดตามสต็อกสินค้า เพิ่ม/แก้ไข หมวดหมู่และรายการสินค้า' },
+    dashboard: { title: 'ภาพรวม', desc: 'งานประจำวันและสถิติสต็อก' },
+    stock: { title: 'คลังสินค้า', desc: 'ดูยอดคงเหลือ เพิ่มหรือแก้ไขสินค้าและหมวดหมู่' },
     transaction: { title: 'เบิก / รับสินค้า', desc: 'บันทึกรายการเบิกสินค้าออกหรือรับสินค้าเข้าคลัง' },
     status: { title: 'สถานะรายการ', desc: 'ตรวจสอบและยืนยันรายการที่รอดำเนินการ' },
     notifications: { title: 'ศูนย์แจ้งเตือน', desc: 'แจ้งเตือนสินค้าหมด การเคลื่อนไหว และคำขอสมัครสมาชิก' },
     hr: { title: 'เข้า-ออกงาน / ลาหยุด', desc: 'บันทึกเวลาทำงาน ยื่นใบลาหยุด และดูสถิติทีมงาน' },
     documents: { title: 'เอกสาร', desc: 'เก็บและจัดการเอกสารสำคัญต่างๆ เช่น ใบสั่งซื้อ ใบเสร็จ สัญญา' },
-    menu: { title: 'ตั้งค่าและบัญชีผู้ใช้', desc: 'จัดการบัญชี สิทธิ์การเข้าถึง และการตั้งค่าระบบ' },
+    menu: { title: 'บัญชีของฉัน', desc: 'โปรไฟล์ สิทธิ์ และการตั้งค่า' },
     users: { title: 'จัดการบัญชีผู้ใช้', desc: 'ตรวจสอบจำนวนบัญชี ดูพนักงานแต่ละหน่วยงาน และจัดการสิทธิ์' },
   };
 
@@ -987,7 +1082,7 @@ export default function StockJinApp() {
       {activeTab === 'dashboard' && user && (
         (dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
           <SmartDashboardView 
-            user={user}
+            user={viewUser}
             products={products}
             transactions={transactions}
             categories={categories}
@@ -1025,7 +1120,8 @@ export default function StockJinApp() {
           handleReorderStock={handleReorderStock}
           copyToClipboard={copyToClipboard}
           handleSendStockToLine={handleSendStockToLine}
-          user={user}
+          user={viewUser}
+          searchQuery={searchQuery} setSearchQuery={setSearchQuery}
       />} 
       {activeTab === 'transaction' && user && <TabTransaction 
           products={products} categories={categories}
@@ -1039,17 +1135,17 @@ export default function StockJinApp() {
           transactions={transactions} statusFilter={statusFilter} setStatusFilter={setStatusFilter}
           verifyingTx={verifyingTx} setVerifyingTx={setVerifyingTx}
           actualQty={actualQty} setActualQty={setActualQty}
-          openVerifyModal={openVerifyModal} handleVerifyAndSave={handleVerifyAndSave}
+          openVerifyModal={openVerifyModal} handleVerifyAndSave={handleVerifyAndSave} handleQuickApprove={handleQuickApprove}
           copyToClipboard={copyToClipboard} generateSummaryText={generateSummaryText}
           handleVoidTransaction={handleVoidTransaction}
           handleEditCompletedTx={handleEditCompletedTx}
-          user={user}
+          user={viewUser}
           handleDeleteHistory={handleDeleteHistory}
           products={products}
           onOpenTransactionDoc={handleOpenTransactionDoc}
       />}
       {activeTab === 'notifications' && user && <TabNotifications
-          user={user}
+          user={viewUser}
           notifications={notifications}
           onMarkAsRead={handleMarkAsRead}
           onMarkAllAsRead={handleMarkAllAsRead}
@@ -1058,21 +1154,20 @@ export default function StockJinApp() {
       />}
       {activeTab === 'hr' && user && (
         <TabHR 
-          user={user} 
+          user={viewUser} 
           initialView={hrInitialView} 
           initialSubTab={hrInitialSubTab} 
         />
       )}
-      {activeTab === 'documents' && <TabDocuments user={user} />}
+      {activeTab === 'documents' && <TabDocuments user={viewUser} />}
       {activeTab === 'menu' && <TabMenu 
-          user={user} loginForm={loginForm} setLoginForm={setLoginForm} handleLogin={handleLogin} handleLogout={handleLogout} loginError={loginError}
-          isRegisterMode={isRegisterMode} setIsRegisterMode={setIsRegisterMode}
-          registerForm={registerForm} setRegisterForm={setRegisterForm}
-          handleRegister={handleRegister} registerError={registerError}
+          user={viewUser} handleLogout={handleLogout}
+          canPreviewAsStaff={isDevBuild && isAdmin(user) && !previewAsStaff} onPreviewAsStaff={() => { setPreviewAsStaff(true); setActiveTab('dashboard'); }}
+          stockOnlyMode={stockOnlyMode} onToggleStockOnlyMode={handleToggleStockOnlyMode}
           pendingUsers={pendingUsers} approvalHistory={approvalHistory} handleApproveUser={handleApproveUser} handleRejectUser={handleRejectUser}
           handleUpdateProfile={handleUpdateProfile}
       />}
-      {activeTab === 'users' && user && isAdmin(user) && <TabUserDirectory user={user} />}
+      {activeTab === 'users' && user && isAdmin(viewUser) && <TabUserDirectory user={viewUser} />}
     </>
   );
 
@@ -1081,7 +1176,7 @@ export default function StockJinApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f4f5fa]">
         <div className="text-center space-y-3">
-          <Loader2 size={40} className="animate-spin text-[#6355d8] mx-auto"/>
+          <Loader2 size={40} className="animate-spin text-brand-500 mx-auto"/>
           <p className="text-slate-700 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p>
         </div>
       </div>
@@ -1092,7 +1187,7 @@ export default function StockJinApp() {
   if (user && user.status === 'pending') {
     return (
       <ModernPendingApproval 
-        user={user} 
+        user={viewUser} 
         handleLogout={handleLogout} 
         onCheckStatus={handleCheckUserStatus} 
       />
@@ -1125,21 +1220,22 @@ export default function StockJinApp() {
   // ========================
   if (isDesktop && user) {
     return (
-      <div className="smart-layout font-sans text-gray-800 selection:bg-purple-100">
+      <div className="smart-layout app-glass-bg text-ink selection:bg-brand-100">
         <DesktopSidebar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
-          user={user} 
+          user={viewUser} 
           handleLogout={handleLogout}
           unreadNotifCount={unreadNotifCount}
           onNavigateWithSub={handleNavigateWithSub}
           dashboardPosTab={dashboardPosTab}
           dashboardSubTab={dashboardSubTab}
+          stockOnlyMode={stockOnlyMode}
         />
         <div className="smart-main-wrapper flex-1 flex flex-col min-h-screen overflow-x-hidden">
           {/* Top Header */}
           <TopHeader 
-            user={user}
+            user={viewUser}
             unreadNotifCount={unreadNotifCount}
             setActiveTab={setActiveTab}
             handleLogout={handleLogout}
@@ -1151,35 +1247,35 @@ export default function StockJinApp() {
           />
 
           {/* Desktop Content Grid */}
-          <main className={`smart-content-grid flex-1 ${activeTab === 'dashboard' ? 'has-right-panel' : ''}`}>
+          <main className={`smart-content-grid flex-1 ${activeTab === 'dashboard' && !stockOnlyMode ? 'has-right-panel' : ''}`}>
             {/* Main Area */}
             <div className="space-y-6 min-w-0 max-w-full">
               {activeTab === 'dashboard' ? (
                 <>
-                  {/* Mode Switcher */}
-                  <div className="flex items-center justify-between px-1 -mb-2">
-                    <div className="text-xs font-bold text-gray-500">
+                  {/* Mode Switcher (hidden in stock-only mode: there are no daily tasks) */}
+                  {!stockOnlyMode && <div className="flex items-center justify-between px-1 -mb-2">
+                    <div className="text-sm font-bold text-ink-muted">
                       ภาพรวมระบบและภารกิจประจำวัน
                     </div>
-                    <div className="bg-white p-1 rounded-2xl shadow-xs border border-gray-100 flex text-xs font-bold">
+                    <div className="glass p-1 rounded-2xl flex text-sm font-bold">
                       <button 
                         onClick={() => setDashboardSubTab('tasks')}
-                        className={`px-4 py-1.5 rounded-xl transition-all ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+                        className={`px-4 h-9 rounded-xl transition-colors ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                       >
-                        📋 แดชบอร์ดงานประจำวัน (Daily Tasks)
+                        งานประจำวัน
                       </button>
                       <button 
                         onClick={() => setDashboardSubTab('analytics')}
-                        className={`px-4 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'analytics' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'}`}
+                        className={`px-4 h-9 rounded-xl transition-colors ${dashboardSubTab === 'analytics' ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                       >
-                        📊 สถิติสต็อกและรายงาน (Stock Analytics)
+                        สถิติ & รายงาน
                       </button>
                     </div>
-                  </div>
+                  </div>}
 
                   {(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
                     <SmartDashboardView 
-                      user={user}
+                      user={viewUser}
                       products={products}
                       transactions={transactions}
                       categories={categories}
@@ -1207,32 +1303,17 @@ export default function StockJinApp() {
                 </>
               ) : (
                 <div className="smart-tab-container">
-                  <div className="mb-4 pb-3 border-b border-gray-100 flex justify-between items-center">
-                    <div>
-                      <h2 className="text-xl font-black text-gray-800 tracking-tight">
-                        {tabTitles[activeTab]?.title || 'StockPro'}
-                      </h2>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {tabTitles[activeTab]?.desc || ''}
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => setActiveTab('dashboard')}
-                      className="text-xs font-bold text-[#6355d8] hover:underline"
-                    >
-                      ← กลับหน้าหลัก
-                    </button>
-                  </div>
+                  <PageHeader title={tabTitles[activeTab]?.title || 'StockPro'} description={tabTitles[activeTab]?.desc} />
                   {renderTabContent()}
                 </div>
               )}
             </div>
 
-            {/* Right Panel (Shown ONLY on Dashboard tab) */}
-            {activeTab === 'dashboard' && (
+            {/* Right Panel (Dashboard only; task-based, so hidden in stock-only mode) */}
+            {activeTab === 'dashboard' && !stockOnlyMode && (
               <div className="hidden xl:block shrink-0">
                 <SmartRightPanel 
-                  user={user}
+                  user={viewUser}
                   transactions={transactions}
                   products={products}
                 />
@@ -1241,8 +1322,14 @@ export default function StockJinApp() {
           </main>
         </div>
 
-        <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
-        {showToast && <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
+        <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} busy={modalConfig.busy} onCancel={() => setModalConfig(prev => prev.busy ? prev : ({ ...prev, isOpen: false }))} />
+        {previewAsStaff && (
+          <div role="status" className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-[80] flex items-center gap-3 pl-4 pr-1.5 py-1.5 rounded-full bg-ink text-white text-sm font-semibold shadow-glass-lg">
+            <span>กำลังดูแบบพนักงาน (เฉพาะในเครื่อง)</span>
+            <button onClick={() => setPreviewAsStaff(false)} className="h-9 px-3.5 rounded-full bg-white text-ink font-bold">กลับเป็นแอดมิน</button>
+          </div>
+        )}
+        {showToast && <div role="status" aria-live="polite" className="fixed top-6 left-1/2 -translate-x-1/2 w-max max-w-[calc(100%-32px)] bg-ink/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl text-sm font-semibold shadow-glass-lg z-[70] flex items-center gap-3 animate-bounce-in border border-white/10"><div className="bg-brand-500 rounded-full p-0.5 text-white shrink-0"><Check size={14} strokeWidth={3}/></div> <span>{toastMsg}</span></div>}
       </div>
     );
   }
@@ -1251,60 +1338,60 @@ export default function StockJinApp() {
   // MOBILE LAYOUT (<1024px)
   // ========================
   return (
-    <div className="bg-[#f4f5fa] min-h-screen font-sans text-gray-800 flex justify-center selection:bg-purple-100">
-      <div className="w-full max-w-md bg-[#f4f5fa] h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
+    <div className="app-glass-bg min-h-screen text-ink flex justify-center selection:bg-brand-100">
+      <div className="w-full max-w-md h-[100dvh] shadow-2xl relative overflow-hidden flex flex-col">
         {/* Navbar */}
-        <div className="bg-[#6355d8] px-5 py-3.5 sticky top-0 z-40 flex justify-between items-center shadow-md">
-          <div className="flex items-center gap-3">
+        <div className="glass sticky top-0 z-40 mx-3 mt-3 rounded-card px-3 py-2.5 flex justify-between items-center">
+          <div className="flex items-center gap-2.5">
             <button 
               onClick={() => setShowMoreDrawer(true)}
-              className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-white backdrop-blur-xs hover:bg-white/30 transition-all active:scale-95"
-              title="เปิดเมนูนำทาง (ซ้าย)"
+              className="w-10 h-10 bg-brand-50 rounded-control flex items-center justify-center text-brand-600 hover:bg-brand-100 transition-colors"
+              aria-label="เปิดเมนู"
             >
-              <Menu size={20} strokeWidth={2.5}/>
+              <Menu size={20} strokeWidth={2.4}/>
             </button>
             <div>
-              <h1 className="text-base font-black text-white tracking-wide leading-none">StockPro</h1>
-              <p className="text-[10px] text-white/80 mt-0.5">Inventory & Workforce Platform</p>
+              <h1 className="text-base font-black text-ink tracking-tight leading-none">StockPro</h1>
+              <p className="text-xs text-ink-muted mt-0.5">{tabTitles[activeTab]?.title || 'คลังสินค้า & บุคลากร'}</p>
             </div>
           </div>
           {user && (
-            <div className="flex items-center gap-2">
-              <button onClick={() => setActiveTab('notifications')} className="relative p-1.5 rounded-full hover:bg-white/10 transition-colors text-white">
-                <Bell size={18} />
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setActiveTab('notifications')} className="relative w-10 h-10 rounded-control flex items-center justify-center text-ink-muted hover:bg-white/70 transition-colors" aria-label="การแจ้งเตือน">
+                <Bell size={19} />
                 {unreadNotifCount > 0 && <span className="smart-notif-dot">{unreadNotifCount > 9 ? '9+' : unreadNotifCount}</span>}
               </button>
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold text-xs border border-white/30 overflow-hidden">
+              <button onClick={() => setActiveTab('menu')} className="w-9 h-9 bg-brand-100 rounded-full flex items-center justify-center text-brand-600 font-bold text-sm ring-2 ring-white overflow-hidden" aria-label="บัญชีของฉัน">
                 {user.photoURL ? <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" /> : user.name.charAt(0)}
-              </div>
+              </button>
             </div>
           )}
         </div>
 
         {/* Content */}
-        <div className="p-4 flex-1 overflow-y-auto scrollbar-hide pb-24 space-y-4">
+        <div className="p-4 flex-1 overflow-y-auto scrollbar-hide pb-28 space-y-4">
           {activeTab === 'dashboard' ? (
             <>
-              {/* Mobile Sub-tab switch */}
-              <div className="flex bg-white p-1 rounded-2xl shadow-xs border border-gray-100 text-xs font-bold">
+              {/* Mobile Sub-tab switch (hidden in stock-only mode) */}
+              {!stockOnlyMode && <div className="glass flex p-1 rounded-2xl text-sm font-bold">
                 <button 
                   onClick={() => setDashboardSubTab('tasks')}
-                  className={`flex-1 py-1.5 rounded-xl transition-all ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500'}`}
+                  className={`flex-1 h-10 rounded-xl transition-colors ${(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-muted'}`}
                 >
-                  📋 งานประจำวัน
+                  งานประจำวัน
                 </button>
                 <button 
                   onClick={() => setDashboardSubTab('analytics')}
-                  className={`flex-1 py-1.5 rounded-xl transition-all ${dashboardSubTab === 'analytics' ? 'bg-[#6355d8] text-white shadow-xs' : 'text-gray-500'}`}
+                  className={`flex-1 h-10 rounded-xl transition-colors ${dashboardSubTab === 'analytics' ? 'bg-brand-500 text-white shadow-sm' : 'text-ink-muted'}`}
                 >
-                  📊 สถิติสต็อก
+                  สถิติ & รายงาน
                 </button>
-              </div>
+              </div>}
 
               {(dashboardSubTab === 'tasks' || dashboardSubTab === 'smart') ? (
                 <>
                   <SmartDashboardView 
-                    user={user}
+                    user={viewUser}
                     products={products}
                     transactions={transactions}
                     categories={categories}
@@ -1315,13 +1402,7 @@ export default function StockJinApp() {
                     initialPosTab={dashboardPosTab}
                     onPosTabChange={setDashboardPosTab}
                   />
-                  <div className="mt-4">
-                    <SmartRightPanel 
-                      user={user}
-                      transactions={transactions}
-                      products={products}
-                    />
-                  </div>
+                  {/* Mobile skips SmartRightPanel: it repeats the progress card and adds a long team list */}
                 </>
               ) : (
                 renderTabContent()
@@ -1334,24 +1415,36 @@ export default function StockJinApp() {
 
         {/* Bottom Nav */}
         {user && (
-          <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200 px-6 py-2 flex justify-between items-center z-50 pb-8 safe-area-pb shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-            <button onClick={() => setActiveTab('dashboard')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'dashboard' ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}><LayoutDashboard size={22} strokeWidth={activeTab==='dashboard'?2.5:2}/><span className="text-[9px] font-bold">ภาพรวม</span></button>
-            <button onClick={() => setActiveTab('stock')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'stock' ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}><Package size={22} strokeWidth={activeTab==='stock'?2.5:2}/><span className="text-[9px] font-bold">คลัง</span></button>
-            <div className="relative -top-8 group"><div className={`absolute inset-0 bg-purple-400 rounded-full blur-xl opacity-40 group-hover:opacity-60 transition-opacity ${activeTab === 'transaction' ? 'block' : 'hidden'}`}></div><button onClick={() => setActiveTab('transaction')} className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl shadow-purple-900/30 border-[6px] border-[#f4f5fa] transition-all active:scale-90 ${activeTab === 'transaction' ? 'bg-[#6355d8] text-white scale-110' : 'bg-gray-800 text-white'}`}><ArrowRightLeft size={28} strokeWidth={2.5} /></button></div>
-            <button onClick={() => setActiveTab('status')} className={`flex flex-col items-center gap-1 transition-all ${activeTab === 'status' ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}><ClipboardList size={22} strokeWidth={activeTab==='status'?2.5:2}/><span className="text-[9px] font-bold">สถานะ</span></button>
-            <button
-              onClick={() => setShowMoreDrawer(true)}
-              className={`flex flex-col items-center gap-1 transition-all ${ ['hr','documents','menu','notifications'].includes(activeTab) ? 'text-[#6355d8] scale-110' : 'text-gray-400'}`}
-            >
-              <div className="relative">
-                <Menu size={22} strokeWidth={['hr','documents','menu','notifications'].includes(activeTab)?2.5:2}/>
-                {(['hr','documents','menu','notifications'].includes(activeTab) || unreadNotifCount > 0) && (
-                  <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${unreadNotifCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-[#6355d8]'}`} />
-                )}
-              </div>
-              <span className="text-[9px] font-bold">อื่นๆ</span>
-            </button>
-          </div>
+          <nav className="glass-strong absolute bottom-3 left-3 right-3 rounded-[24px] px-2 py-1.5 flex justify-between items-center z-50 safe-area-pb" aria-label="เมนูหลัก">
+            {[
+              { key: 'dashboard', label: 'ภาพรวม', icon: LayoutDashboard },
+              { key: 'stock', label: 'คลัง', icon: Package },
+              { key: 'transaction', label: 'เบิก/รับ', icon: ArrowRightLeft },
+              { key: 'status', label: 'สถานะ', icon: ClipboardList },
+            ].map(({ key, label, icon: Icon }) => {
+              const active = activeTab === key;
+              return (
+                <button key={key} onClick={() => setActiveTab(key)} aria-current={active ? 'page' : undefined}
+                  className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-14 rounded-2xl transition-colors duration-150 ${active ? 'bg-brand-500 text-white shadow-[0_6px_16px_rgba(99,85,216,0.3)]' : 'text-ink-subtle hover:text-brand-600'}`}>
+                  <Icon size={21} strokeWidth={active ? 2.4 : 2}/>
+                  <span className="text-xs font-bold">{label}</span>
+                </button>
+              );
+            })}
+            {(() => {
+              const moreActive = ['hr','documents','menu','notifications','users'].includes(activeTab);
+              return (
+                <button onClick={() => setShowMoreDrawer(true)}
+                  className={`flex-1 flex flex-col items-center justify-center gap-0.5 h-14 rounded-2xl transition-colors duration-150 ${moreActive ? 'bg-brand-500 text-white' : 'text-ink-subtle hover:text-brand-600'}`}>
+                  <span className="relative">
+                    <Menu size={21} strokeWidth={moreActive ? 2.4 : 2}/>
+                    {unreadNotifCount > 0 && <span className="absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full bg-danger-500 ring-2 ring-white" />}
+                  </span>
+                  <span className="text-xs font-bold">อื่นๆ</span>
+                </button>
+              );
+            })()}
+          </nav>
         )}
 
         {/* More Drawer (Mobile) */}
@@ -1363,12 +1456,13 @@ export default function StockJinApp() {
           onNavigateWithSub={handleNavigateWithSub}
           dashboardPosTab={dashboardPosTab}
           dashboardSubTab={dashboardSubTab}
-          user={user}
+          stockOnlyMode={stockOnlyMode}
+          user={viewUser}
           unreadNotifCount={unreadNotifCount}
           handleLogout={handleLogout}
         />
         
-        <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))} />
+        <ConfirmModal isOpen={modalConfig.isOpen} title={modalConfig.title} message={modalConfig.message} type={modalConfig.type} onConfirm={modalConfig.onConfirm} busy={modalConfig.busy} onCancel={() => setModalConfig(prev => prev.busy ? prev : ({ ...prev, isOpen: false }))} />
 
         {/* Official Transaction Document Modal (GRN / GIS A4 PDF) */}
         <TransactionDocumentModal
@@ -1382,7 +1476,13 @@ export default function StockJinApp() {
           onSuccessSave={(msg) => showNotification(msg)}
         />
 
-        {showToast && <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl text-sm font-bold shadow-2xl z-[70] flex items-center gap-3 animate-bounce-in whitespace-nowrap border border-white/10"><div className="bg-[#6355d8] rounded-full p-0.5 text-white"><Check size={14} strokeWidth={3}/></div> {toastMsg}</div>}
+        {previewAsStaff && (
+          <div role="status" className="fixed bottom-24 lg:bottom-6 left-1/2 -translate-x-1/2 z-[80] flex items-center gap-3 pl-4 pr-1.5 py-1.5 rounded-full bg-ink text-white text-sm font-semibold shadow-glass-lg">
+            <span>กำลังดูแบบพนักงาน (เฉพาะในเครื่อง)</span>
+            <button onClick={() => setPreviewAsStaff(false)} className="h-9 px-3.5 rounded-full bg-white text-ink font-bold">กลับเป็นแอดมิน</button>
+          </div>
+        )}
+        {showToast && <div role="status" aria-live="polite" className="absolute top-24 left-1/2 -translate-x-1/2 w-max max-w-[calc(100%-32px)] bg-ink/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl text-sm font-semibold shadow-glass-lg z-[70] flex items-center gap-3 animate-bounce-in border border-white/10"><div className="bg-brand-500 rounded-full p-0.5 text-white shrink-0"><Check size={14} strokeWidth={3}/></div> <span>{toastMsg}</span></div>}
       </div>
     </div>
   );

@@ -435,7 +435,7 @@ export default function LeaveDocumentModal({
                     </h4>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
                       currentStatus === 'approved' 
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' 
+                        ? 'bg-success-500/20 text-emerald-300 border border-success-500/40' 
                         : currentStatus === 'rejected'
                         ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                         : 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
@@ -457,8 +457,8 @@ export default function LeaveDocumentModal({
                   disabled={isUpdatingStatus}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black shadow-md transition-all ${
                     currentStatus === 'approved'
-                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      : 'bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-105 active:scale-95'
+                      ? 'bg-success-600 text-white hover:bg-success-700'
+                      : 'bg-success-500 hover:bg-success-600 text-white hover:scale-105 active:scale-95'
                   } disabled:opacity-50`}
                 >
                   {isUpdatingStatus ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
@@ -766,7 +766,7 @@ export default function LeaveDocumentModal({
                 <div className="text-sm font-bold text-gray-900 mb-3 flex items-center justify-between">
                   <span>ความเห็นและคำสั่งของผู้บังคับบัญชา / ผู้อนุมัติ :</span>
                   <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                    isApproved ? 'bg-green-100 text-green-700' : isRejected ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                    isApproved ? 'bg-success-100 text-success-700' : isRejected ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
                   }`}>
                     {isApproved ? '● อนุมัติแล้ว' : isRejected ? '● ไม่อนุมัติ' : '○ รอการอนุมัติ'}
                   </span>

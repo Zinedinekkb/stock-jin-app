@@ -1,79 +1,8 @@
 // app/components/DesktopSidebar.js
 'use client';
-import React, { useState, useEffect } from 'react';
-import { 
-  Home, Package, ArrowRightLeft, ClipboardList, Bell, 
-  Clock, FolderOpen, Users, Settings, ChevronDown, 
-  ChevronLeft, ChevronRight, LogOut, QrCode
-} from 'lucide-react';
-import { isAdmin } from '../utils/permissions';
-import { getUserCluster } from '../services/taskService';
-
-const menuItems = [
-  {
-    key: 'dashboard',
-    label: 'แดชบอร์ด & งาน',
-    icon: Home,
-    emoji: '📊',
-    subItems: [
-      { key: 'my', label: 'งานของฉัน', icon: '⭐', params: { posTab: 'my', subTab: 'tasks' } },
-      { key: 'warehouse', label: 'คลัง/สต็อก', icon: '📦', params: { posTab: 'warehouse', subTab: 'tasks' } },
-      { key: 'kitchen', label: 'ครัว/เชฟ', icon: '👨‍🍳', params: { posTab: 'kitchen', subTab: 'tasks' } },
-      { key: 'finance', label: 'การเงิน/แคชเชียร์', icon: '💰', params: { posTab: 'finance', subTab: 'tasks' } },
-      { key: 'service', label: 'หน้าร้าน/บริการ', icon: '🍱', params: { posTab: 'service', subTab: 'tasks' } },
-      { key: 'shipping', label: 'จัดส่ง/พัสดุ', icon: '🚚', params: { posTab: 'shipping', subTab: 'tasks' } },
-      { key: 'management', label: 'บริหาร/Admin', icon: '👔', params: { posTab: 'management', subTab: 'tasks' } },
-      { key: 'all', label: 'งานทั้งหมด', icon: '🌐', params: { posTab: 'all', subTab: 'tasks' } },
-      { key: 'analytics', label: 'สถิติสต็อก & รายงาน', icon: '📈', params: { subTab: 'analytics' } },
-    ]
-  },
-  {
-    key: 'stock',
-    label: 'คลังสินค้า',
-    icon: Package,
-    emoji: '📦'
-  },
-  {
-    key: 'transaction',
-    label: 'เบิก/รับสินค้า',
-    icon: ArrowRightLeft,
-    emoji: '🔄'
-  },
-  {
-    key: 'status',
-    label: 'สถานะรายการ',
-    icon: ClipboardList,
-    emoji: '📑'
-  },
-  {
-    key: 'hr',
-    label: 'เข้า-ออกงาน / ลา',
-    icon: Clock,
-    emoji: '⏰'
-  },
-  {
-    key: 'documents',
-    label: 'เอกสาร',
-    icon: FolderOpen,
-    emoji: '📁'
-  },
-  {
-    key: 'users',
-    label: 'จัดการบัญชีผู้ใช้',
-    icon: Users,
-    adminOnly: true
-  },
-  {
-    key: 'notifications',
-    label: 'การแจ้งเตือน',
-    icon: Bell
-  },
-  {
-    key: 'menu',
-    label: 'ตั้งค่า & บัญชี',
-    icon: Settings
-  }
-];
+import React, { useState } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, Package, QrCode } from 'lucide-react';
+import { getVisibleNavItems, getVisibleSubItems, isSubItemActive, NAV_ITEMS } from '../config/navigation';
 
 export default function DesktopSidebar({ 
   activeTab, 
@@ -83,22 +12,23 @@ export default function DesktopSidebar({
   unreadNotifCount = 0,
   onNavigateWithSub,
   dashboardPosTab = 'my',
-  dashboardSubTab = 'tasks'
+  dashboardSubTab = 'tasks',
+  stockOnlyMode = false
 }) {
   // Sidebar expanded / collapsed state
   const [isCollapsed, setIsCollapsed] = useState(false);
   // Accordion expanded section
   const [expandedSection, setExpandedSection] = useState('dashboard');
   const [hoveredTab, setHoveredTab] = useState(null);
+  const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
 
-  const isUserAdmin = isAdmin(user);
-
-  // Auto-expand section if activeTab has subItems
-  useEffect(() => {
-    if (activeTab && menuItems.some(i => i.key === activeTab && i.subItems?.length)) {
+  // Auto-expand section when navigating to a tab that has sub-items (adjusted during render, not in an effect)
+  if (activeTab !== prevActiveTab) {
+    setPrevActiveTab(activeTab);
+    if (NAV_ITEMS.some(i => i.key === activeTab && i.subItems?.length)) {
       setExpandedSection(activeTab);
     }
-  }, [activeTab]);
+  }
 
   const handleItemClick = (item) => {
     if (isCollapsed) {
@@ -108,8 +38,14 @@ export default function DesktopSidebar({
       return;
     }
 
-    setActiveTab(item.key);
-    if (item.subItems && item.subItems.length > 0) {
+    const hasSub = getVisibleSubItems(item, user, { stockOnlyMode }).length > 0;
+    // First click navigates and opens the sub-menu; clicking the already-active item toggles it
+    if (activeTab !== item.key) {
+      setActiveTab(item.key);
+      if (hasSub) setExpandedSection(item.key);
+      return;
+    }
+    if (hasSub) {
       setExpandedSection(prev => prev === item.key ? null : item.key);
     }
   };
@@ -145,7 +81,7 @@ export default function DesktopSidebar({
           {!isCollapsed && (
             <div className="min-w-0 transition-opacity duration-200">
               <h1 className="text-base font-black text-white tracking-wide leading-none truncate">StockPro</h1>
-              <p className="text-[10px] text-white/70 font-medium mt-1 truncate">Workforce & Inventory</p>
+              <p className="text-xs text-white/70 font-medium mt-1 truncate">Workforce & Inventory</p>
             </div>
           )}
         </div>
@@ -160,12 +96,11 @@ export default function DesktopSidebar({
 
       {/* Navigation List (Scrollable) */}
       <div className="smart-sidebar-nav smart-sidebar-scroll">
-        {menuItems
-          .filter(item => !item.adminOnly || isUserAdmin)
+        {getVisibleNavItems(user, { stockOnlyMode })
           .map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.key;
-            const hasSub = item.subItems && item.subItems.length > 0;
+            const hasSub = getVisibleSubItems(item, user, { stockOnlyMode }).length > 0;
             const isExpanded = expandedSection === item.key && !isCollapsed;
             const showBadge = item.key === 'notifications' && unreadNotifCount > 0;
 
@@ -185,7 +120,7 @@ export default function DesktopSidebar({
                     <Icon 
                       size={22} 
                       strokeWidth={isActive ? 2.5 : 2} 
-                      className={isActive ? 'text-[#6355d8]' : 'text-white/85 group-hover:text-white'} 
+                      className={isActive ? 'text-brand-500' : 'text-white/85 group-hover:text-white'} 
                     />
                     {showBadge && (
                       <span className="smart-sidebar-badge">
@@ -196,13 +131,13 @@ export default function DesktopSidebar({
 
                   {!isCollapsed && (
                     <>
-                      <span className={`flex-1 text-xs truncate tracking-tight ${isActive ? 'text-[#6355d8] font-black' : 'font-semibold text-white/90'}`}>
+                      <span className={`flex-1 text-xs truncate tracking-tight ${isActive ? 'text-brand-500 font-black' : 'font-semibold text-white/90'}`}>
                         {item.label}
                       </span>
                       {hasSub && (
                         <ChevronDown 
                           size={14} 
-                          className={`transition-transform duration-200 shrink-0 ${isActive ? 'text-[#6355d8]' : 'text-white/60'} ${isExpanded ? 'rotate-180' : ''}`}
+                          className={`transition-transform duration-200 shrink-0 ${isActive ? 'text-brand-500' : 'text-white/60'} ${isExpanded ? 'rotate-180' : ''}`}
                         />
                       )}
                     </>
@@ -220,26 +155,10 @@ export default function DesktopSidebar({
                 {!isCollapsed && hasSub && (
                   <div className={`smart-sidebar-sub-wrapper ${isExpanded ? 'expanded' : ''}`}>
                     <div className="smart-sidebar-sub-container">
-                      {item.subItems
-                        .filter(sub => {
-                          if (sub.adminOnly && !isUserAdmin) return false;
-                          if (item.key === 'dashboard' && !isUserAdmin) {
-                            const userCluster = getUserCluster(user);
-                            if (sub.key === 'my' || sub.key === 'analytics') return true;
-                            if (userCluster && sub.key === userCluster) return true;
-                            return false;
-                          }
-                          return true;
-                        })
+                      {getVisibleSubItems(item, user, { stockOnlyMode })
                         .map(sub => {
-                          let isSubActive = false;
-                          if (item.key === 'dashboard') {
-                            if (sub.key === 'analytics') {
-                              isSubActive = isActive && dashboardSubTab === 'analytics';
-                            } else {
-                              isSubActive = isActive && (dashboardSubTab === 'tasks' || !dashboardSubTab) && dashboardPosTab === sub.key;
-                            }
-                          }
+                          const isSubActive = isSubItemActive(item, sub, { activeTab, dashboardSubTab, dashboardPosTab });
+                          const SubIcon = sub.icon;
 
                           return (
                             <button
@@ -247,7 +166,7 @@ export default function DesktopSidebar({
                               onClick={() => handleSubItemClick(item.key, sub)}
                               className={`smart-sidebar-sub-item ${isSubActive ? 'active' : ''}`}
                             >
-                              <span className="text-sm shrink-0">{sub.icon}</span>
+                              <SubIcon size={15} className="shrink-0" />
                               <span className="truncate">{sub.label}</span>
                             </button>
                           );
@@ -283,7 +202,7 @@ export default function DesktopSidebar({
               )}
             </div>
             {!isCollapsed && (
-              <span className="text-[11px] font-bold text-white truncate max-w-[120px]">
+              <span className="text-xs font-bold text-white truncate max-w-[120px]">
                 {user?.name?.split(' ')[0] || 'ผู้ใช้งาน'}
               </span>
             )}

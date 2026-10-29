@@ -162,7 +162,7 @@ export default function TabUserDirectory({ user }) {
   };
 
   const getStatusBadge = (status) => {
-    if (status === 'approved') return { label: 'Active', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' };
+    if (status === 'approved') return { label: 'Active', cls: 'bg-success-100 text-success-700 border-success-100' };
     if (status === 'pending') return { label: 'Pending', cls: 'bg-amber-100 text-amber-700 border-amber-200' };
     if (status === 'deactivated') return { label: 'Inactive', cls: 'bg-red-100 text-red-700 border-red-200' };
     return { label: status || '—', cls: 'bg-gray-100 text-gray-600 border-gray-200' };

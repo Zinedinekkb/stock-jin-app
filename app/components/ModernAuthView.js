@@ -53,7 +53,7 @@ export default function ModernAuthView({
         {/* ========================================= */}
         {/* LEFT COLUMN: HERO BRANDING (Desktop only) */}
         {/* ========================================= */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#4f42c2] via-[#6355d8] to-[#8072f5] p-12 text-white flex-col justify-between relative overflow-hidden">
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-600 via-brand-500 to-[#8072f5] p-12 text-white flex-col justify-between relative overflow-hidden">
           {/* Ambient Glows */}
           <div className="absolute -top-24 -left-24 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
@@ -67,7 +67,7 @@ export default function ModernAuthView({
               </div>
               <div>
                 <span className="text-2xl font-black tracking-wide text-white">StockPro</span>
-                <span className="ml-2 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 bg-white/20 rounded-full text-white/90">v2.5</span>
+                <span className="ml-2 text-xs font-bold uppercase tracking-wider px-2 py-0.5 bg-white/20 rounded-full text-white/90">v2.5</span>
                 <p className="text-xs text-purple-200 mt-0.5">Smart Inventory & Workforce</p>
               </div>
             </div>
@@ -93,12 +93,12 @@ export default function ModernAuthView({
             {/* Feature Badges */}
             <div className="space-y-3 pt-2">
               <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/10">
-                <div className="w-8 h-8 rounded-xl bg-emerald-400/20 text-emerald-200 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-success-500/20 text-success-100 flex items-center justify-center shrink-0">
                   <CheckCircle2 size={18} />
                 </div>
                 <div>
                   <p className="text-xs font-bold text-white">ระบบจัดการสต็อกและ POS สองคอลัมน์</p>
-                  <p className="text-[11px] text-purple-200">เบิก/รับสะดวกรวดเร็ว ตรวจนับแม่นยำ</p>
+                  <p className="text-xs text-purple-200">เบิก/รับสะดวกรวดเร็ว ตรวจนับแม่นยำ</p>
                 </div>
               </div>
 
@@ -108,14 +108,14 @@ export default function ModernAuthView({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-white">ระบบสิทธิ์และการอนุมัติขั้นสูง</p>
-                  <p className="text-[11px] text-purple-200">ปลอดภัย ผู้ใช้ใหม่รอการอนุมัติก่อนเริ่มงาน</p>
+                  <p className="text-xs text-purple-200">ปลอดภัย ผู้ใช้ใหม่รอการอนุมัติก่อนเริ่มงาน</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Bottom Footer Note */}
-          <div className="relative z-10 text-[11px] text-purple-200/70 flex items-center justify-between border-t border-white/10 pt-4">
+          <div className="relative z-10 text-xs text-purple-200/70 flex items-center justify-between border-t border-white/10 pt-4">
             <span>© 2026 StockPro Inc.</span>
             <span>Fast, Reliable & Modern</span>
           </div>
@@ -128,13 +128,13 @@ export default function ModernAuthView({
           
           {/* Mobile Brand Header (< lg) */}
           <div className="lg:hidden flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-            <div className="w-10 h-10 bg-[#6355d8] rounded-2xl flex items-center justify-center text-white shadow-md">
+            <div className="w-10 h-10 bg-brand-500 rounded-2xl flex items-center justify-center text-white shadow-md">
               <Package size={22} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black text-[#6355d8]">StockPro</h1>
-                <span className="text-[10px] font-bold px-2 py-0.5 bg-purple-100 text-[#6355d8] rounded-full">v2.5</span>
+                <h1 className="text-xl font-black text-brand-500">StockPro</h1>
+                <span className="text-xs font-bold px-2 py-0.5 bg-purple-100 text-brand-500 rounded-full">v2.5</span>
               </div>
               <p className="text-xs text-gray-400">Inventory & Workforce Platform</p>
             </div>
@@ -159,7 +159,7 @@ export default function ModernAuthView({
               onClick={() => setIsRegisterMode(false)}
               className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 !isRegisterMode 
-                  ? 'bg-white text-[#6355d8] shadow-sm' 
+                  ? 'bg-white text-brand-500 shadow-sm' 
                   : 'text-gray-500 hover:text-gray-900'
               }`}
             >
@@ -170,7 +170,7 @@ export default function ModernAuthView({
               onClick={() => setIsRegisterMode(true)}
               className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                 isRegisterMode 
-                  ? 'bg-white text-[#6355d8] shadow-sm' 
+                  ? 'bg-white text-brand-500 shadow-sm' 
                   : 'text-gray-500 hover:text-gray-900'
               }`}
             >
@@ -237,7 +237,7 @@ export default function ModernAuthView({
           {/* Divider */}
           <div className="relative flex items-center justify-center my-4">
             <div className="border-t border-gray-200 w-full" />
-            <span className="bg-white px-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+            <span className="bg-white px-3 text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
               หรือระบุด้วยอีเมล
             </span>
             <div className="border-t border-gray-200 w-full" />
@@ -262,10 +262,10 @@ export default function ModernAuthView({
                     placeholder="เช่น สมชาย ใจดี"
                     value={registerForm.name}
                     onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#6355d8] focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
                   />
                 </div>
-                <p className="text-[10px] text-gray-500 mt-1 pl-1">
+                <p className="text-xs text-gray-500 mt-1 pl-1">
                   *กรุณากรอกชื่อและนามสกุลจริง เพื่อใช้พิมพ์ลงในเอกสารบริษัทและใบขอลาอย่างเป็นทางการ
                 </p>
               </div>
@@ -290,7 +290,7 @@ export default function ModernAuthView({
                       setLoginForm({ ...loginForm, username: e.target.value });
                     }
                   }}
-                  className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#6355d8] focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
                 />
               </div>
             </div>
@@ -316,7 +316,7 @@ export default function ModernAuthView({
                       setLoginForm({ ...loginForm, password: e.target.value });
                     }
                   }}
-                  className="w-full pl-10 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#6355d8] focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
+                  className="w-full pl-10 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -342,7 +342,7 @@ export default function ModernAuthView({
                     placeholder="••••••••"
                     value={registerForm.confirmPassword}
                     onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
-                    className="w-full pl-10 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-[#6355d8] focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
+                    className="w-full pl-10 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
                   />
                   <button
                     type="button"
@@ -367,7 +367,7 @@ export default function ModernAuthView({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-[#6355d8] to-[#7b6ef6] hover:from-[#5749cc] hover:to-[#6f62ea] active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
+              className="w-full mt-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-brand-500 to-[#7b6ef6] hover:from-[#5749cc] hover:to-[#6f62ea] active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -386,7 +386,7 @@ export default function ModernAuthView({
           {/* Admin Approval Notice Banner */}
           <div className="mt-6 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-start gap-2.5 text-amber-800">
             <Clock size={16} className="shrink-0 text-amber-600 mt-0.5" />
-            <p className="text-[11px] leading-relaxed">
+            <p className="text-xs leading-relaxed">
               <strong>ข้อกำหนดด้านความปลอดภัย:</strong> บัญชีใหม่ทุกบัญชี (ทั้ง Gmail, GitHub และอีเมล) จะต้องได้รับการอนุมัติสิทธิ์จากผู้ดูแลระบบ (Admin) ก่อนจึงจะสามารถเข้าใช้งานคลังสินค้าได้
             </p>
           </div>

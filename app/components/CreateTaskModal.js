@@ -6,6 +6,7 @@ import {
   User, Users, Briefcase, Flame, Sparkles, Loader2
 } from 'lucide-react';
 import { createTask, updateTask, getTodayKey, notifyTaskAssigned } from '../services/taskService';
+import { getTaskSteps } from '../services/taskSteps';
 import { isAdmin } from '../utils/permissions';
 
 const POSITIONS = [
@@ -35,6 +36,7 @@ export default function CreateTaskModal({
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [stepsText, setStepsText] = useState(''); // one instruction step per line
   const [type, setType] = useState('assigned'); // 'routine' | 'assigned'
   const [targetType, setTargetType] = useState('position'); // 'position' | 'user' | 'all'
   const [targetPosition, setTargetPosition] = useState('พนักงานคุมสต็อก');
@@ -52,6 +54,7 @@ export default function CreateTaskModal({
     if (editingTask) {
       setTitle(editingTask.title || '');
       setDescription(editingTask.description || '');
+      setStepsText(getTaskSteps(editingTask).join('\n'));
       setType(editingTask.type || 'assigned');
       setTargetType(editingTask.targetType || 'position');
       setTargetPosition(editingTask.targetPosition || 'พนักงานคุมสต็อก');
@@ -62,6 +65,7 @@ export default function CreateTaskModal({
     } else {
       setTitle('');
       setDescription('');
+      setStepsText('');
       setType('assigned');
       if (isUserAdmin) {
         setTargetType('position');
@@ -126,6 +130,7 @@ export default function CreateTaskModal({
       const taskPayload = {
         title: title.trim(),
         description: description.trim(),
+        steps: stepsText.split('\n').map(line => line.replace(/^\s*\d+[.)]\s*/, '').trim()).filter(Boolean),
         type,
         isRoutine: type === 'routine',
         category,
@@ -175,7 +180,7 @@ export default function CreateTaskModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-8 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-purple-700 to-[#6355d8] text-white flex items-center justify-between shrink-0">
+        <div className="px-6 py-5 bg-gradient-to-r from-purple-700 to-brand-500 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold">
               {type === 'routine' ? '🔄' : '⚡'}
@@ -217,14 +222,14 @@ export default function CreateTaskModal({
                 onClick={() => setType('routine')}
                 className={`p-3 rounded-2xl border text-left transition-all flex items-start gap-2.5 ${
                   type === 'routine' 
-                    ? 'border-[#6355d8] bg-purple-50/70 shadow-sm text-purple-950 font-bold' 
+                    ? 'border-brand-500 bg-purple-50/70 shadow-sm text-purple-950 font-bold' 
                     : 'border-slate-200 hover:border-slate-300 text-slate-600'
                 }`}
               >
                 <span className="text-xl">🔄</span>
                 <div>
                   <div className="text-xs font-bold">งานประจำวัน (Routine)</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">เช็คลิสต์รายวันสำหรับตำแหน่งงาน</div>
+                  <div className="text-xs text-slate-500 mt-0.5">เช็คลิสต์รายวันสำหรับตำแหน่งงาน</div>
                 </div>
               </button>
 
@@ -233,14 +238,14 @@ export default function CreateTaskModal({
                 onClick={() => setType('assigned')}
                 className={`p-3 rounded-2xl border text-left transition-all flex items-start gap-2.5 ${
                   type === 'assigned' 
-                    ? 'border-[#6355d8] bg-purple-50/70 shadow-sm text-purple-950 font-bold' 
+                    ? 'border-brand-500 bg-purple-50/70 shadow-sm text-purple-950 font-bold' 
                     : 'border-slate-200 hover:border-slate-300 text-slate-600'
                 }`}
               >
                 <span className="text-xl">⚡</span>
                 <div>
                   <div className="text-xs font-bold">งานเสริม / งานสั่งมอบหมาย</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">งานเฉพาะกิจ มีกำหนดส่งและติดตามผล</div>
+                  <div className="text-xs text-slate-500 mt-0.5">งานเฉพาะกิจ มีกำหนดส่งและติดตามผล</div>
                 </div>
               </button>
             </div>
@@ -257,7 +262,7 @@ export default function CreateTaskModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="เช่น ตรวจนับสต็อกโซนแช่แข็ง, เตรียมเนื้อสัตว์สำหรับมื้อเที่ยง, สรุปเงินทอนเปิดกะ"
-              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-[#6355d8] focus:ring-4 focus:ring-purple-500/10 text-sm font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all"
+              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-sm font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all"
             />
           </div>
 
@@ -274,7 +279,7 @@ export default function CreateTaskModal({
                   onClick={() => setTargetType('position')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     targetType === 'position'
-                      ? 'bg-[#6355d8] text-white shadow-xs'
+                      ? 'bg-brand-500 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -285,7 +290,7 @@ export default function CreateTaskModal({
                   onClick={() => setTargetType('user')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     targetType === 'user'
-                      ? 'bg-[#6355d8] text-white shadow-xs'
+                      ? 'bg-brand-500 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -299,7 +304,7 @@ export default function CreateTaskModal({
                   }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     targetType === 'all'
-                      ? 'bg-[#6355d8] text-white shadow-xs'
+                      ? 'bg-brand-500 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -308,7 +313,7 @@ export default function CreateTaskModal({
               </div>
             ) : (
               <div className="mb-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 border border-purple-200 rounded-xl text-xs font-bold text-[#6355d8]">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 border border-purple-200 rounded-xl text-xs font-bold text-brand-500">
                   👤 งานของฉัน ({currentUser?.name || 'พนักงาน'})
                 </span>
               </div>
@@ -318,7 +323,7 @@ export default function CreateTaskModal({
               <select
                 value={targetPosition}
                 onChange={(e) => setTargetPosition(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-[#6355d8] text-sm font-semibold text-slate-800 outline-none bg-white"
+                className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 text-sm font-semibold text-slate-800 outline-none bg-white"
               >
                 {POSITIONS.map(p => (
                   <option key={p.key} value={p.key}>{p.label}</option>
@@ -330,7 +335,7 @@ export default function CreateTaskModal({
               <select
                 value={targetUserId}
                 onChange={(e) => setTargetUserId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-[#6355d8] text-sm font-semibold text-slate-800 outline-none bg-white"
+                className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 text-sm font-semibold text-slate-800 outline-none bg-white"
               >
                 <option value="">-- เลือกพนักงานผู้รับผิดชอบ --</option>
                 {approvedUsers
@@ -362,7 +367,7 @@ export default function CreateTaskModal({
                   }`}
                 >
                   <div className="text-xs font-bold">{p.label}</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">{p.desc}</div>
+                  <div className="text-xs text-slate-400 mt-0.5">{p.desc}</div>
                 </button>
               ))}
             </div>
@@ -378,7 +383,7 @@ export default function CreateTaskModal({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-[#6355d8] text-sm font-semibold text-slate-800 outline-none"
+                className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 text-sm font-semibold text-slate-800 outline-none"
               />
             </div>
             <div>
@@ -390,22 +395,38 @@ export default function CreateTaskModal({
                 value={dueTime}
                 onChange={(e) => setDueTime(e.target.value)}
                 placeholder="เช่น 16:30"
-                className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-[#6355d8] text-sm font-semibold text-slate-800 outline-none"
+                className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 text-sm font-semibold text-slate-800 outline-none"
               />
             </div>
           </div>
 
-          {/* 6. Description / Notes */}
+          {/* 6. Step-by-step instructions: what staff read and tick one by one */}
           <div>
-            <label className="block text-xs font-black text-slate-700 mb-1.5">
-              รายละเอียด / ขั้นตอนการทำงาน (Instructions / Notes)
+            <label htmlFor="task-steps" className="block text-sm font-bold text-ink mb-1">
+              วิธีทำ (ทีละขั้นตอน)
+            </label>
+            <p className="text-xs text-ink-subtle mb-1.5">พิมพ์ 1 บรรทัดต่อ 1 ขั้นตอน พนักงานจะเห็นเป็นเช็คลิสต์ และงานจะปิดเองเมื่อทำครบทุกข้อ</p>
+            <textarea
+              id="task-steps"
+              rows={5}
+              value={stepsText}
+              onChange={(e) => setStepsText(e.target.value)}
+              placeholder={'เช่น\nนับเงินทอนในลิ้นชัก\nเทียบกับยอดมาตรฐาน\nจดยอดลงหมายเหตุ'}
+              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all"
+            />
+          </div>
+
+          {/* 7. Short description / notes */}
+          <div>
+            <label className="block text-sm font-bold text-ink mb-1.5">
+              รายละเอียดเพิ่มเติม / ข้อควรระวัง
             </label>
             <textarea
-              rows={3}
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="ระบุข้อควรระวัง จุดตรวจเช็ค หรือข้อมูลเพิ่มเติม..."
-              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-[#6355d8] focus:ring-4 focus:ring-purple-500/10 text-sm font-normal text-slate-800 placeholder-slate-400 outline-none transition-all resize-none"
+              placeholder="ระบุข้อควรระวัง หรือข้อมูลเพิ่มเติม (ถ้ามี)"
+              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-sm font-normal text-slate-800 placeholder-slate-400 outline-none transition-all resize-none"
             />
           </div>
 
@@ -421,7 +442,7 @@ export default function CreateTaskModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-[#6355d8] hover:bg-[#5244c4] text-white text-xs font-black shadow-lg shadow-purple-500/25 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-lg shadow-purple-500/25 transition-all disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
