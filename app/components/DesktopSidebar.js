@@ -22,12 +22,10 @@ export default function DesktopSidebar({
   const [hoveredTab, setHoveredTab] = useState(null);
   const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
 
-  // Auto-expand section when navigating to a tab that has sub-items (adjusted during render, not in an effect)
+  // On navigation, open the new tab's sub-menu and collapse any other (adjusted during render, not in an effect)
   if (activeTab !== prevActiveTab) {
     setPrevActiveTab(activeTab);
-    if (NAV_ITEMS.some(i => i.key === activeTab && i.subItems?.length)) {
-      setExpandedSection(activeTab);
-    }
+    setExpandedSection(NAV_ITEMS.some(i => i.key === activeTab && i.subItems?.length) ? activeTab : null);
   }
 
   const handleItemClick = (item) => {
@@ -42,7 +40,8 @@ export default function DesktopSidebar({
     // First click navigates and opens the sub-menu; clicking the already-active item toggles it
     if (activeTab !== item.key) {
       setActiveTab(item.key);
-      if (hasSub) setExpandedSection(item.key);
+      // Opening another section collapses the one that was open
+      setExpandedSection(hasSub ? item.key : null);
       return;
     }
     if (hasSub) {
