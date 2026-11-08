@@ -7,10 +7,11 @@ import {
   ChevronRight, ChevronDown, Flame, Sparkles, ShieldCheck, 
   ArrowRight, RefreshCw, Briefcase, Package, ArrowRightLeft, 
   ClipboardList, MessageSquare, Loader2, PlayCircle, Eye,
-  BarChart3, CheckSquare, Layers, UserPlus, ListChecks
+  BarChart3, CheckSquare, Layers, UserPlus, ListChecks, CalendarPlus
 } from 'lucide-react';
 import { GlassCard, Button, Badge, SectionHeader } from './ui';
 import { getTaskSteps } from '../services/taskSteps';
+import { taskToCalendar } from '@/lib/calendarLink';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { 
@@ -644,6 +645,19 @@ export default function DailyTaskDashboard({
                       >
                         <MessageSquare size={17} />
                       </button>
+                      {task.dueDate && (
+                        <a
+                          href={taskToCalendar(task)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className={`${iconBtn} hover:text-brand-600 hover:bg-brand-50`}
+                          aria-label={`เพิ่มงาน ${task.title} ลงปฏิทิน Google`}
+                          title="เพิ่มลงปฏิทิน"
+                        >
+                          <CalendarPlus size={17} />
+                        </a>
+                      )}
                       {(isUserAdmin || task.createdBy === user?.uid) && (
                         <button onClick={() => { setEditingTask(task); setIsCreateModalOpen(true); }} className={`${iconBtn} hover:text-brand-600 hover:bg-brand-50`} aria-label="แก้ไขงาน">
                           <Edit3 size={17} />

@@ -11,6 +11,7 @@ import html2canvas from 'html2canvas';
 import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { sendPushEvent } from '@/lib/pushClient';
 
 const THAI_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -168,15 +169,6 @@ export default function LeaveDocumentModal({
       setApprovedAtDate(dateFormatted);
       setStatusMessage(isApprove ? '✅ อนุมัติและลงนามเรียบร้อยแล้ว!' : '❌ บันทึกผลไม่อนุมัติเรียบร้อยแล้ว');
 
-      // LINE Notification
-      fetch('/api/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: `📢 ผลการพิจารณาคำขอลา!\nพนักงาน: ${leave.userName}\nประเภท: ${leaveTypeLabel}\nผลการพิจารณา: ${isApprove ? '✅ อนุมัติแล้ว' : '❌ ไม่อนุมัติ'}\nผู้อนุมัติ: ${cleanApprover} (${cleanPosition})\nบันทึก: ${cleanNote}`
-        })
-      }).catch(() => {});
-
       // Email Notification to employee
       if (leave.userEmail) {
         fetch('/api/notify-email', {
@@ -199,6 +191,8 @@ export default function LeaveDocumentModal({
           })
         }).catch(() => {});
       }
+
+      sendPushEvent('leave_decided', { leaveId: leave.id }); // แจ้งเตือนพนักงานเจ้าของใบลา (ไม่ block)
 
       if (onSuccessSave) {
         onSuccessSave(isApprove ? '✅ อนุมัติและลงนามคำขอลาเรียบร้อยแล้ว' : '❌ บันทึกผลปฏิเสธคำขอลาเรียบร้อยแล้ว');

@@ -6,6 +6,8 @@ import {
   ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone, Boxes, Eye
 } from 'lucide-react';
 import { GlassCard, Button, Badge, SectionHeader, ListRow } from './ui';
+import InstallAppButton from './InstallAppButton';
+import PushToggle from './PushToggle';
 
 const PRESET_POSITIONS = [
   { label: 'เชฟ / แม่ครัว' },
@@ -183,6 +185,12 @@ export default function TabMenu({
             แก้ไขโปรไฟล์
           </Button>
         </GlassCard>
+
+        {/* Install as an app (shows only when the browser allows it) */}
+        <InstallAppButton variant="full" />
+
+        {/* Push notifications on this device */}
+        <PushToggle user={user} />
 
         {/* Admin: pending sign-ups need action, so they come first */}
         {isUserAdmin && pendingUsers.length > 0 && (

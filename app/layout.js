@@ -8,6 +8,18 @@ const plexThai = IBM_Plex_Sans_Thai({ subsets: ['thai', 'latin'], weight: ['400'
 export const metadata = {
   title: 'StockPro — ระบบจัดการสต็อกและบุคลากร',
   description: 'ระบบจัดการคลังสินค้าและบุคลากรสำหรับทุกธุรกิจ',
+  appleWebApp: {
+    capable: true,
+    title: 'StockPro',
+    statusBarStyle: 'default',
+  },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
+}
+
+export const viewport = {
+  themeColor: '#6355d8',
 }
 
 export default function RootLayout({ children }) {

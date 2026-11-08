@@ -61,6 +61,21 @@ export const isAdmin = (user) => {
   return user?.role === 'admin';
 };
 
+// คีย์เวิร์ดตรงกับ POSITION_CLUSTERS.warehouse ใน taskService.js (inline ไว้เพื่อหลีกเลี่ยง circular import)
+const WAREHOUSE_POSITION_KEYWORDS = ['สต็อก', 'คลัง', 'stock', 'warehouse', 'พัสดุ', 'คุมสต็อก'];
+
+/**
+ * ผู้ที่กรอก/ยืนยันยอดจริงได้: Admin หรือตำแหน่งสต็อก/คลัง
+ * @param {object} user
+ * @returns {boolean}
+ */
+export const canVerifyStock = (user) => {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  const userPos = (user.position || '').toLowerCase();
+  return WAREHOUSE_POSITION_KEYWORDS.some(k => userPos.includes(k));
+};
+
 /**
  * ตรวจสอบว่าผู้ใช้เป็น Staff หรือไม่
  * @param {object} user
