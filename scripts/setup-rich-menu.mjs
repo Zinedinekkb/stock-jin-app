@@ -8,7 +8,7 @@
  *   node scripts/setup-rich-menu.mjs --dry-run                         (สร้างรูป + พิมพ์ JSON เท่านั้น / image + JSON only, no network)
  *
  * ค่าที่ต้องมี / Required env:
- *   LINE_CHANNEL_ACCESS_TOKEN  Channel access token ของ LINE Official Account
+ *   LINE_CHANNEL_ACCESS_TOKEN (หรือ LINE_ACCESS_TOKEN) Channel access token ของ LINE Official Account
  *   NEXT_PUBLIC_APP_URL        URL ของแอป (ค่าเริ่มต้น https://stock-jin-app.vercel.app)
  *
  * หมายเหตุ: เมื่อผู้ใช้กดปุ่มใน Rich Menu (ปุ่มข้อความ) LINE จะส่งข้อความปกติเข้ามาที่บอท
@@ -43,7 +43,7 @@ const FONT = 'Leelawadee UI, Tahoma, Noto Sans Thai, sans-serif';
 const OUT_PNG = path.join(path.dirname(fileURLToPath(import.meta.url)), 'rich-menu.png');
 
 const dryRun = process.argv.slice(2).includes('--dry-run');
-const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || process.env.LINE_ACCESS_TOKEN; // app uses LINE_ACCESS_TOKEN
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://stock-jin-app.vercel.app';
 
 if (!dryRun && !TOKEN) {
