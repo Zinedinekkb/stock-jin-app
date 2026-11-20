@@ -115,3 +115,11 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://<โดเมน>/api/cron/
 - **ไม่ได้รับ push:** ตรวจ `NEXT_PUBLIC_FIREBASE_VAPID_KEY` และ `FIREBASE_SERVICE_ACCOUNT` แล้ว Redeploy iPhone ต้อง iOS 16.4 ขึ้นไปและเพิ่มแอปลงหน้าจอโฮมก่อน
 - **เขียนข้อมูลไม่ได้ (permission denied):** ยังไม่ได้ deploy rules ในขั้นตอนที่ 2
 - **Build ล้มเหลวเพราะ Sentry:** ไม่ต้องตั้ง `SENTRY_*` ถ้าไม่ใช้ Sentry
+
+## อัปเกรดจากเวอร์ชันเก่า (มีผู้ใช้อยู่แล้ว)
+
+กฎความปลอดภัยใหม่ใช้เอกสาร `settings/setup` ตัดสินว่าใครเป็นแอดมินคนแรก ถ้าระบบเดิมมีผู้ใช้อยู่แล้วแต่ยังไม่มีเอกสารนี้ **คนที่สมัครคนถัดไปจะกลายเป็นแอดมิน** ก่อน deploy กฎใหม่ ให้สร้างเอกสารนี้ใน Firestore console เอง:
+
+- คอลเลกชัน `settings` เอกสาร `setup` ฟิลด์ `adminUid` (string) = UID ของแอดมินคนปัจจุบัน
+
+Upgrading an existing install: before deploying the new rules, create `settings/setup` with `adminUid` set to your current admin's UID. Otherwise the next new sign-up becomes admin.

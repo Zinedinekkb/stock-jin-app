@@ -49,6 +49,39 @@ import {
 } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
+// First-admin bootstrap. One transaction reads settings/setup: if it is missing, this user
+// claims it and becomes admin/approved; otherwise they register as pending staff.
+// firestore.rules only allow an admin user doc to be created in the same transaction as
+// settings/setup naming that uid. If the user doc already exists (the email sign-up
+// handler and the auth listener race), the existing data is returned untouched.
+async function createUserDocWithBootstrap(db, authUser, { name, email, provider } = {}) {
+  const userRef = doc(db, 'users', authUser.uid);
+  const setupRef = doc(db, 'settings', 'setup');
+  return runTransaction(db, async (t) => {
+    const existing = await t.get(userRef);
+    if (existing.exists()) {
+      // listener won the race: keep the doc, but honour the name typed on the form
+      if (name && existing.data().name !== name) t.update(userRef, { name });
+      return { ...existing.data(), ...(name ? { name } : {}) };
+    }
+    const setupSnap = await t.get(setupRef);
+    const isFirstUser = !setupSnap.exists();
+    const data = {
+      name: name || authUser.displayName || authUser.email?.split('@')[0] || (isFirstUser ? 'ผู้ดูแลระบบ (Owner)' : 'ผู้ใช้ใหม่'),
+      email: email ?? authUser.email ?? '',
+      role: isFirstUser ? 'admin' : 'staff',
+      position: isFirstUser ? 'ผู้ดูแลระบบ' : 'พนักงานทั่วไป',
+      status: isFirstUser ? 'approved' : 'pending',
+      photoURL: authUser.photoURL || null,
+      provider: provider || authUser.providerData?.[0]?.providerId || 'password',
+      createdAt: serverTimestamp()
+    };
+    if (isFirstUser) t.set(setupRef, { adminUid: authUser.uid, createdAt: serverTimestamp() });
+    t.set(userRef, data);
+    return data;
+  });
+}
+
 export default function HomePage() {
   const branding = useBranding();
   const [activeTab, setActiveTab] = useState('dashboard'); 
@@ -188,28 +221,8 @@ export default function HomePage() {
               role: uObj.role,
             });
           } else {
-            // New user registered via Google / GitHub or direct OAuth:
-            const usersSnap = await getDocs(query(collection(db, 'users')));
-            const isFirstUser = usersSnap.empty;
-
-            const providerId = currentUser.providerData?.[0]?.providerId || 'password';
-            const initialRole = isFirstUser ? 'admin' : 'staff';
-            const initialStatus = isFirstUser ? 'approved' : 'pending';
-            const initialPos = isFirstUser ? 'ผู้ดูแลระบบ' : 'พนักงานทั่วไป';
-            const initialName = currentUser.displayName || currentUser.email?.split('@')[0] || (isFirstUser ? 'ผู้ดูแลระบบ (Owner)' : 'ผู้ใช้ใหม่');
-
-            const newUserData = {
-              name: initialName,
-              email: currentUser.email || '',
-              role: initialRole,
-              position: initialPos,
-              status: initialStatus,
-              photoURL: currentUser.photoURL || null,
-              provider: providerId,
-              createdAt: serverTimestamp()
-            };
-
-            await setDoc(userRef, newUserData);
+            // New user registered via Google / GitHub or direct OAuth (email sign-up writes its own doc in handleRegister).
+            const newUserData = await createUserDocWithBootstrap(db, currentUser);
 
             const uObj = {
               uid: currentUser.uid,
@@ -856,17 +869,12 @@ export default function HomePage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, registerForm.email, registerForm.password);
       const newUser = userCredential.user;
-      // สถานะ pending — ต้องรอ Admin อนุมัติ
-      const newUserData = {
+      // pending — รอ Admin อนุมัติ (ยกเว้นผู้ใช้คนแรกของระบบ ซึ่งเป็น admin อัตโนมัติ)
+      const newUserData = await createUserDocWithBootstrap(db, newUser, {
         name: trimmedName,
         email: registerForm.email,
-        role: 'staff',
-        position: 'พนักงานทั่วไป',
-        status: 'pending',
         provider: 'password',
-        createdAt: serverTimestamp()
-      };
-      await setDoc(doc(db, 'users', newUser.uid), newUserData);
+      });
       setUser({
         uid: newUser.uid,
         id: newUser.uid,

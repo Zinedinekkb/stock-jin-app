@@ -1,0 +1,107 @@
+rules_version = '2';
+
+// StockPro Firestore rules.
+// Server-side code (cron, API routes) uses the Admin SDK and bypasses these rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    // Own user doc, or null-safe check that it exists first.
+    function hasUserDoc() {
+      return signedIn() && exists(userPath(request.auth.uid));
+    }
+
+    function me() {
+      return get(userPath(request.auth.uid)).data;
+    }
+
+    // Legacy user docs created before the approval flow have no `status`;
+    // the client treats a missing status as 'approved', so the rules do too.
+    // New docs can only be created as 'pending' (see users/create below).
+    function isApproved() {
+      return hasUserDoc() && me().get('status', 'approved') == 'approved';
+    }
+
+    function isAdmin() {
+      return isApproved() && me().get('role', 'staff') == 'admin';
+    }
+
+    function setupPath() {
+      return /databases/$(database)/documents/settings/setup;
+    }
+
+    // First-admin bootstrap: the user doc may be created as admin/approved only
+    // in the same batch/transaction that creates settings/setup naming this uid.
+    function isBootstrapAdminCreate(uid) {
+      return request.resource.data.role == 'admin'
+        && request.resource.data.status == 'approved'
+        && !exists(setupPath())
+        && existsAfter(setupPath())
+        && getAfter(setupPath()).data.adminUid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if isApproved() || (signedIn() && request.auth.uid == uid);
+
+      allow create: if signedIn() && request.auth.uid == uid
+        && (
+          (request.resource.data.role == 'staff' && request.resource.data.status == 'pending')
+          || isBootstrapAdminCreate(uid)
+        );
+
+      // Self-service update: only non-privileged fields. role/status/position
+      // can never be changed by the user themselves.
+      // pushEnabledAt (lib/pushClient.js) and nickname/department/phone
+      // (profile edit in TabMenu) are written by the user, so they are listed.
+      allow update: if (signedIn() && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+            ['name', 'photoURL', 'fcmTokens', 'themeMode', 'pushEnabledAt',
+             'nickname', 'department', 'phone']))
+        || isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // Written exactly once, in the same transaction as the first admin's user doc.
+    match /settings/setup {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && !exists(setupPath())
+        && request.resource.data.adminUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // settings/app (stockOnlyMode), settings/branding, ...
+    // settings/setup is excluded from the admin write: it is immutable (see above).
+    match /settings/{docId} {
+      allow read: if signedIn();
+      allow write: if docId != 'setup' && isAdmin();
+    }
+
+    // Day-to-day collections. Deletes are admin-only (the UI already gates
+    // product/category/task/document/transaction deletion to admins).
+    match /{coll}/{docId} {
+      allow read, create, update: if isApproved() && coll in [
+        'products', 'categories', 'transactions', 'tasks',
+        'attendance', 'leaves', 'documents', 'approval_history'
+      ];
+      allow delete: if isAdmin() && coll in [
+        'products', 'categories', 'transactions', 'tasks',
+        'attendance', 'leaves', 'documents', 'approval_history'
+      ];
+    }
+
+    // Written only by the Admin SDK cron job.
+    match /daily_reports/{docId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+  }
+}
