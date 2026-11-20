@@ -7,6 +7,7 @@ import {
   Eye, Loader2, Check, AlertCircle, Sparkles, Send, ShieldCheck
 } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { useBranding } from './BrandingProvider';
 import html2canvas from 'html2canvas';
 import { 
   formatThaiDate, 
@@ -22,6 +23,7 @@ export default function TransactionDocumentModal({
   currentUser,
   onSuccessSave,
 }) {
+  const branding = useBranding();
   const sheetRef = useRef(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSavedToDocs, setIsSavedToDocs] = useState(false);
@@ -127,6 +129,7 @@ export default function TransactionDocumentModal({
         transaction: { ...transaction, docNumber },
         user: currentUser,
         isVerified: isCompleted,
+        options: { branding },
       });
 
       setIsSavedToDocs(true);
@@ -204,7 +207,7 @@ export default function TransactionDocumentModal({
               disabled={isGenerating}
               className="px-3.5 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-2xs disabled:opacity-50"
             >
-              <Download size={14} className="text-blue-600" />
+              <Download size={14} className="text-brand-600" />
               <span>ดาวน์โหลด PDF</span>
             </button>
 
@@ -220,7 +223,7 @@ export default function TransactionDocumentModal({
           </div>
 
           {statusMessage && (
-            <div className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg animate-fade-in">
+            <div className="text-xs font-bold text-brand-700 bg-brand-50 px-3 py-1 rounded-lg animate-fade-in">
               {statusMessage}
             </div>
           )}
@@ -231,7 +234,7 @@ export default function TransactionDocumentModal({
           <div
             id="transaction-document-sheet"
             ref={sheetRef}
-            className="leave-doc-sheet"
+            className="leave-doc-sheet paper-light"
             style={{ width: '794px', minHeight: '1123px' }}
           >
             {/* Top Emblem & Header */}
@@ -242,10 +245,10 @@ export default function TransactionDocumentModal({
                 </div>
                 <div>
                   <div className="text-base font-extrabold text-slate-900 tracking-wide">
-                    บริษัท สต็อกโปร ซิสเต็มส์ จำกัด (มหาชน)
+                    {branding.shopName || branding.appName}
                   </div>
                   <div className="text-xs text-slate-600 font-semibold mt-0.5">
-                    STOCKPRO INVENTORY MANAGEMENT SYSTEM
+                    {String(branding.appName).toUpperCase()}
                   </div>
                   <div className="text-[11px] text-slate-500">
                     คลังสินค้าและพัสดุส่วนกลาง · เอกสารคลังพัสดุทางการ
@@ -430,7 +433,7 @@ export default function TransactionDocumentModal({
             {/* Stamp if completed */}
             {isCompleted && (
               <div className="absolute right-14 bottom-32 border-4 border-double border-success-600 text-success-600 rounded-2xl px-4 py-2 text-center font-black text-xs tracking-widest -rotate-12 bg-success-50/90 shadow-md pointer-events-none">
-                <div>★ STOCKPRO VERIFIED ★</div>
+                <div>★ {String(branding.appName).toUpperCase()} VERIFIED ★</div>
                 <div className="text-[9px] font-bold tracking-normal mt-0.5">อนุมัติและปรับยอดสต็อกแล้ว</div>
                 <div className="text-[8px] font-medium mt-0.5">{verifiedAtText || formattedDate}</div>
               </div>
@@ -439,7 +442,7 @@ export default function TransactionDocumentModal({
             {/* Document Footer */}
             <div className="absolute bottom-6 left-12 right-12 border-t border-slate-200 pt-2 flex justify-between items-center text-[9px] text-slate-400">
               <div>
-                เอกสารนี้สร้างขึ้นโดยระบบสารสนเทศอัตโนมัติ StockPro Inventory System (ใบสำคัญทางการ)
+                เอกสารนี้สร้างขึ้นโดยระบบสารสนเทศอัตโนมัติ {branding.appName} (ใบสำคัญทางการ)
               </div>
               <div>
                 Ref #{transaction.id || '-'} · {docNumber}

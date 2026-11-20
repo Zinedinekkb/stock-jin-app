@@ -16,6 +16,7 @@ import TabHR from './components/TabHR';
 import TabDocuments from './components/TabDocuments';
 import TabNotifications from './components/TabNotifications';
 import TabUserDirectory from './components/TabUserDirectory';
+import TabBranding from './components/TabBranding';
 import TransactionDocumentModal from './components/TransactionDocumentModal';
 import MoreDrawer from './components/MoreDrawer';
 import DesktopSidebar from './components/DesktopSidebar';
@@ -33,6 +34,8 @@ import * as Sentry from '@sentry/nextjs';
 import { submitTransactionService, sendStockReportService, sendDailyReportService } from '@/app/services/transactionService';
 import { uploadAndSaveTransactionDocument } from '@/app/utils/transactionPdfGenerator';
 import { compressImageFile, blobToDataUrl } from '@/app/utils/cameraUtils';
+import { useBranding, applyThemeMode, readThemeMode } from './components/BrandingProvider';
+import { normalizeMode } from '../lib/theme/mode';
 
 // --- FIREBASE IMPORTS ---
 import { db, auth, storage } from '@/lib/firebase';
@@ -46,7 +49,41 @@ import {
 } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
-export default function StockJinApp() {
+// First-admin bootstrap. One transaction reads settings/setup: if it is missing, this user
+// claims it and becomes admin/approved; otherwise they register as pending staff.
+// firestore.rules only allow an admin user doc to be created in the same transaction as
+// settings/setup naming that uid. If the user doc already exists (the email sign-up
+// handler and the auth listener race), the existing data is returned untouched.
+async function createUserDocWithBootstrap(db, authUser, { name, email, provider } = {}) {
+  const userRef = doc(db, 'users', authUser.uid);
+  const setupRef = doc(db, 'settings', 'setup');
+  return runTransaction(db, async (t) => {
+    const existing = await t.get(userRef);
+    if (existing.exists()) {
+      // listener won the race: keep the doc, but honour the name typed on the form
+      if (name && existing.data().name !== name) t.update(userRef, { name });
+      return { ...existing.data(), ...(name ? { name } : {}) };
+    }
+    const setupSnap = await t.get(setupRef);
+    const isFirstUser = !setupSnap.exists();
+    const data = {
+      name: name || authUser.displayName || authUser.email?.split('@')[0] || (isFirstUser ? 'ผู้ดูแลระบบ (Owner)' : 'ผู้ใช้ใหม่'),
+      email: email ?? authUser.email ?? '',
+      role: isFirstUser ? 'admin' : 'staff',
+      position: isFirstUser ? 'ผู้ดูแลระบบ' : 'พนักงานทั่วไป',
+      status: isFirstUser ? 'approved' : 'pending',
+      photoURL: authUser.photoURL || null,
+      provider: provider || authUser.providerData?.[0]?.providerId || 'password',
+      createdAt: serverTimestamp()
+    };
+    if (isFirstUser) t.set(setupRef, { adminUid: authUser.uid, createdAt: serverTimestamp() });
+    t.set(userRef, data);
+    return data;
+  });
+}
+
+export default function HomePage() {
+  const branding = useBranding();
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [isDesktop, setIsDesktop] = useState(false);
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
@@ -184,28 +221,8 @@ export default function StockJinApp() {
               role: uObj.role,
             });
           } else {
-            // New user registered via Google / GitHub or direct OAuth:
-            const usersSnap = await getDocs(query(collection(db, 'users')));
-            const isFirstUser = usersSnap.empty;
-
-            const providerId = currentUser.providerData?.[0]?.providerId || 'password';
-            const initialRole = isFirstUser ? 'admin' : 'staff';
-            const initialStatus = isFirstUser ? 'approved' : 'pending';
-            const initialPos = isFirstUser ? 'ผู้ดูแลระบบ' : 'พนักงานทั่วไป';
-            const initialName = currentUser.displayName || currentUser.email?.split('@')[0] || (isFirstUser ? 'ผู้ดูแลระบบ (Owner)' : 'ผู้ใช้ใหม่');
-
-            const newUserData = {
-              name: initialName,
-              email: currentUser.email || '',
-              role: initialRole,
-              position: initialPos,
-              status: initialStatus,
-              photoURL: currentUser.photoURL || null,
-              provider: providerId,
-              createdAt: serverTimestamp()
-            };
-
-            await setDoc(userRef, newUserData);
+            // New user registered via Google / GitHub or direct OAuth (email sign-up writes its own doc in handleRegister).
+            const newUserData = await createUserDocWithBootstrap(db, currentUser);
 
             const uObj = {
               uid: currentUser.uid,
@@ -275,6 +292,10 @@ export default function StockJinApp() {
     const unsubUser = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        // Adopt the per-user theme mode if it differs from this device
+        if (data.themeMode && normalizeMode(data.themeMode) === data.themeMode && data.themeMode !== readThemeMode()) {
+          applyThemeMode(data.themeMode);
+        }
         if ((data.status && data.status !== user.status) || (data.role && data.role !== user.role) || (data.position && data.position !== user.position)) {
           setUser(prev => ({
             ...prev,
@@ -419,7 +440,7 @@ export default function StockJinApp() {
       const qtyLabel = isPending ? item.qty : `${item.qty} → ${qtyShow}`; 
       return `${idx + 1}. ${item.name} : ${qtyLabel} ${item.unit}`;
     }).join('\n');
-    return `StockPro\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
+    return `${branding.appName}\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
   };
 
   // --- LOGIC: Void/Edit/Reorder ---
@@ -522,7 +543,7 @@ export default function StockJinApp() {
       `ระบบจะออกเอกสารทางการเป็น PDF บันทึกลงคลังเอกสารอัตโนมัติ และส่งไปที่หน้า "สถานะ" เพื่อรอตรวจสอบ`,
       async () => {
         try {
-            const res = await submitTransactionService({ cart, transMode, note, user });
+            const res = await submitTransactionService({ cart, transMode, note, user, branding });
             setCart([]); setNote('');
             const docInfo = res?.docNumber ? ` (เลขที่ ${res.docNumber})` : '';
             showNotification(`ส่งคำขอแล้ว${docInfo} · รอตรวจสอบ`);
@@ -596,7 +617,8 @@ export default function StockJinApp() {
               verifiedAt: verifiedAtDate,
             },
             user: user,
-            isVerified: true
+            isVerified: true,
+            options: { branding }
           });
         } catch (pdfErr) {
           console.error("Auto PDF Generation on Verify Error:", pdfErr);
@@ -847,17 +869,12 @@ export default function StockJinApp() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, registerForm.email, registerForm.password);
       const newUser = userCredential.user;
-      // สถานะ pending — ต้องรอ Admin อนุมัติ
-      const newUserData = {
+      // pending — รอ Admin อนุมัติ (ยกเว้นผู้ใช้คนแรกของระบบ ซึ่งเป็น admin อัตโนมัติ)
+      const newUserData = await createUserDocWithBootstrap(db, newUser, {
         name: trimmedName,
         email: registerForm.email,
-        role: 'staff',
-        position: 'พนักงานทั่วไป',
-        status: 'pending',
         provider: 'password',
-        createdAt: serverTimestamp()
-      };
-      await setDoc(doc(db, 'users', newUser.uid), newUserData);
+      });
       setUser({
         uid: newUser.uid,
         id: newUser.uid,
@@ -1116,6 +1133,7 @@ export default function StockJinApp() {
     status: { title: 'สถานะรายการ', desc: 'ตรวจสอบและยืนยันรายการที่รอดำเนินการ' },
     notifications: { title: 'ศูนย์แจ้งเตือน', desc: 'แจ้งเตือนสินค้าหมด การเคลื่อนไหว และคำขอสมัครสมาชิก' },
     hr: { title: 'เข้า-ออกงาน / ลาหยุด', desc: 'บันทึกเวลาทำงาน ยื่นใบลาหยุด และดูสถิติทีมงาน' },
+    branding: { title: 'ตั้งค่าร้าน', desc: 'โลโก้ สีหลัก ชื่อแอป และข้อมูลร้านสำหรับเอกสาร' },
     documents: { title: 'เอกสาร', desc: 'เก็บและจัดการเอกสารสำคัญต่างๆ เช่น ใบสั่งซื้อ ใบเสร็จ สัญญา' },
     menu: { title: 'บัญชีของฉัน', desc: 'โปรไฟล์ สิทธิ์ และการตั้งค่า' },
     users: { title: 'จัดการบัญชีผู้ใช้', desc: 'ตรวจสอบจำนวนบัญชี ดูพนักงานแต่ละหน่วยงาน และจัดการสิทธิ์' },
@@ -1211,15 +1229,17 @@ export default function StockJinApp() {
           stockOnlyMode={stockOnlyMode} onToggleStockOnlyMode={handleToggleStockOnlyMode}
           pendingUsers={pendingUsers} approvalHistory={approvalHistory} handleApproveUser={handleApproveUser} handleRejectUser={handleRejectUser}
           handleUpdateProfile={handleUpdateProfile}
+          onOpenBranding={() => setActiveTab('branding')}
       />}
       {activeTab === 'users' && user && isAdmin(viewUser) && <TabUserDirectory user={viewUser} />}
+      {activeTab === 'branding' && user && isAdmin(viewUser) && <TabBranding user={viewUser} showNotification={showNotification} />}
     </>
   );
 
   // --- RENDER MAIN ---
   if (isLoadingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f4f5fa]">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--app-bg)]">
         <div className="text-center space-y-3">
           <Loader2 size={40} className="animate-spin text-brand-500 mx-auto"/>
           <p className="text-slate-700 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p>
@@ -1348,7 +1368,7 @@ export default function StockJinApp() {
                 </>
               ) : (
                 <div className="smart-tab-container">
-                  <PageHeader title={tabTitles[activeTab]?.title || 'StockPro'} description={tabTitles[activeTab]?.desc} />
+                  <PageHeader title={tabTitles[activeTab]?.title || branding.appName} description={tabTitles[activeTab]?.desc} />
                   {renderTabContent()}
                 </div>
               )}
@@ -1396,7 +1416,7 @@ export default function StockJinApp() {
               <Menu size={20} strokeWidth={2.4}/>
             </button>
             <div>
-              <h1 className="text-base font-black text-ink tracking-tight leading-none">StockPro</h1>
+              <h1 className="text-base font-black text-ink tracking-tight leading-none">{branding.appName}</h1>
               <p className="text-xs text-ink-muted mt-0.5">{tabTitles[activeTab]?.title || 'คลังสินค้า & บุคลากร'}</p>
             </div>
           </div>

@@ -122,11 +122,11 @@ export default function StockVerifyDocument({
           </div>
 
           {/* ตัวกระดาษ A4 */}
-          <div className="bg-white text-slate-800 rounded-md shadow-2xl p-5 md:p-8 font-sans text-[13px] leading-relaxed">
+          <div className="paper-light bg-white text-slate-800 rounded-md shadow-2xl p-5 md:p-8 font-sans text-[13px] leading-relaxed">
             {/* หัวเอกสาร */}
-            <div className="flex justify-between items-start gap-3 border-b-2 border-blue-900 pb-3 mb-4">
+            <div className="flex justify-between items-start gap-3 border-b-2 border-brand-900 pb-3 mb-4">
               <div className="min-w-0">
-                <h3 className="text-base md:text-lg font-bold text-blue-900">
+                <h3 className="text-base md:text-lg font-bold text-brand-900">
                   {isOut ? 'ใบเบิกสินค้า / ใบตรวจนับยอดจริง' : 'ใบรับสินค้าเข้า / ใบตรวจนับยอดจริง'}
                 </h3>
                 <p className="text-xs text-slate-500">คลังสินค้า</p>
@@ -162,7 +162,7 @@ export default function StockVerifyDocument({
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full border-collapse text-[12.5px]">
                 <thead>
-                  <tr className="bg-blue-50 text-blue-900">
+                  <tr className="bg-brand-50 text-brand-900">
                     <th className="border border-slate-300 px-1 py-1.5 w-12">ลำดับ</th>
                     <th className="border border-slate-300 px-2 py-1.5 text-left">รายการ</th>
                     <th className="border border-slate-300 px-1 py-1.5 w-16">หน่วย</th>
@@ -174,12 +174,12 @@ export default function StockVerifyDocument({
                 </thead>
                 <tbody>
                   {rows.map((row, idx) => (
-                    <tr key={row.key} className={row.isExtra ? 'bg-purple-50' : ''}>
+                    <tr key={row.key} className={row.isExtra ? 'bg-brand-50' : ''}>
                       <td className="border border-slate-300 px-1 py-1.5 text-center">{idx + 1}</td>
                       <td className="border border-slate-300 px-2 py-1.5">
                         <div className="flex items-center gap-1.5">
                           <span>{row.item.name}</span>
-                          {row.isExtra && <span className="text-[10.5px] text-purple-600 whitespace-nowrap">(เพิ่มตอนตรวจ)</span>}
+                          {row.isExtra && <span className="text-[10.5px] text-brand-600 whitespace-nowrap">(เพิ่มตอนตรวจ)</span>}
                           {row.isExtra && editable && (
                             <button
                               type="button"
@@ -239,7 +239,7 @@ export default function StockVerifyDocument({
                 <div
                   key={row.key}
                   className={`rounded-lg border p-2.5 ${
-                    row.isExtra ? 'bg-purple-50 border-purple-200 border-solid' :
+                    row.isExtra ? 'bg-brand-50 border-brand-200 border-solid' :
                     row.diff !== 0 ? 'bg-red-50/60 border-red-200' : 'border-slate-200'
                   }`}
                 >
@@ -247,7 +247,7 @@ export default function StockVerifyDocument({
                     <div className="min-w-0">
                       <p className="font-bold text-sm text-slate-800 break-words">
                         {row.item.name}
-                        {row.isExtra && <span className="ml-1.5 text-[10.5px] font-normal text-purple-600">(เพิ่มตอนตรวจ)</span>}
+                        {row.isExtra && <span className="ml-1.5 text-[10.5px] font-normal text-brand-600">(เพิ่มตอนตรวจ)</span>}
                       </p>
                       <p className="text-xs text-slate-500">
                         {row.isExtra ? 'มาเกิน / ตกหล่น' : `${requestedLabel} ${row.requested} ${row.item.unit || ''}`}
@@ -332,7 +332,7 @@ export default function StockVerifyDocument({
             <button
               type="button"
               onClick={() => onOpenPdf && onOpenPdf(tx)}
-              className="px-3.5 py-2.5 rounded-xl bg-white text-brand-600 border border-purple-200 font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-purple-50"
+              className="px-3.5 py-2.5 rounded-xl bg-white text-brand-600 border border-brand-200 font-bold text-xs flex items-center gap-1.5 shadow-sm hover:bg-brand-50"
             >
               <FileText size={15} /> พิมพ์ / ดู PDF
             </button>
@@ -397,7 +397,7 @@ export default function StockVerifyDocument({
 function SignBlock({ title, name, date, className = '' }) {
   return (
     <div className={className}>
-      <div className="h-9 border-b border-dotted border-slate-500 flex items-end justify-center font-semibold text-blue-600 pb-0.5 truncate">
+      <div className="h-9 border-b border-dotted border-slate-500 flex items-end justify-center font-semibold text-brand-600 pb-0.5 truncate">
         {name || ''}
       </div>
       <p className="mt-1 text-slate-700">{title}</p>

@@ -81,7 +81,7 @@ export const blankDocData = (typeKey, shop = {}) => ({
 export const sampleDocData = (typeKey, shop = {}) => {
   const base = blankDocData(typeKey, shop);
   const shopDefaults = {
-    shopName: shop.shopName || 'ร้านสต็อกจิน (Stock Jin)',
+    shopName: shop.shopName || shop.appName || 'ร้านตัวอย่าง',
     shopAddress: shop.shopAddress || '99/9 ถนนสุขุมวิท แขวงคลองตัน เขตคลองเตย กรุงเทพฯ 10110',
     shopTaxId: shop.shopTaxId || '0105567000000',
     shopPhone: shop.shopPhone || '02-123-4567',

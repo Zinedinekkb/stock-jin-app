@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 import { isCronAuthorized } from '@/lib/cronAuth';
+import { integrationStatus, LINE_SKIPPED } from '../../../../lib/integrations.js';
+import { getBrandingServer } from '../../../../lib/branding/server.js';
 import { halfMonthRangeBangkok, buildMovementSummary, getLowStock } from '@/lib/reportData';
 import {
   linePush, flexBubble, flexMessage, flexSectionTitle, movementRows,
@@ -15,6 +17,8 @@ export async function GET(request) {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  if (!integrationStatus().line) return NextResponse.json(LINE_SKIPPED);
+
   try {
     const target = process.env.LINE_GROUP_ID || process.env.LINE_USER_ID;
     if (!target) {
@@ -28,6 +32,7 @@ export async function GET(request) {
       getLowStock(db),
     ]);
 
+    const branding = await getBrandingServer();
     const bubble = flexBubble({
       title: `📊 สรุปครึ่งเดือน ${label}`,
       subtitle: `รายการเสร็จ ${summary.completedCount} รายการ · รอดำเนินการ ${summary.pendingCount}`,
@@ -43,7 +48,7 @@ export async function GET(request) {
           size: 'sm', color: '#555555', margin: 'sm',
         },
       ],
-      footerText: 'ดูรายละเอียดเพิ่มเติมได้ในระบบ StockPro',
+      footerText: `ดูรายละเอียดเพิ่มเติมได้ในระบบ ${branding.appName}`,
     });
 
     await linePush(target, [flexMessage(`สรุปครึ่งเดือน ${label}`, bubble)]);

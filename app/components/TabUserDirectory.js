@@ -169,7 +169,7 @@ export default function TabUserDirectory({ user }) {
   };
 
   const getRoleBadge = (role) => {
-    if (role === 'admin') return { label: '👑 Admin', cls: 'bg-indigo-100 text-indigo-700 border-indigo-200' };
+    if (role === 'admin') return { label: '👑 Admin', cls: 'bg-brand-100 text-brand-700 border-brand-200' };
     return { label: '✅ Staff', cls: 'bg-slate-100 text-slate-600 border-slate-200' };
   };
 
@@ -184,11 +184,11 @@ export default function TabUserDirectory({ user }) {
       {/* Summary Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
         {[
-          { label: 'บัญชีทั้งหมด', value: stats.total, icon: Users, color: '#6366f1' },
+          { label: 'บัญชีทั้งหมด', value: stats.total, icon: Users, color: 'rgb(var(--brand-500))' },
           { label: 'ใช้งานอยู่', value: stats.active, icon: UserCheck, color: '#10b981' },
           { label: 'รอดำเนินการ', value: stats.pending, icon: AlertTriangle, color: '#f59e0b' },
-          { label: 'Admin', value: stats.admins, icon: Shield, color: '#8b5cf6' },
-          { label: 'Staff', value: stats.staff, icon: ShieldCheck, color: '#64748b' },
+          { label: 'Admin', value: stats.admins, icon: Shield, color: 'rgb(var(--brand-500))' },
+          { label: 'Staff', value: stats.staff, icon: ShieldCheck, color: 'rgb(var(--slate-500))' },
           { label: 'ถูกระงับ', value: stats.deactivated, icon: UserX, color: '#ef4444' },
         ].map((s, i) => {
           const Icon = s.icon;
@@ -198,7 +198,7 @@ export default function TabUserDirectory({ user }) {
               borderRadius: 16,
               padding: '18px 16px',
               boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              border: '1px solid #f3f4f6',
+              border: '1px solid rgb(var(--gray-100))',
               display: 'flex',
               alignItems: 'center',
               gap: 12,
@@ -211,8 +211,8 @@ export default function TabUserDirectory({ user }) {
                 <Icon size={20} color={s.color} />
               </div>
               <div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: '#111827', lineHeight: 1 }}>{s.value}</div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginTop: 2 }}>{s.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: 'rgb(var(--gray-900))', lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'rgb(var(--gray-400))', marginTop: 2 }}>{s.label}</div>
               </div>
             </div>
           );
@@ -222,15 +222,15 @@ export default function TabUserDirectory({ user }) {
       {/* Search + Sort */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 200, position: 'relative' }}>
-          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'rgb(var(--gray-400))' }} />
           <input
             placeholder="ค้นหาชื่อ, อีเมล, ตำแหน่ง..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             style={{
               width: '100%', padding: '10px 12px 10px 36px',
-              border: '1.5px solid #e5e7eb', borderRadius: 12,
-              fontSize: 13, color: '#374151', outline: 'none',
+              border: '1.5px solid rgb(var(--gray-200))', borderRadius: 12,
+              fontSize: 13, color: 'rgb(var(--gray-700))', outline: 'none',
               background: 'white', boxSizing: 'border-box',
             }}
           />
@@ -240,8 +240,8 @@ export default function TabUserDirectory({ user }) {
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '10px 14px', borderRadius: 12,
-            border: '1.5px solid #e5e7eb', background: 'white',
-            fontSize: 12, fontWeight: 600, color: '#6b7280',
+            border: '1.5px solid rgb(var(--gray-200))', background: 'white',
+            fontSize: 12, fontWeight: 600, color: 'rgb(var(--gray-500))',
             cursor: 'pointer',
           }}
         >
@@ -259,9 +259,9 @@ export default function TabUserDirectory({ user }) {
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 14px', borderRadius: 20,
-              border: selectedDept === dept.key ? '1.5px solid #4f46e5' : '1.5px solid #e5e7eb',
-              background: selectedDept === dept.key ? '#4f46e5' : 'white',
-              color: selectedDept === dept.key ? '#ffffff' : '#6b7280',
+              border: selectedDept === dept.key ? '1.5px solid rgb(var(--brand-600))' : '1.5px solid rgb(var(--gray-200))',
+              background: selectedDept === dept.key ? 'rgb(var(--brand-600))' : 'white',
+              color: selectedDept === dept.key ? '#ffffff' : 'rgb(var(--gray-500))',
               fontSize: 12, fontWeight: 700, cursor: 'pointer',
               whiteSpace: 'nowrap', flexShrink: 0,
               transition: 'all 0.15s',
@@ -270,8 +270,8 @@ export default function TabUserDirectory({ user }) {
             <span>{dept.emoji}</span>
             <span>{dept.label}</span>
             <span style={{
-              background: selectedDept === dept.key ? 'rgba(255,255,255,0.25)' : '#f3f4f6',
-              color: selectedDept === dept.key ? '#ffffff' : '#9ca3af',
+              background: selectedDept === dept.key ? 'rgba(255,255,255,0.25)' : 'rgb(var(--gray-100))',
+              color: selectedDept === dept.key ? '#ffffff' : 'rgb(var(--gray-400))',
               padding: '1px 7px', borderRadius: 10, fontSize: 10, fontWeight: 800,
             }}>{deptCounts[dept.key] || 0}</span>
           </button>
@@ -281,9 +281,9 @@ export default function TabUserDirectory({ user }) {
       {/* User Cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {filteredUsers.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+          <div style={{ textAlign: 'center', padding: 40, color: 'rgb(var(--gray-400))' }}>
             <Users size={40} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
-            <p style={{ fontSize: 14, fontWeight: 700, color: '#6b7280' }}>ไม่พบผู้ใช้</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'rgb(var(--gray-500))' }}>ไม่พบผู้ใช้</p>
             <p style={{ fontSize: 12 }}>ลองเปลี่ยนตัวกรองหรือคำค้นหา</p>
           </div>
         ) : (
@@ -296,7 +296,7 @@ export default function TabUserDirectory({ user }) {
               <div key={u.id} style={{
                 background: 'white',
                 borderRadius: 16,
-                border: isCurrentUser ? '2px solid #c7d2fe' : '1px solid #f3f4f6',
+                border: isCurrentUser ? '2px solid rgb(var(--brand-200))' : '1px solid rgb(var(--gray-100))',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
                 overflow: 'hidden',
                 transition: 'all 0.2s',
@@ -310,11 +310,11 @@ export default function TabUserDirectory({ user }) {
                   <div style={{
                     width: 44, height: 44, minWidth: 44,
                     borderRadius: '50%',
-                    background: u.photoURL ? 'transparent' : 'linear-gradient(135deg, #6366f1, #818cf8)',
+                    background: u.photoURL ? 'transparent' : 'linear-gradient(135deg, rgb(var(--brand-500)), rgb(var(--brand-400)))',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: 'white', fontWeight: 800, fontSize: 16,
                     overflow: 'hidden',
-                    border: '2px solid #e5e7eb',
+                    border: '2px solid rgb(var(--gray-200))',
                   }}>
                     {u.photoURL ? (
                       <img src={u.photoURL} alt={u.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -326,37 +326,37 @@ export default function TabUserDirectory({ user }) {
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: 'rgb(var(--gray-900))' }}>
                         {u.name || 'ไม่ระบุชื่อ'}
                       </span>
                       {isCurrentUser && (
                         <span style={{
                           fontSize: 9, fontWeight: 700, padding: '1px 6px',
-                          borderRadius: 6, background: '#eef2ff', color: '#6366f1',
+                          borderRadius: 6, background: 'rgb(var(--brand-50))', color: 'rgb(var(--brand-500))',
                         }}>คุณ</span>
                       )}
                     </div>
-                    <div style={{ fontSize: 11, color: '#9ca3af', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                    <div style={{ fontSize: 11, color: 'rgb(var(--gray-400))', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
                       <Mail size={10} /> {u.email || '—'}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 6 }}>
                       <span style={{
                         fontSize: 10, fontWeight: 700, padding: '2px 8px',
                         borderRadius: 6, border: '1px solid',
-                        ...(() => { const b = statusBadge; return { background: b.cls.includes('emerald') ? '#d1fae5' : b.cls.includes('amber') ? '#fef3c7' : b.cls.includes('red') ? '#fee2e2' : '#f3f4f6', color: b.cls.includes('emerald') ? '#059669' : b.cls.includes('amber') ? '#d97706' : b.cls.includes('red') ? '#dc2626' : '#6b7280', borderColor: b.cls.includes('emerald') ? '#a7f3d0' : b.cls.includes('amber') ? '#fde68a' : b.cls.includes('red') ? '#fecaca' : '#e5e7eb' }; })(),
+                        ...(() => { const b = statusBadge; return { background: b.cls.includes('emerald') ? 'var(--tint-green-100)' : b.cls.includes('amber') ? 'var(--tint-amber-100)' : b.cls.includes('red') ? 'var(--tint-red-100)' : 'rgb(var(--gray-100))', color: b.cls.includes('emerald') ? '#059669' : b.cls.includes('amber') ? '#d97706' : b.cls.includes('red') ? '#dc2626' : 'rgb(var(--gray-500))', borderColor: b.cls.includes('emerald') ? 'var(--tint-green-300)' : b.cls.includes('amber') ? '#fde68a' : b.cls.includes('red') ? 'var(--tint-red-200)' : 'rgb(var(--gray-200))' }; })(),
                       }}>{statusBadge.label}</span>
                       <span style={{
                         fontSize: 10, fontWeight: 700, padding: '2px 8px',
                         borderRadius: 6, border: '1px solid',
-                        background: u.role === 'admin' ? '#eef2ff' : '#f8fafc',
-                        color: u.role === 'admin' ? '#4f46e5' : '#64748b',
-                        borderColor: u.role === 'admin' ? '#c7d2fe' : '#e2e8f0',
+                        background: u.role === 'admin' ? 'rgb(var(--brand-50))' : 'rgb(var(--slate-50))',
+                        color: u.role === 'admin' ? 'rgb(var(--brand-600))' : 'rgb(var(--slate-500))',
+                        borderColor: u.role === 'admin' ? 'rgb(var(--brand-200))' : 'rgb(var(--slate-200))',
                       }}>{roleBadge.label}</span>
                       {u.position && (
                         <span style={{
                           fontSize: 10, fontWeight: 600, padding: '2px 8px',
-                          borderRadius: 6, background: '#f9fafb', color: '#6b7280',
-                          border: '1px solid #f3f4f6',
+                          borderRadius: 6, background: 'rgb(var(--gray-50))', color: 'rgb(var(--gray-500))',
+                          border: '1px solid rgb(var(--gray-100))',
                         }}>{u.position}</span>
                       )}
                       {u.department && u.department !== 'unassigned' && (
@@ -380,8 +380,8 @@ export default function TabUserDirectory({ user }) {
                         onClick={() => openEditUser(u)}
                         style={{
                           padding: '6px 12px', borderRadius: 8,
-                          border: '1px solid #e5e7eb', background: 'white',
-                          fontSize: 11, fontWeight: 600, color: '#6b7280',
+                          border: '1px solid rgb(var(--gray-200))', background: 'white',
+                          fontSize: 11, fontWeight: 600, color: 'rgb(var(--gray-500))',
                           cursor: 'pointer',
                         }}
                       >แก้ไข</button>
@@ -390,7 +390,7 @@ export default function TabUserDirectory({ user }) {
                           onClick={() => handleReactivateUser(u)}
                           style={{
                             padding: '6px 12px', borderRadius: 8,
-                            border: '1px solid #a7f3d0', background: '#d1fae5',
+                            border: '1px solid #a7f3d0', background: 'var(--tint-green-100)',
                             fontSize: 11, fontWeight: 600, color: '#059669',
                             cursor: 'pointer',
                           }}
@@ -400,7 +400,7 @@ export default function TabUserDirectory({ user }) {
                           onClick={() => setShowDeactivateConfirm(u)}
                           style={{
                             padding: '6px 12px', borderRadius: 8,
-                            border: '1px solid #fecaca', background: '#fee2e2',
+                            border: '1px solid #fecaca', background: 'var(--tint-red-100)',
                             fontSize: 11, fontWeight: 600, color: '#dc2626',
                             cursor: 'pointer',
                           }}
@@ -413,10 +413,10 @@ export default function TabUserDirectory({ user }) {
                 {/* Date footer */}
                 <div style={{
                   padding: '6px 16px',
-                  background: '#f9fafb',
-                  borderTop: '1px solid #f3f4f6',
+                  background: 'rgb(var(--gray-50))',
+                  borderTop: '1px solid rgb(var(--gray-100))',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  fontSize: 10, color: '#9ca3af',
+                  fontSize: 10, color: 'rgb(var(--gray-400))',
                 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Calendar size={10} /> สมัครเมื่อ {formatDate(u.createdAt)}
@@ -449,7 +449,7 @@ export default function TabUserDirectory({ user }) {
               padding: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
               <div>
-                <h3 style={{ color: '#a5b4fc', fontSize: 16, fontWeight: 800, margin: 0 }}>
+                <h3 style={{ color: 'rgb(var(--brand-300))', fontSize: 16, fontWeight: 800, margin: 0 }}>
                   แก้ไขข้อมูลผู้ใช้
                 </h3>
                 <p style={{ color: 'rgba(203,213,225,0.8)', fontSize: 12, marginTop: 2 }}>
@@ -471,7 +471,7 @@ export default function TabUserDirectory({ user }) {
             <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Department */}
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6, display: 'block' }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'rgb(var(--gray-700))', marginBottom: 6, display: 'block' }}>
                   <Building2 size={12} style={{ display: 'inline', marginRight: 4 }} /> แผนก / หน่วยงาน
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -481,9 +481,9 @@ export default function TabUserDirectory({ user }) {
                       onClick={() => setEditDepartment(dept.key)}
                       style={{
                         padding: '6px 12px', borderRadius: 8,
-                        border: editDepartment === dept.key ? '2px solid #4f46e5' : '1.5px solid #e5e7eb',
-                        background: editDepartment === dept.key ? '#eef2ff' : 'white',
-                        color: editDepartment === dept.key ? '#4f46e5' : '#6b7280',
+                        border: editDepartment === dept.key ? '2px solid rgb(var(--brand-600))' : '1.5px solid rgb(var(--gray-200))',
+                        background: editDepartment === dept.key ? 'rgb(var(--brand-50))' : 'white',
+                        color: editDepartment === dept.key ? 'rgb(var(--brand-600))' : 'rgb(var(--gray-500))',
                         fontSize: 12, fontWeight: 600, cursor: 'pointer',
                       }}
                     >{dept.emoji} {dept.label}</button>
@@ -493,7 +493,7 @@ export default function TabUserDirectory({ user }) {
 
               {/* Position */}
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6, display: 'block' }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'rgb(var(--gray-700))', marginBottom: 6, display: 'block' }}>
                   <Briefcase size={12} style={{ display: 'inline', marginRight: 4 }} /> ตำแหน่งงาน
                 </label>
                 <input
@@ -502,8 +502,8 @@ export default function TabUserDirectory({ user }) {
                   placeholder="เช่น พนักงานคลัง, ผู้จัดการ, เชฟ..."
                   style={{
                     width: '100%', padding: '10px 12px',
-                    border: '1.5px solid #e5e7eb', borderRadius: 10,
-                    fontSize: 13, color: '#374151', outline: 'none',
+                    border: '1.5px solid rgb(var(--gray-200))', borderRadius: 10,
+                    fontSize: 13, color: 'rgb(var(--gray-700))', outline: 'none',
                     boxSizing: 'border-box',
                   }}
                 />
@@ -511,7 +511,7 @@ export default function TabUserDirectory({ user }) {
 
               {/* Role */}
               <div>
-                <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 6, display: 'block' }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'rgb(var(--gray-700))', marginBottom: 6, display: 'block' }}>
                   <Shield size={12} style={{ display: 'inline', marginRight: 4 }} /> สิทธิ์การเข้าถึง
                 </label>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -519,9 +519,9 @@ export default function TabUserDirectory({ user }) {
                     onClick={() => setEditRole('staff')}
                     style={{
                       flex: 1, padding: 10, borderRadius: 10,
-                      border: editRole === 'staff' ? '2px solid #4f46e5' : '1.5px solid #e5e7eb',
-                      background: editRole === 'staff' ? '#eef2ff' : 'white',
-                      color: editRole === 'staff' ? '#4f46e5' : '#6b7280',
+                      border: editRole === 'staff' ? '2px solid rgb(var(--brand-600))' : '1.5px solid rgb(var(--gray-200))',
+                      background: editRole === 'staff' ? 'rgb(var(--brand-50))' : 'white',
+                      color: editRole === 'staff' ? 'rgb(var(--brand-600))' : 'rgb(var(--gray-500))',
                       fontSize: 13, fontWeight: 700, cursor: 'pointer',
                       textAlign: 'center',
                     }}
@@ -530,9 +530,9 @@ export default function TabUserDirectory({ user }) {
                     onClick={() => setEditRole('admin')}
                     style={{
                       flex: 1, padding: 10, borderRadius: 10,
-                      border: editRole === 'admin' ? '2px solid #8b5cf6' : '1.5px solid #e5e7eb',
-                      background: editRole === 'admin' ? '#f5f3ff' : 'white',
-                      color: editRole === 'admin' ? '#7c3aed' : '#6b7280',
+                      border: editRole === 'admin' ? '2px solid rgb(var(--brand-500))' : '1.5px solid rgb(var(--gray-200))',
+                      background: editRole === 'admin' ? 'rgb(var(--brand-50))' : 'white',
+                      color: editRole === 'admin' ? 'rgb(var(--brand-700))' : 'rgb(var(--gray-500))',
                       fontSize: 13, fontWeight: 700, cursor: 'pointer',
                       textAlign: 'center',
                     }}
@@ -546,8 +546,8 @@ export default function TabUserDirectory({ user }) {
                   onClick={() => setEditingUser(null)}
                   style={{
                     flex: 1, padding: 12, borderRadius: 12,
-                    background: '#f3f4f6', color: '#6b7280',
-                    border: '1px solid #e5e7eb', fontSize: 14,
+                    background: 'rgb(var(--gray-100))', color: 'rgb(var(--gray-500))',
+                    border: '1px solid rgb(var(--gray-200))', fontSize: 14,
                     fontWeight: 700, cursor: 'pointer',
                   }}
                 >ยกเลิก</button>
@@ -556,7 +556,7 @@ export default function TabUserDirectory({ user }) {
                   disabled={isSaving}
                   style={{
                     flex: 2, padding: 12, borderRadius: 12,
-                    background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
+                    background: 'linear-gradient(135deg, rgb(var(--brand-600)), rgb(var(--brand-500)))',
                     color: 'white', border: 'none', fontSize: 14,
                     fontWeight: 700, cursor: isSaving ? 'not-allowed' : 'pointer',
                     opacity: isSaving ? 0.6 : 1,
@@ -586,16 +586,16 @@ export default function TabUserDirectory({ user }) {
           }}>
             <div style={{
               width: 56, height: 56, borderRadius: '50%',
-              background: '#fee2e2', display: 'flex',
+              background: 'var(--tint-red-100)', display: 'flex',
               alignItems: 'center', justifyContent: 'center',
               margin: '0 auto 16px',
             }}>
               <AlertTriangle size={28} color="#dc2626" />
             </div>
-            <h3 style={{ fontSize: 16, fontWeight: 800, color: '#111827', marginBottom: 8 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 800, color: 'rgb(var(--gray-900))', marginBottom: 8 }}>
               ระงับบัญชี &ldquo;{showDeactivateConfirm.name}&rdquo;?
             </h3>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>
+            <p style={{ fontSize: 13, color: 'rgb(var(--gray-500))', marginBottom: 20 }}>
               ผู้ใช้คนนี้จะไม่สามารถเข้าสู่ระบบได้จนกว่าจะเปิดใช้งานใหม่
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -603,8 +603,8 @@ export default function TabUserDirectory({ user }) {
                 onClick={() => setShowDeactivateConfirm(null)}
                 style={{
                   flex: 1, padding: 12, borderRadius: 12,
-                  background: '#f3f4f6', color: '#6b7280',
-                  border: '1px solid #e5e7eb', fontSize: 14,
+                  background: 'rgb(var(--gray-100))', color: 'rgb(var(--gray-500))',
+                  border: '1px solid rgb(var(--gray-200))', fontSize: 14,
                   fontWeight: 700, cursor: 'pointer',
                 }}
               >ยกเลิก</button>

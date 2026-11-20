@@ -106,7 +106,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
               {isUserAdmin ? 'ความคืบหน้าทั้งระบบ' : 'ความคืบหน้างานที่คุณรับผิดชอบ'}
             </p>
           </div>
-          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-50 text-brand-500 border border-purple-100">
+          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-brand-50 text-brand-500 border border-brand-100">
             {todayKey}
           </span>
         </div>
@@ -138,8 +138,8 @@ export default function SmartRightPanel({ user, transactions = [], products = []
             />
             <defs>
               <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#8b5cf6" />
-                <stop offset="100%" stopColor="#6355d8" />
+                <stop offset="0%" stopColor="rgb(var(--brand-400))" />
+                <stop offset="100%" stopColor="rgb(var(--brand-500))" />
               </linearGradient>
             </defs>
           </svg>
@@ -161,7 +161,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
             <div className="text-xs font-bold text-slate-500">⏳ รอดำเนินการ</div>
             <div className="text-base font-black text-slate-800 mt-0.5">{stats.pending}</div>
           </div>
-          <div className="p-2.5 rounded-2xl bg-purple-50 border border-purple-100 text-center">
+          <div className="p-2.5 rounded-2xl bg-brand-50 border border-brand-100 text-center">
             <div className="text-xs font-bold text-brand-500">⚡ กำลังทำ</div>
             <div className="text-base font-black text-brand-500 mt-0.5">{stats.inProgress}</div>
           </div>
@@ -230,7 +230,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-xl bg-purple-100 text-brand-500 font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
+                        <div className="w-7 h-7 rounded-xl bg-brand-100 text-brand-500 font-bold text-xs flex items-center justify-center shrink-0 overflow-hidden">
                           {member.photoURL ? (
                             <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover" />
                           ) : (
@@ -247,7 +247,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
                         </div>
                       </div>
 
-                      <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md shrink-0">
+                      <span className="text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md shrink-0">
                         {mDone}/{mTotal}
                       </span>
                     </div>
@@ -268,7 +268,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
           <div className="pt-2">
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="w-full py-2.5 px-3 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2.5 px-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Plus size={16} strokeWidth={3} />
               <span>สั่งงานพนักงานด่วน</span>
@@ -288,16 +288,16 @@ export default function SmartRightPanel({ user, transactions = [], products = []
           </div>
 
           <div className="space-y-2 text-xs">
-            <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-100 flex items-center justify-between">
+            <div className="p-3 rounded-2xl bg-brand-50/70 border border-brand-100 flex items-center justify-between">
               <span className="font-semibold text-slate-700">🔄 งานประจำวันตำแหน่งนี้</span>
               <span className="font-black text-brand-500">
                 {visibleTasks.filter(t => (t.isRoutine || t.type === 'routine') && isTaskDone(t, todayKey)).length}/
                 {visibleTasks.filter(t => (t.isRoutine || t.type === 'routine')).length}
               </span>
             </div>
-            <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between">
+            <div className="p-3 rounded-2xl bg-brand-50/70 border border-brand-100 flex items-center justify-between">
               <span className="font-semibold text-slate-700">⚡ งานมอบหมายที่รับผิดชอบ</span>
-              <span className="font-black text-indigo-700">
+              <span className="font-black text-brand-700">
                 {visibleTasks.filter(t => !t.isRoutine && t.type !== 'routine' && isTaskDone(t, todayKey)).length}/
                 {visibleTasks.filter(t => !t.isRoutine && t.type !== 'routine').length}
               </span>
@@ -308,7 +308,7 @@ export default function SmartRightPanel({ user, transactions = [], products = []
           <div className="pt-2">
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="w-full py-2.5 px-3 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2.5 px-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-md shadow-brand-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Plus size={16} strokeWidth={3} />
               <span>เพิ่มบันทึกงานส่วนตัว</span>

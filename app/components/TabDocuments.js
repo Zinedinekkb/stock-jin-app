@@ -29,11 +29,11 @@ const DOC_CATEGORIES = [
 const getFileIcon = (url = '', type, name = '') => {
   if (type === 'order' || name?.includes('ใบรับสินค้า') || name?.includes('GRN')) return <FileText size={20} className="text-success-600" />;
   if (type === 'receipt' || name?.includes('ใบเบิก') || name?.includes('GIS')) return <FileText size={20} className="text-rose-600" />;
-  if (type === 'sales') return <FileText size={20} className="text-blue-700" />;
+  if (type === 'sales') return <FileText size={20} className="text-brand-700" />;
   if (type === 'payment') return <FileText size={20} className="text-amber-700" />;
-  if (type === 'leave' || name?.includes('ใบขอลา') || name?.includes('ใบลา')) return <FileText size={20} className="text-purple-600" />;
-  if (type === 'report' || name?.startsWith('รายงานประจำวัน')) return <FileText size={20} className="text-indigo-600" />;
-  if (type === 'image') return <Image size={20} className="text-blue-500" />;
+  if (type === 'leave' || name?.includes('ใบขอลา') || name?.includes('ใบลา')) return <FileText size={20} className="text-brand-600" />;
+  if (type === 'report' || name?.startsWith('รายงานประจำวัน')) return <FileText size={20} className="text-brand-600" />;
+  if (type === 'image') return <Image size={20} className="text-brand-500" />;
   if (url.includes('drive.google')) return <File size={20} className="text-yellow-600" />;
   if (url.includes('line') || url.includes('chat')) return <Link2 size={20} className="text-success-600" />;
   return <FileText size={20} className="text-gray-500" />;
@@ -355,7 +355,7 @@ export default function TabDocuments({ user }) {
             {/* Modal Header */}
             <div className="p-3.5 sm:p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/90">
               <div className="flex items-center gap-2.5 min-w-0 pr-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 text-brand-500 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-500 flex items-center justify-center shrink-0">
                   <FileText size={20} />
                 </div>
                 <div className="min-w-0">

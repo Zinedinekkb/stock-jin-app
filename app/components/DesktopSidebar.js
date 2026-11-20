@@ -2,6 +2,7 @@
 'use client';
 import React, { useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Package, QrCode } from 'lucide-react';
+import { useBranding } from './BrandingProvider';
 import { getVisibleNavItems, getVisibleSubItems, isSubItemActive, NAV_ITEMS } from '../config/navigation';
 
 export default function DesktopSidebar({ 
@@ -15,6 +16,7 @@ export default function DesktopSidebar({
   dashboardSubTab = 'tasks',
   stockOnlyMode = false
 }) {
+  const { appName, logoUrl } = useBranding();
   // Sidebar expanded / collapsed state
   const [isCollapsed, setIsCollapsed] = useState(false);
   // Accordion expanded section
@@ -72,14 +74,14 @@ export default function DesktopSidebar({
             setActiveTab('dashboard');
           }}
           className="flex items-center gap-2.5 overflow-hidden cursor-pointer group"
-          title="StockPro - หน้าแรก"
+          title={`${appName} - หน้าแรก`}
         >
           <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shrink-0 shadow-sm border border-white/20 group-hover:scale-105 transition-transform">
-            <Package size={22} strokeWidth={2.5} />
+            {logoUrl ? <img src={logoUrl} alt={appName} className="w-full h-full object-contain rounded-2xl" /> : <Package size={22} strokeWidth={2.5} />}
           </div>
           {!isCollapsed && (
             <div className="min-w-0 transition-opacity duration-200">
-              <h1 className="text-base font-black text-white tracking-wide leading-none truncate">StockPro</h1>
+              <h1 className="text-base font-black text-white tracking-wide leading-none truncate">{appName}</h1>
               <p className="text-xs text-white/70 font-medium mt-1 truncate">Workforce & Inventory</p>
             </div>
           )}

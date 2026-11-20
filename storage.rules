@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isApproved() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && userDoc().get('status', 'approved') == 'approved';
+    }
+
+    function isAdmin() {
+      return isApproved() && userDoc().get('role', 'staff') == 'admin';
+    }
+
+    // Shop logo: public read, admin write, png/jpeg/webp under 2 MB.
+    match /branding/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/(png|jpeg|webp)');
+    }
+
+    // Generated PDFs (documents/transactions, documents/leaves).
+    match /documents/{allPaths=**} {
+      allow read, write: if isApproved();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

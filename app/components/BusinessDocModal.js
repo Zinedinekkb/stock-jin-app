@@ -3,23 +3,11 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import { X, Plus, Trash2, Download, Save, Printer, Sparkles, FileText } from 'lucide-react';
 import { Button } from './ui';
+import { useBranding } from './BrandingProvider';
 import {
   BUSINESS_DOC_TYPES, getDocType, blankDocData, sampleDocData, emptyItem, calcTotals,
   buildBusinessDocHtml, generateBusinessDocPdf, saveBusinessDocument, makeDocNumber,
 } from '../utils/businessDocTemplates';
-
-// Shop header details are a per-device convenience, so they are remembered locally
-const SHOP_KEY = 'stockjin.shopInfo';
-const loadShop = () => {
-  try { return JSON.parse(localStorage.getItem(SHOP_KEY) || '{}'); } catch { return {}; }
-};
-const saveShop = (data) => {
-  try {
-    localStorage.setItem(SHOP_KEY, JSON.stringify({
-      shopName: data.shopName, shopAddress: data.shopAddress, shopTaxId: data.shopTaxId, shopPhone: data.shopPhone,
-    }));
-  } catch { /* storage unavailable: nothing to remember */ }
-};
 
 const inputClass = 'w-full h-11 px-3 rounded-control bg-white/80 border border-white text-sm text-ink outline-none focus:ring-2 focus:ring-brand-200';
 const labelClass = 'block text-xs font-bold text-ink-muted mb-1';
@@ -39,7 +27,7 @@ function A4Preview({ html }) {
   }, []);
   return (
     <div ref={wrapRef} className="w-full">
-      <div className="mx-auto shadow-glass-lg rounded-md overflow-hidden bg-white" style={{ width: 794 * scale, height: 1123 * scale }}>
+      <div className="paper-light mx-auto shadow-glass-lg rounded-md overflow-hidden bg-white" style={{ width: 794 * scale, height: 1123 * scale }}>
         {/* Our own template output; user text is escaped in buildBusinessDocHtml */}
         <div style={{ width: 794, transform: `scale(${scale})`, transformOrigin: 'top left' }} dangerouslySetInnerHTML={{ __html: html }} />
       </div>
@@ -48,14 +36,16 @@ function A4Preview({ html }) {
 }
 
 export default function BusinessDocModal({ isOpen, onClose, initialType = 'PO', user, showNotification }) {
+  // Shop header details come from the shared branding settings
+  const branding = useBranding();
   const [typeKey, setTypeKey] = useState(initialType);
-  const [data, setData] = useState(() => blankDocData(initialType, typeof window !== 'undefined' ? loadShop() : {}));
+  const [data, setData] = useState(() => blankDocData(initialType, branding));
   const [mobileView, setMobileView] = useState('form'); // 'form' | 'preview'
   const [busy, setBusy] = useState('');
   const [prevOpen, setPrevOpen] = useState(isOpen);
   if (isOpen !== prevOpen) {
     setPrevOpen(isOpen);
-    if (isOpen) { setTypeKey(initialType); setData(blankDocData(initialType, loadShop())); setMobileView('form'); }
+    if (isOpen) { setTypeKey(initialType); setData(blankDocData(initialType, branding)); setMobileView('form'); }
   }
   if (!isOpen) return null;
 
@@ -78,13 +68,11 @@ export default function BusinessDocModal({ isOpen, onClose, initialType = 'PO', 
   };
 
   const handleDownload = () => run('download', async () => {
-    saveShop(data);
     const { pdf, fileName } = await generateBusinessDocPdf(typeKey, data);
     pdf.save(fileName);
   });
 
   const handleSave = () => run('save', async () => {
-    saveShop(data);
     await saveBusinessDocument(typeKey, data, user);
     notify(`บันทึก${t.title}ลงคลังเอกสารแล้ว`);
     onClose();
@@ -129,7 +117,7 @@ export default function BusinessDocModal({ isOpen, onClose, initialType = 'PO', 
           <div className={`overflow-y-auto p-4 space-y-4 ${mobileView === 'form' ? 'block' : 'hidden'} lg:block`}>
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm text-ink-muted">{t.desc}</p>
-              <Button size="sm" variant="ghost" icon={Sparkles} onClick={() => setData(sampleDocData(typeKey, loadShop()))}>ใส่ข้อมูลตัวอย่าง</Button>
+              <Button size="sm" variant="ghost" icon={Sparkles} onClick={() => setData(sampleDocData(typeKey, branding))}>ใส่ข้อมูลตัวอย่าง</Button>
             </div>
 
             <fieldset className="space-y-2.5">
@@ -144,7 +132,7 @@ export default function BusinessDocModal({ isOpen, onClose, initialType = 'PO', 
             </fieldset>
 
             <fieldset className="space-y-2.5">
-              <legend className="text-sm font-bold text-ink mb-1">ข้อมูลร้าน (จำไว้ในเครื่องนี้)</legend>
+              <legend className="text-sm font-bold text-ink mb-1">ข้อมูลร้าน (ตั้งค่าหลักที่เมนูตั้งค่าร้าน)</legend>
               <label className="block"><span className={labelClass}>ชื่อร้าน / บริษัท</span><input className={inputClass} value={data.shopName} onChange={e => set({ shopName: e.target.value })} /></label>
               <label className="block"><span className={labelClass}>ที่อยู่</span><input className={inputClass} value={data.shopAddress} onChange={e => set({ shopAddress: e.target.value })} /></label>
               <div className="grid grid-cols-2 gap-2.5">
