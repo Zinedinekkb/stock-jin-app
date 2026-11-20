@@ -22,7 +22,7 @@ const POSITIONS = [
 const PRIORITIES = [
   { key: 'urgent', label: '🔴 ด่วนมาก', desc: 'ต้องรีบทำทันที', color: 'border-rose-400 bg-rose-50 text-rose-700' },
   { key: 'high', label: '🟡 สำคัญ', desc: 'ต้องเสร็จภายในกำหนด', color: 'border-amber-400 bg-amber-50 text-amber-700' },
-  { key: 'normal', label: '🔵 ปกติ', desc: 'งานทั่วไปตามรอบ', color: 'border-indigo-400 bg-indigo-50 text-indigo-700' },
+  { key: 'normal', label: '🔵 ปกติ', desc: 'งานทั่วไปตามรอบ', color: 'border-brand-400 bg-brand-50 text-brand-700' },
   { key: 'low', label: '⚪ ทั่วไป', desc: 'ไม่มีเวลาเร่งด่วน', color: 'border-slate-300 bg-slate-50 text-slate-700' },
 ];
 
@@ -180,7 +180,7 @@ export default function CreateTaskModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-8 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-purple-700 to-brand-500 text-white flex items-center justify-between shrink-0">
+        <div className="px-6 py-5 bg-gradient-to-r from-brand-700 to-brand-500 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold">
               {type === 'routine' ? '🔄' : '⚡'}
@@ -189,7 +189,7 @@ export default function CreateTaskModal({
               <h2 className="text-lg font-black tracking-tight">
                 {editingTask ? 'แก้ไขงาน / ภารกิจ' : isUserAdmin ? 'สั่งงานใหม่ / มอบหมายภารกิจ' : 'เพิ่มบันทึกงานของฉัน (To-Do)'}
               </h2>
-              <p className="text-xs text-purple-100 font-medium">
+              <p className="text-xs text-brand-100 font-medium">
                 {isUserAdmin ? 'สำหรับผู้บริหารและผู้มอบหมายงาน' : 'รายการงานส่วนตัวที่ต้องทำ'}
               </p>
             </div>
@@ -222,7 +222,7 @@ export default function CreateTaskModal({
                 onClick={() => setType('routine')}
                 className={`p-3 rounded-2xl border text-left transition-all flex items-start gap-2.5 ${
                   type === 'routine' 
-                    ? 'border-brand-500 bg-purple-50/70 shadow-sm text-purple-950 font-bold' 
+                    ? 'border-brand-500 bg-brand-50/70 shadow-sm text-brand-900 font-bold' 
                     : 'border-slate-200 hover:border-slate-300 text-slate-600'
                 }`}
               >
@@ -238,7 +238,7 @@ export default function CreateTaskModal({
                 onClick={() => setType('assigned')}
                 className={`p-3 rounded-2xl border text-left transition-all flex items-start gap-2.5 ${
                   type === 'assigned' 
-                    ? 'border-brand-500 bg-purple-50/70 shadow-sm text-purple-950 font-bold' 
+                    ? 'border-brand-500 bg-brand-50/70 shadow-sm text-brand-900 font-bold' 
                     : 'border-slate-200 hover:border-slate-300 text-slate-600'
                 }`}
               >
@@ -262,7 +262,7 @@ export default function CreateTaskModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="เช่น ตรวจนับสต็อกโซนแช่แข็ง, เตรียมเนื้อสัตว์สำหรับมื้อเที่ยง, สรุปเงินทอนเปิดกะ"
-              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-sm font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all"
+              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-sm font-semibold text-slate-800 placeholder-slate-400 outline-none transition-all"
             />
           </div>
 
@@ -313,7 +313,7 @@ export default function CreateTaskModal({
               </div>
             ) : (
               <div className="mb-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-purple-50 border border-purple-200 rounded-xl text-xs font-bold text-brand-500">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-50 border border-brand-200 rounded-xl text-xs font-bold text-brand-500">
                   👤 งานของฉัน ({currentUser?.name || 'พนักงาน'})
                 </span>
               </div>
@@ -362,7 +362,7 @@ export default function CreateTaskModal({
                   onClick={() => setPriority(p.key)}
                   className={`p-2.5 rounded-2xl border text-center transition-all ${
                     priority === p.key 
-                      ? `${p.color} ring-2 ring-purple-600/30 font-black shadow-xs` 
+                      ? `${p.color} ring-2 ring-brand-600/30 font-black shadow-xs` 
                       : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
@@ -412,7 +412,7 @@ export default function CreateTaskModal({
               value={stepsText}
               onChange={(e) => setStepsText(e.target.value)}
               placeholder={'เช่น\nนับเงินทอนในลิ้นชัก\nเทียบกับยอดมาตรฐาน\nจดยอดลงหมายเหตุ'}
-              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all"
+              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all"
             />
           </div>
 
@@ -426,7 +426,7 @@ export default function CreateTaskModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="ระบุข้อควรระวัง หรือข้อมูลเพิ่มเติม (ถ้ามี)"
-              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-sm font-normal text-slate-800 placeholder-slate-400 outline-none transition-all resize-none"
+              className="w-full px-4 py-2.5 rounded-2xl border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-sm font-normal text-slate-800 placeholder-slate-400 outline-none transition-all resize-none"
             />
           </div>
 
@@ -442,7 +442,7 @@ export default function CreateTaskModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-lg shadow-purple-500/25 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-lg shadow-brand-500/25 transition-all disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>

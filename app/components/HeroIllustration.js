@@ -29,8 +29,8 @@ export default function HeroIllustration({ className = "w-48 h-36" }) {
             <stop offset="100%" stopColor="#dc2626" />
           </linearGradient>
           <linearGradient id="pantsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#4f46e5" />
-            <stop offset="100%" stopColor="#3730a3" />
+            <stop offset="0%" stopColor="rgb(var(--brand-600))" />
+            <stop offset="100%" stopColor="rgb(var(--brand-800))" />
           </linearGradient>
           <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#f59e0b" floodOpacity="0.25" />
@@ -71,7 +71,7 @@ export default function HeroIllustration({ className = "w-48 h-36" }) {
         {/* Person Walking */}
         <g filter="url(#softShadow)">
           {/* Back leg */}
-          <path d="M165 140 L155 178 L146 182" stroke="#312e81" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M165 140 L155 178 L146 182" stroke="rgb(var(--brand-900))" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
           {/* Back shoe */}
           <ellipse cx="144" cy="183" rx="6" ry="3" fill="#dc2626" />
 
@@ -99,10 +99,10 @@ export default function HeroIllustration({ className = "w-48 h-36" }) {
           {/* Hair Bun / Cap */}
           <path
             d="M163 67 C162 60 172 58 175 62 C178 66 174 72 167 72 C164 72 163 70 163 67 Z"
-            fill="#1e1b4b"
+            fill="rgb(var(--brand-900))"
           />
           {/* Ponytail / Bun detail */}
-          <circle cx="178" cy="62" r="4.5" fill="#1e1b4b" />
+          <circle cx="178" cy="62" r="4.5" fill="rgb(var(--brand-900))" />
 
           {/* Arm holding phone */}
           <path

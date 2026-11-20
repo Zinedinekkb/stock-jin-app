@@ -169,7 +169,7 @@ export default function TabUserDirectory({ user }) {
   };
 
   const getRoleBadge = (role) => {
-    if (role === 'admin') return { label: '👑 Admin', cls: 'bg-indigo-100 text-indigo-700 border-indigo-200' };
+    if (role === 'admin') return { label: '👑 Admin', cls: 'bg-brand-100 text-brand-700 border-brand-200' };
     return { label: '✅ Staff', cls: 'bg-slate-100 text-slate-600 border-slate-200' };
   };
 
@@ -184,10 +184,10 @@ export default function TabUserDirectory({ user }) {
       {/* Summary Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
         {[
-          { label: 'บัญชีทั้งหมด', value: stats.total, icon: Users, color: '#6366f1' },
+          { label: 'บัญชีทั้งหมด', value: stats.total, icon: Users, color: 'rgb(var(--brand-500))' },
           { label: 'ใช้งานอยู่', value: stats.active, icon: UserCheck, color: '#10b981' },
           { label: 'รอดำเนินการ', value: stats.pending, icon: AlertTriangle, color: '#f59e0b' },
-          { label: 'Admin', value: stats.admins, icon: Shield, color: '#8b5cf6' },
+          { label: 'Admin', value: stats.admins, icon: Shield, color: 'rgb(var(--brand-500))' },
           { label: 'Staff', value: stats.staff, icon: ShieldCheck, color: '#64748b' },
           { label: 'ถูกระงับ', value: stats.deactivated, icon: UserX, color: '#ef4444' },
         ].map((s, i) => {
@@ -259,8 +259,8 @@ export default function TabUserDirectory({ user }) {
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '8px 14px', borderRadius: 20,
-              border: selectedDept === dept.key ? '1.5px solid #4f46e5' : '1.5px solid #e5e7eb',
-              background: selectedDept === dept.key ? '#4f46e5' : 'white',
+              border: selectedDept === dept.key ? '1.5px solid rgb(var(--brand-600))' : '1.5px solid #e5e7eb',
+              background: selectedDept === dept.key ? 'rgb(var(--brand-600))' : 'white',
               color: selectedDept === dept.key ? '#ffffff' : '#6b7280',
               fontSize: 12, fontWeight: 700, cursor: 'pointer',
               whiteSpace: 'nowrap', flexShrink: 0,
@@ -296,7 +296,7 @@ export default function TabUserDirectory({ user }) {
               <div key={u.id} style={{
                 background: 'white',
                 borderRadius: 16,
-                border: isCurrentUser ? '2px solid #c7d2fe' : '1px solid #f3f4f6',
+                border: isCurrentUser ? '2px solid rgb(var(--brand-200))' : '1px solid #f3f4f6',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
                 overflow: 'hidden',
                 transition: 'all 0.2s',
@@ -310,7 +310,7 @@ export default function TabUserDirectory({ user }) {
                   <div style={{
                     width: 44, height: 44, minWidth: 44,
                     borderRadius: '50%',
-                    background: u.photoURL ? 'transparent' : 'linear-gradient(135deg, #6366f1, #818cf8)',
+                    background: u.photoURL ? 'transparent' : 'linear-gradient(135deg, rgb(var(--brand-500)), rgb(var(--brand-400)))',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: 'white', fontWeight: 800, fontSize: 16,
                     overflow: 'hidden',
@@ -332,7 +332,7 @@ export default function TabUserDirectory({ user }) {
                       {isCurrentUser && (
                         <span style={{
                           fontSize: 9, fontWeight: 700, padding: '1px 6px',
-                          borderRadius: 6, background: '#eef2ff', color: '#6366f1',
+                          borderRadius: 6, background: 'rgb(var(--brand-50))', color: 'rgb(var(--brand-500))',
                         }}>คุณ</span>
                       )}
                     </div>
@@ -348,9 +348,9 @@ export default function TabUserDirectory({ user }) {
                       <span style={{
                         fontSize: 10, fontWeight: 700, padding: '2px 8px',
                         borderRadius: 6, border: '1px solid',
-                        background: u.role === 'admin' ? '#eef2ff' : '#f8fafc',
-                        color: u.role === 'admin' ? '#4f46e5' : '#64748b',
-                        borderColor: u.role === 'admin' ? '#c7d2fe' : '#e2e8f0',
+                        background: u.role === 'admin' ? 'rgb(var(--brand-50))' : '#f8fafc',
+                        color: u.role === 'admin' ? 'rgb(var(--brand-600))' : '#64748b',
+                        borderColor: u.role === 'admin' ? 'rgb(var(--brand-200))' : '#e2e8f0',
                       }}>{roleBadge.label}</span>
                       {u.position && (
                         <span style={{
@@ -449,7 +449,7 @@ export default function TabUserDirectory({ user }) {
               padding: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             }}>
               <div>
-                <h3 style={{ color: '#a5b4fc', fontSize: 16, fontWeight: 800, margin: 0 }}>
+                <h3 style={{ color: 'rgb(var(--brand-300))', fontSize: 16, fontWeight: 800, margin: 0 }}>
                   แก้ไขข้อมูลผู้ใช้
                 </h3>
                 <p style={{ color: 'rgba(203,213,225,0.8)', fontSize: 12, marginTop: 2 }}>
@@ -481,9 +481,9 @@ export default function TabUserDirectory({ user }) {
                       onClick={() => setEditDepartment(dept.key)}
                       style={{
                         padding: '6px 12px', borderRadius: 8,
-                        border: editDepartment === dept.key ? '2px solid #4f46e5' : '1.5px solid #e5e7eb',
-                        background: editDepartment === dept.key ? '#eef2ff' : 'white',
-                        color: editDepartment === dept.key ? '#4f46e5' : '#6b7280',
+                        border: editDepartment === dept.key ? '2px solid rgb(var(--brand-600))' : '1.5px solid #e5e7eb',
+                        background: editDepartment === dept.key ? 'rgb(var(--brand-50))' : 'white',
+                        color: editDepartment === dept.key ? 'rgb(var(--brand-600))' : '#6b7280',
                         fontSize: 12, fontWeight: 600, cursor: 'pointer',
                       }}
                     >{dept.emoji} {dept.label}</button>
@@ -519,9 +519,9 @@ export default function TabUserDirectory({ user }) {
                     onClick={() => setEditRole('staff')}
                     style={{
                       flex: 1, padding: 10, borderRadius: 10,
-                      border: editRole === 'staff' ? '2px solid #4f46e5' : '1.5px solid #e5e7eb',
-                      background: editRole === 'staff' ? '#eef2ff' : 'white',
-                      color: editRole === 'staff' ? '#4f46e5' : '#6b7280',
+                      border: editRole === 'staff' ? '2px solid rgb(var(--brand-600))' : '1.5px solid #e5e7eb',
+                      background: editRole === 'staff' ? 'rgb(var(--brand-50))' : 'white',
+                      color: editRole === 'staff' ? 'rgb(var(--brand-600))' : '#6b7280',
                       fontSize: 13, fontWeight: 700, cursor: 'pointer',
                       textAlign: 'center',
                     }}
@@ -530,9 +530,9 @@ export default function TabUserDirectory({ user }) {
                     onClick={() => setEditRole('admin')}
                     style={{
                       flex: 1, padding: 10, borderRadius: 10,
-                      border: editRole === 'admin' ? '2px solid #8b5cf6' : '1.5px solid #e5e7eb',
-                      background: editRole === 'admin' ? '#f5f3ff' : 'white',
-                      color: editRole === 'admin' ? '#7c3aed' : '#6b7280',
+                      border: editRole === 'admin' ? '2px solid rgb(var(--brand-500))' : '1.5px solid #e5e7eb',
+                      background: editRole === 'admin' ? 'rgb(var(--brand-50))' : 'white',
+                      color: editRole === 'admin' ? 'rgb(var(--brand-700))' : '#6b7280',
                       fontSize: 13, fontWeight: 700, cursor: 'pointer',
                       textAlign: 'center',
                     }}
@@ -556,7 +556,7 @@ export default function TabUserDirectory({ user }) {
                   disabled={isSaving}
                   style={{
                     flex: 2, padding: 12, borderRadius: 12,
-                    background: 'linear-gradient(135deg, #4f46e5, #6366f1)',
+                    background: 'linear-gradient(135deg, rgb(var(--brand-600)), rgb(var(--brand-500)))',
                     color: 'white', border: 'none', fontSize: 14,
                     fontWeight: 700, cursor: isSaving ? 'not-allowed' : 'pointer',
                     opacity: isSaving ? 0.6 : 1,

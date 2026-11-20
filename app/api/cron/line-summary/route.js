@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 import { isCronAuthorized } from '@/lib/cronAuth';
+import { getBrandingServer } from '../../../../lib/branding/server.js';
 import { halfMonthRangeBangkok, buildMovementSummary, getLowStock } from '@/lib/reportData';
 import {
   linePush, flexBubble, flexMessage, flexSectionTitle, movementRows,
@@ -28,6 +29,7 @@ export async function GET(request) {
       getLowStock(db),
     ]);
 
+    const branding = await getBrandingServer();
     const bubble = flexBubble({
       title: `📊 สรุปครึ่งเดือน ${label}`,
       subtitle: `รายการเสร็จ ${summary.completedCount} รายการ · รอดำเนินการ ${summary.pendingCount}`,
@@ -43,7 +45,7 @@ export async function GET(request) {
           size: 'sm', color: '#555555', margin: 'sm',
         },
       ],
-      footerText: 'ดูรายละเอียดเพิ่มเติมได้ในระบบ StockPro',
+      footerText: `ดูรายละเอียดเพิ่มเติมได้ในระบบ ${branding.appName}`,
     });
 
     await linePush(target, [flexMessage(`สรุปครึ่งเดือน ${label}`, bubble)]);

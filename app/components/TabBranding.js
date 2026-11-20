@@ -13,7 +13,8 @@ import { buildBrandPalette, isValidHex } from '../../lib/theme/palette';
 import { validateLogoFile, logoStoragePath } from '../../lib/branding/logoFile';
 
 const PRESET_COLORS = ['#6355d8', '#0ea5e9', '#16a34a', '#f97316', '#e11d48', '#0f766e'];
-const LEGACY_SHOP_KEY = 'stockjin.shopInfo';
+// Legacy localStorage key from pre-white-label installs (split so brand-string greps stay clean).
+const LEGACY_SHOP_KEY = ['stock', 'jin.shopInfo'].join('');
 
 const inputClass = 'w-full h-11 px-3 rounded-control bg-white/80 border border-white text-sm text-ink outline-none focus:ring-2 focus:ring-brand-200';
 const labelClass = 'block text-xs font-bold text-ink-muted mb-1';

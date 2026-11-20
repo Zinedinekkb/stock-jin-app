@@ -208,7 +208,7 @@ export default function CameraAttendanceModal({
           {/* Loading Spinner */}
           {isLoadingCamera && !capturedData && !cameraError && (
             <div className="cam-overlay-state">
-              <Loader2 size={32} className="animate-spin text-indigo-500 mb-2" />
+              <Loader2 size={32} className="animate-spin text-brand-500 mb-2" />
               <p className="text-xs font-medium text-gray-600">กำลังเปิดกล้อง...</p>
             </div>
           )}
@@ -231,7 +231,7 @@ export default function CameraAttendanceModal({
                       setCameraError(e.message);
                     });
                 }}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 active:scale-95 transition-all"
+                className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold hover:bg-brand-700 active:scale-95 transition-all"
               >
                 ลองใหม่อีกครั้ง
               </button>

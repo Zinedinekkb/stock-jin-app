@@ -11,10 +11,10 @@ import { hasPermission, isAdmin } from '../utils/permissions';
 const NOTIF_CATEGORIES = [
   { key: 'all', label: 'ทั้งหมด', icon: Bell, color: 'text-gray-600', bg: 'bg-gray-100' },
   { key: 'stock', label: 'สต็อก', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100' },
-  { key: 'movement', label: 'เคลื่อนไหว', icon: Package, color: 'text-blue-600', bg: 'bg-blue-100' },
-  { key: 'dashboard', label: 'รายงาน', icon: BarChart3, color: 'text-purple-600', bg: 'bg-purple-100' },
+  { key: 'movement', label: 'เคลื่อนไหว', icon: Package, color: 'text-brand-600', bg: 'bg-brand-100' },
+  { key: 'dashboard', label: 'รายงาน', icon: BarChart3, color: 'text-brand-600', bg: 'bg-brand-100' },
   { key: 'user', label: 'ผู้ใช้', icon: UserPlus, color: 'text-orange-600', bg: 'bg-orange-100' },
-  { key: 'hr', label: 'บุคลากร/ลา', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-100' },
+  { key: 'hr', label: 'บุคลากร/ลา', icon: FileText, color: 'text-brand-600', bg: 'bg-brand-100' },
 ];
 
 export default function TabNotifications({
@@ -63,13 +63,13 @@ export default function TabNotifications({
       case 'movement':
         return notif.subType === 'IN'
           ? <ArrowDownCircle size={20} className="text-success-500" />
-          : <ArrowUpCircle size={20} className="text-blue-500" />;
+          : <ArrowUpCircle size={20} className="text-brand-500" />;
       case 'dashboard':
-        return <BarChart3 size={20} className="text-purple-500" />;
+        return <BarChart3 size={20} className="text-brand-500" />;
       case 'user':
         return <UserPlus size={20} className="text-orange-500" />;
       case 'hr':
-        return <FileText size={20} className="text-indigo-500" />;
+        return <FileText size={20} className="text-brand-500" />;
       default:
         return <Bell size={20} className="text-gray-500" />;
     }
@@ -78,10 +78,10 @@ export default function TabNotifications({
   const getNotifBorderColor = (notif) => {
     switch (notif.category) {
       case 'stock': return notif.severity === 'critical' ? 'border-l-red-500' : 'border-l-yellow-500';
-      case 'movement': return notif.subType === 'IN' ? 'border-l-green-500' : 'border-l-blue-500';
-      case 'dashboard': return 'border-l-purple-500';
+      case 'movement': return notif.subType === 'IN' ? 'border-l-green-500' : 'border-l-brand-500';
+      case 'dashboard': return 'border-l-brand-500';
       case 'user': return 'border-l-orange-500';
-      case 'hr': return 'border-l-indigo-500';
+      case 'hr': return 'border-l-brand-500';
       default: return 'border-l-gray-300';
     }
   };

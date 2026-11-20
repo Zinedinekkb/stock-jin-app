@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { getBrandingServer, tripletToHex } from '../../../lib/branding/server.js';
+import { buildBrandPalette } from '../../../lib/theme/palette.js';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://stock-jin-app.vercel.app';
 
@@ -18,12 +20,19 @@ function formatThaiDate(dateInput) {
   return `${day} ${month} พ.ศ. ${year}`;
 }
 
-function getPriorityLabel(priority) {
+const escHtml = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function brandHex(branding) {
+  const p = buildBrandPalette(branding.primaryColor);
+  return { c600: tripletToHex(p[600]), c700: tripletToHex(p[700]), c900: tripletToHex(p[900]), c100: tripletToHex(p[100]) };
+}
+
+function getPriorityLabel(priority, brand) {
   switch (priority) {
     case 'urgent': return { label: 'ด่วนมาก', color: '#dc2626', bg: '#fee2e2' };
     case 'high': return { label: 'สำคัญ', color: '#d97706', bg: '#fef3c7' };
     case 'low': return { label: 'ทั่วไป', color: '#64748b', bg: '#f1f5f9' };
-    default: return { label: 'ปกติ', color: '#4f46e5', bg: '#e0e7ff' };
+    default: return { label: 'ปกติ', color: brand.c600, bg: brand.c100 };
   }
 }
 
@@ -39,8 +48,10 @@ function getLeaveTypeLabel(type) {
 // -------------------------------------------------------------
 // HTML Email Templates
 // -------------------------------------------------------------
-function generateTaskAssignedHtml({ task, currentUser }) {
-  const priorityInfo = getPriorityLabel(task.priority);
+function generateTaskAssignedHtml({ task, currentUser, branding }) {
+  const brand = brandHex(branding);
+  const priorityInfo = getPriorityLabel(task.priority, brand);
+  const appName = escHtml(branding.appName);
   const targetLabel = task.targetType === 'user' 
     ? (task.targetUserName || 'พนักงาน') 
     : (task.targetPosition || 'ทุกคน');
@@ -53,7 +64,7 @@ function generateTaskAssignedHtml({ task, currentUser }) {
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Sarabun', 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
         .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
-        .header { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: #ffffff; padding: 28px 32px; text-align: left; }
+        .header { background: linear-gradient(135deg, #0f172a 0%, ${brand.c900} 100%); color: #ffffff; padding: 28px 32px; text-align: left; }
         .logo { font-size: 24px; font-weight: 900; letter-spacing: 0.5px; }
         .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 800; text-transform: uppercase; margin-top: 12px; }
         .content { padding: 32px; }
@@ -64,14 +75,14 @@ function generateTaskAssignedHtml({ task, currentUser }) {
         .info-label { color: #64748b; font-weight: 600; }
         .info-value { color: #0f172a; font-weight: 700; text-align: right; }
         .desc-box { background: #faf5ff; border: 1px solid #f3e8ff; border-radius: 12px; padding: 16px; margin-bottom: 28px; font-size: 13.5px; color: #581c87; line-height: 1.6; }
-        .btn { display: block; text-align: center; background: #6355d8; color: #ffffff !important; padding: 14px 28px; border-radius: 12px; font-weight: 800; font-size: 14px; text-decoration: none; box-shadow: 0 4px 12px rgba(99, 85, 216, 0.25); }
+        .btn { display: block; text-align: center; background: ${brand.c600}; color: #ffffff !important; padding: 14px 28px; border-radius: 12px; font-weight: 800; font-size: 14px; text-decoration: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
         .footer { padding: 20px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">📦 StockPro Tasks</div>
+          <div class="logo">📦 ${appName} Tasks</div>
           <div style="font-size: 13px; opacity: 0.85; margin-top: 4px;">ระบบแจ้งเตือนการสั่งงานและ To-Do List อัตโนมัติ</div>
           <span class="badge" style="background: ${priorityInfo.bg}; color: ${priorityInfo.color};">
             ความสำคัญ: ${priorityInfo.label}
@@ -108,7 +119,7 @@ function generateTaskAssignedHtml({ task, currentUser }) {
           <a href="${APP_URL}" class="btn">🚀 เข้าสู่ระบบเพื่อดูงานและอัปเดตความคืบหน้า</a>
         </div>
         <div class="footer">
-          อีเมลนี้ถูกส่งจากระบบ StockPro Team & Task Management โดยอัตโนมัติ<br>
+          อีเมลนี้ถูกส่งจากระบบ ${appName} Team & Task Management โดยอัตโนมัติ<br>
           หากมีข้อสงสัยกรุณาติดต่อผู้มอบหมายงานหรือผู้ดูแลระบบ
         </div>
       </div>
@@ -117,7 +128,9 @@ function generateTaskAssignedHtml({ task, currentUser }) {
   `;
 }
 
-function generateLeaveSubmittedHtml({ leave }) {
+function generateLeaveSubmittedHtml({ leave, branding }) {
+  const brand = brandHex(branding);
+  const appName = escHtml(branding.appName);
   const leaveLabel = getLeaveTypeLabel(leave.leaveType || leave.type);
 
   return `
@@ -128,21 +141,21 @@ function generateLeaveSubmittedHtml({ leave }) {
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, 'Sarabun', 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #1e293b; }
         .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
-        .header { background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%); color: #ffffff; padding: 28px 32px; text-align: left; }
+        .header { background: linear-gradient(135deg, ${brand.c900} 0%, ${brand.c700} 100%); color: #ffffff; padding: 28px 32px; text-align: left; }
         .logo { font-size: 24px; font-weight: 900; letter-spacing: 0.5px; }
         .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 800; background: #fef3c7; color: #b45309; margin-top: 12px; }
         .content { padding: 32px; }
         .title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 16px; line-height: 1.4; }
         .info-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 20px; margin-bottom: 24px; }
         .desc-box { background: #eff6ff; border: 1px solid #dbeafe; border-radius: 12px; padding: 16px; margin-bottom: 28px; font-size: 13.5px; color: #1e40af; line-height: 1.6; }
-        .btn { display: block; text-align: center; background: #4338ca; color: #ffffff !important; padding: 14px 28px; border-radius: 12px; font-weight: 800; font-size: 14px; text-decoration: none; box-shadow: 0 4px 12px rgba(67, 56, 202, 0.25); }
+        .btn { display: block; text-align: center; background: ${brand.c700}; color: #ffffff !important; padding: 14px 28px; border-radius: 12px; font-weight: 800; font-size: 14px; text-decoration: none; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); }
         .footer { padding: 20px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">📋 StockPro HR System</div>
+          <div class="logo">📋 ${appName} HR System</div>
           <div style="font-size: 13px; opacity: 0.85; margin-top: 4px;">ระบบแจ้งเตือนคำขอลาบุคลากรสำหรับผู้ดูแลระบบ</div>
           <span class="badge">● มีคำขอลาใหม่รอพิจารณา</span>
         </div>
@@ -160,7 +173,7 @@ function generateLeaveSubmittedHtml({ leave }) {
               </tr>
               <tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 8px 0; color: #64748b; font-weight: 600;">ประเภทการลา:</td>
-                <td style="padding: 8px 0; color: #4338ca; font-weight: 700; text-align: right;">${leaveLabel}</td>
+                <td style="padding: 8px 0; color: ${brand.c700}; font-weight: 700; text-align: right;">${leaveLabel}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #64748b; font-weight: 600;">ช่วงวันที่ขอลา:</td>
@@ -176,7 +189,7 @@ function generateLeaveSubmittedHtml({ leave }) {
         </div>
         <div class="footer">
           อีเมลนี้ถูกส่งถึงผู้ดูแลระบบและผู้จัดการโดยอัตโนมัติ<br>
-          StockPro Inventory & Human Resources Management System
+          ${appName} Inventory & Human Resources Management System
         </div>
       </div>
     </body>
@@ -184,7 +197,8 @@ function generateLeaveSubmittedHtml({ leave }) {
   `;
 }
 
-function generateLeaveDecisionHtml({ leave }) {
+function generateLeaveDecisionHtml({ leave, branding }) {
+  const appName = escHtml(branding.appName);
   const isApproved = leave.status === 'approved';
   const leaveLabel = getLeaveTypeLabel(leave.leaveType || leave.type);
 
@@ -210,7 +224,7 @@ function generateLeaveDecisionHtml({ leave }) {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">📋 StockPro HR System</div>
+          <div class="logo">📋 ${appName} HR System</div>
           <div style="font-size: 13px; opacity: 0.85; margin-top: 4px;">แจ้งเตือนผลการพิจารณาคำขอลาอย่างเป็นทางการ</div>
           <span class="badge">${isApproved ? '✓ ได้รับการอนุมัติแล้ว' : '✕ ไม่อนุมัติคำขอ'}</span>
         </div>
@@ -245,7 +259,7 @@ function generateLeaveDecisionHtml({ leave }) {
           <a href="${APP_URL}" class="btn">📄 ตรวจสอบและดาวน์โหลดเอกสารใบลาทางการ</a>
         </div>
         <div class="footer">
-          อีเมลนี้ถูกส่งจากระบบ StockPro HR System โดยอัตโนมัติ
+          อีเมลนี้ถูกส่งจากระบบ ${appName} HR System โดยอัตโนมัติ
         </div>
       </div>
     </body>
@@ -259,6 +273,7 @@ function generateLeaveDecisionHtml({ leave }) {
 export async function POST(request) {
   try {
     const body = await request.json();
+    const branding = await getBrandingServer();
     const { type, to, subject, data = {}, customHtml } = body;
 
     const smtpHost = process.env.EMAIL_HOST || process.env.SMTP_HOST || 'smtp.gmail.com';
@@ -276,7 +291,7 @@ export async function POST(request) {
       console.log('📬 Simulated Email Dispatch:', {
         type,
         intendedTo: to || (type === 'leave_submitted' ? adminEmails : 'user'),
-        subject: subject || (type === 'task_assigned' ? `[StockPro] มอบหมายงาน: ${data?.title}` : `[StockPro] แจ้งเตือน: ${type}`),
+        subject: subject || (type === 'task_assigned' ? `[${branding.appName}] มอบหมายงาน: ${data?.title}` : `[${branding.appName}] แจ้งเตือน: ${type}`),
         dataSummary: { title: data?.title, user: data?.userName || data?.targetUserName, status: data?.status }
       });
       return NextResponse.json({
@@ -302,16 +317,16 @@ export async function POST(request) {
     let mailHtml = customHtml;
 
     if (type === 'task_assigned') {
-      mailSubject = mailSubject || `🎯 [StockPro] คุณได้รับมอบหมายงานใหม่: ${data.title || ''}`;
-      mailHtml = generateTaskAssignedHtml({ task: data, currentUser: data.currentUser });
+      mailSubject = mailSubject || `🎯 [${branding.appName}] คุณได้รับมอบหมายงานใหม่: ${data.title || ''}`;
+      mailHtml = generateTaskAssignedHtml({ task: data, currentUser: data.currentUser, branding });
     } else if (type === 'leave_submitted') {
       mailTo = mailTo || adminEmails;
-      mailSubject = mailSubject || `📋 [StockPro] มีคำขอลาใหม่จาก ${data.userName || 'พนักงาน'} รอการพิจารณา`;
-      mailHtml = generateLeaveSubmittedHtml({ leave: data });
+      mailSubject = mailSubject || `📋 [${branding.appName}] มีคำขอลาใหม่จาก ${data.userName || 'พนักงาน'} รอการพิจารณา`;
+      mailHtml = generateLeaveSubmittedHtml({ leave: data, branding });
     } else if (type === 'leave_decision') {
       const isApprove = data.status === 'approved';
-      mailSubject = mailSubject || `📋 [StockPro] ผลการพิจารณาคำขอลาของคุณ: ${isApprove ? '✅ อนุมัติแล้ว' : '❌ ไม่อนุมัติ'}`;
-      mailHtml = generateLeaveDecisionHtml({ leave: data });
+      mailSubject = mailSubject || `📋 [${branding.appName}] ผลการพิจารณาคำขอลาของคุณ: ${isApprove ? '✅ อนุมัติแล้ว' : '❌ ไม่อนุมัติ'}`;
+      mailHtml = generateLeaveDecisionHtml({ leave: data, branding });
     }
 
     if (!mailTo || (Array.isArray(mailTo) && mailTo.length === 0)) {
@@ -323,7 +338,7 @@ export async function POST(request) {
 
     // Send Mail
     const info = await transporter.sendMail({
-      from: `"StockPro System" <${smtpUser}>`,
+      from: `"${branding.appName}" <${smtpUser}>`,
       to: Array.isArray(mailTo) ? mailTo.join(', ') : mailTo,
       subject: mailSubject,
       html: mailHtml,

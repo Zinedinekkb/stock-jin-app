@@ -8,6 +8,7 @@ import {
 import { GlassCard, Button, Badge, SectionHeader, ListRow } from './ui';
 import InstallAppButton from './InstallAppButton';
 import PushToggle from './PushToggle';
+import { useBranding } from './BrandingProvider';
 
 const PRESET_POSITIONS = [
   { label: 'เชฟ / แม่ครัว' },
@@ -32,6 +33,7 @@ export default function TabMenu({
   // Admin: open the shop branding tab
   onOpenBranding
 }) {
+  const { appName, tagline } = useBranding();
   const [userToApprove, setUserToApprove] = useState(null);
   const [selectedPosition, setSelectedPosition] = useState('พนักงานเสิร์ฟ');
   const [customPosition, setCustomPosition] = useState('');
@@ -295,7 +297,7 @@ export default function TabMenu({
                 onClick={onPreviewAsStaff}
               />
             )}
-            <ListRow icon={Smartphone} label="เกี่ยวกับแอป" description="StockPro · ระบบคลังสินค้าและบุคลากร" trailing={<Badge tone="neutral">v2.2</Badge>} />
+            <ListRow icon={Smartphone} label="เกี่ยวกับแอป" description={`${appName} · ${tagline}`} />
           </GlassCard>
         </section>
 

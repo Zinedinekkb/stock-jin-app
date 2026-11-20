@@ -321,7 +321,7 @@ export default function LeaveDocumentModal({
         {/* Top Header Controls */}
         <div className="leave-modal-header no-print">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center shadow-xs">
               <FileText size={20} />
             </div>
             <div>
@@ -377,7 +377,7 @@ export default function LeaveDocumentModal({
               type="button"
               onClick={handleSaveToDocuments}
               disabled={isGenerating}
-              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
+              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-50"
             >
               {isGenerating ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -395,7 +395,7 @@ export default function LeaveDocumentModal({
               disabled={isGenerating}
               className="px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all shadow-2xs disabled:opacity-50"
             >
-              <Download size={14} className="text-blue-600" />
+              <Download size={14} className="text-brand-600" />
               <span>ดาวน์โหลด PDF</span>
             </button>
 
@@ -411,7 +411,7 @@ export default function LeaveDocumentModal({
           </div>
 
           {statusMessage && (
-            <div className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1 rounded-lg animate-fade-in">
+            <div className="text-xs font-bold text-brand-700 bg-brand-50 px-3 py-1 rounded-lg animate-fade-in">
               {statusMessage}
             </div>
           )}
@@ -419,15 +419,15 @@ export default function LeaveDocumentModal({
 
         {/* Executive Approval & Signing Station (For Admins) */}
         {isUserAdmin && (
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 mx-4 sm:mx-6 my-2 rounded-2xl shadow-md border border-indigo-900/60 no-print">
+          <div className="bg-gradient-to-r from-slate-900 via-brand-900 to-slate-900 text-white p-4 mx-4 sm:mx-6 my-2 rounded-2xl shadow-md border border-brand-900/60 no-print">
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 pb-3 border-b border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-sm border border-indigo-500/30">
+                <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold text-sm border border-brand-500/30">
                   ✍️
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-indigo-200">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-brand-200">
                       ส่วนการพิจารณาและลงนามคำขอลา (Executive Decision)
                     </h4>
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
@@ -480,35 +480,35 @@ export default function LeaveDocumentModal({
             {/* Inputs: Approver name, title, and remark */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 text-xs">
               <div>
-                <label className="text-[10px] text-indigo-300 font-bold block mb-1">ชื่อ-นามสกุล ผู้อนุมัติ</label>
+                <label className="text-[10px] text-brand-300 font-bold block mb-1">ชื่อ-นามสกุล ผู้อนุมัติ</label>
                 <input
                   type="text"
                   value={approverName}
                   onChange={(e) => setApproverName(e.target.value)}
                   placeholder="ชื่อ-นามสกุล ผู้อนุมัติ"
-                  className="w-full bg-white/10 border border-white/15 rounded-xl px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400"
+                  className="w-full bg-white/10 border border-white/15 rounded-xl px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-brand-400"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] text-indigo-300 font-bold block mb-1">ตำแหน่งผู้อนุมัติ</label>
+                <label className="text-[10px] text-brand-300 font-bold block mb-1">ตำแหน่งผู้อนุมัติ</label>
                 <input
                   type="text"
                   value={approverPosition}
                   onChange={(e) => setApproverPosition(e.target.value)}
                   placeholder="ตำแหน่งผู้อนุมัติ"
-                  className="w-full bg-white/10 border border-white/15 rounded-xl px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400"
+                  className="w-full bg-white/10 border border-white/15 rounded-xl px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-brand-400"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] text-indigo-300 font-bold block mb-1">ความเห็น/คำสั่งผู้บังคับบัญชา</label>
+                <label className="text-[10px] text-brand-300 font-bold block mb-1">ความเห็น/คำสั่งผู้บังคับบัญชา</label>
                 <input
                   type="text"
                   value={approverNote}
                   onChange={(e) => setApproverNote(e.target.value)}
                   placeholder="เช่น อนุญาตตามที่เสนอ หรือ ระบุเหตุผลที่ไม่อนุมัติ"
-                  className="w-full bg-white/10 border border-white/15 rounded-xl px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400"
+                  className="w-full bg-white/10 border border-white/15 rounded-xl px-2.5 py-1.5 text-white placeholder-slate-400 focus:outline-none focus:border-brand-400"
                 />
               </div>
             </div>
@@ -521,7 +521,7 @@ export default function LeaveDocumentModal({
             /* Customization Form (Only for Admin / Owner) */
             <div className="p-6 max-w-xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm space-y-4 my-4 no-print">
               <h4 className="text-sm font-bold text-gray-800 flex items-center gap-2 border-b pb-2">
-                <Sliders size={16} className="text-purple-600" /> ปรับแต่งข้อความในโครงร่างเอกสาร
+                <Sliders size={16} className="text-brand-600" /> ปรับแต่งข้อความในโครงร่างเอกสาร
               </h4>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -624,7 +624,7 @@ export default function LeaveDocumentModal({
                         type="text"
                         value={approverName}
                         onChange={(e) => setApproverName(e.target.value)}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
                         placeholder="ชื่อ-นามสกุล ผู้อนุมัติ"
                       />
                     </div>
@@ -635,7 +635,7 @@ export default function LeaveDocumentModal({
                         type="text"
                         value={approverPosition}
                         onChange={(e) => setApproverPosition(e.target.value)}
-                        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="w-full text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
                         placeholder="ผู้จัดการฝ่าย / ผู้บังคับบัญชา"
                       />
                     </div>
@@ -655,7 +655,7 @@ export default function LeaveDocumentModal({
                 <button
                   type="button"
                   onClick={() => setActiveTab('preview')}
-                  className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl transition-all"
+                  className="px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition-all"
                 >
                   เสร็จสิ้นและดูตัวอย่าง
                 </button>
@@ -682,7 +682,7 @@ export default function LeaveDocumentModal({
 
                 {/* Center Corporate Emblem / Seal */}
                 <div className="w-2/4 flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-indigo-700 to-indigo-500 text-white flex items-center justify-center shadow-sm mb-1.5">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-brand-700 to-brand-500 text-white flex items-center justify-center shadow-sm mb-1.5">
                     <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                     </svg>
@@ -777,7 +777,7 @@ export default function LeaveDocumentModal({
                     <span>
                       อนุญาตให้ลาหยุดงานตามที่เสนอได้{' '}
                       {isApproved && approverNote && approverNote !== 'อนุญาตให้ลาหยุดงานตามที่เสนอได้' ? (
-                        <span className="text-indigo-900 font-semibold">({approverNote})</span>
+                        <span className="text-brand-900 font-semibold">({approverNote})</span>
                       ) : ''}
                     </span>
                   </div>
@@ -807,7 +807,7 @@ export default function LeaveDocumentModal({
                     <div className="text-gray-700 flex items-center justify-center gap-1.5">
                       <span>ลงชื่อ</span>
                       {isApproved && approverName ? (
-                        <span className="font-semibold text-indigo-900 border-b border-gray-400 min-w-[150px] text-center px-2">
+                        <span className="font-semibold text-brand-900 border-b border-gray-400 min-w-[150px] text-center px-2">
                           {approverName}
                         </span>
                       ) : (

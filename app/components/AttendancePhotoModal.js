@@ -40,7 +40,7 @@ export default function AttendancePhotoModal({ isOpen, onClose, record }) {
         {/* Header */}
         <div className="cam-modal-header">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <ImageIcon size={18} />
             </div>
             <div>
@@ -133,7 +133,7 @@ export default function AttendancePhotoModal({ isOpen, onClose, record }) {
                 href={getMapUrl(currentLoc)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-2.5 py-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
+                className="px-2.5 py-1.5 bg-brand-50 text-brand-600 hover:bg-brand-100 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors"
                 title="เปิดใน Google Maps"
               >
                 <span>แผนที่</span>

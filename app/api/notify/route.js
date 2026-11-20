@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getBrandingServer } from '../../../lib/branding/server.js';
 
 export async function POST(request) {
     try {
@@ -13,6 +14,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Config missing' }, { status: 500 });
         }
 
+        const branding = await getBrandingServer();
         let linePayload = {};
 
         // ==========================================
@@ -77,7 +79,7 @@ export async function POST(request) {
                         backgroundColor: themeColor,
                         paddingAll: "lg",
                         contents: [
-                            { type: "text", text: "StockPro UPDATE", color: "#ffffff", weight: "bold", size: "xs" },
+                            { type: "text", text: `${branding.appName} UPDATE`, color: "#ffffff", weight: "bold", size: "xs" },
                             { type: "text", text: headerTitle, color: "#ffffff", weight: "bold", size: "xl", margin: "sm" }
                         ]
                     },

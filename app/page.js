@@ -34,6 +34,7 @@ import * as Sentry from '@sentry/nextjs';
 import { submitTransactionService, sendStockReportService, sendDailyReportService } from '@/app/services/transactionService';
 import { uploadAndSaveTransactionDocument } from '@/app/utils/transactionPdfGenerator';
 import { compressImageFile, blobToDataUrl } from '@/app/utils/cameraUtils';
+import { useBranding } from './components/BrandingProvider';
 
 // --- FIREBASE IMPORTS ---
 import { db, auth, storage } from '@/lib/firebase';
@@ -47,7 +48,8 @@ import {
 } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
-export default function StockJinApp() {
+export default function HomePage() {
+  const branding = useBranding();
   const [activeTab, setActiveTab] = useState('dashboard'); 
   const [isDesktop, setIsDesktop] = useState(false);
   const [showMoreDrawer, setShowMoreDrawer] = useState(false);
@@ -420,7 +422,7 @@ export default function StockJinApp() {
       const qtyLabel = isPending ? item.qty : `${item.qty} → ${qtyShow}`; 
       return `${idx + 1}. ${item.name} : ${qtyLabel} ${item.unit}`;
     }).join('\n');
-    return `StockPro\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
+    return `${branding.appName}\n${header} ${statusText}\n📅 ${tx.date}\n------------------\n${itemsList}\n------------------\n📝 Note: ${tx.note || '-'}\nผู้บันทึก: ${tx.recorder || 'Staff'}`;
   };
 
   // --- LOGIC: Void/Edit/Reorder ---
@@ -523,7 +525,7 @@ export default function StockJinApp() {
       `ระบบจะออกเอกสารทางการเป็น PDF บันทึกลงคลังเอกสารอัตโนมัติ และส่งไปที่หน้า "สถานะ" เพื่อรอตรวจสอบ`,
       async () => {
         try {
-            const res = await submitTransactionService({ cart, transMode, note, user });
+            const res = await submitTransactionService({ cart, transMode, note, user, branding });
             setCart([]); setNote('');
             const docInfo = res?.docNumber ? ` (เลขที่ ${res.docNumber})` : '';
             showNotification(`ส่งคำขอแล้ว${docInfo} · รอตรวจสอบ`);
@@ -597,7 +599,8 @@ export default function StockJinApp() {
               verifiedAt: verifiedAtDate,
             },
             user: user,
-            isVerified: true
+            isVerified: true,
+            options: { branding }
           });
         } catch (pdfErr) {
           console.error("Auto PDF Generation on Verify Error:", pdfErr);
@@ -1352,7 +1355,7 @@ export default function StockJinApp() {
                 </>
               ) : (
                 <div className="smart-tab-container">
-                  <PageHeader title={tabTitles[activeTab]?.title || 'StockPro'} description={tabTitles[activeTab]?.desc} />
+                  <PageHeader title={tabTitles[activeTab]?.title || branding.appName} description={tabTitles[activeTab]?.desc} />
                   {renderTabContent()}
                 </div>
               )}
@@ -1400,7 +1403,7 @@ export default function StockJinApp() {
               <Menu size={20} strokeWidth={2.4}/>
             </button>
             <div>
-              <h1 className="text-base font-black text-ink tracking-tight leading-none">StockPro</h1>
+              <h1 className="text-base font-black text-ink tracking-tight leading-none">{branding.appName}</h1>
               <p className="text-xs text-ink-muted mt-0.5">{tabTitles[activeTab]?.title || 'คลังสินค้า & บุคลากร'}</p>
             </div>
           </div>

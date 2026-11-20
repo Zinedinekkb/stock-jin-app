@@ -3,8 +3,10 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 import { Calendar, Send, FileText, Package, AlertCircle, Copy, FileSpreadsheet, Clock3 } from 'lucide-react';
 import { GlassCard, Button, Badge } from './ui';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
+import { useBranding } from './BrandingProvider';
 
 export default function TabDashboard({ transactions, products, categories, dateFilterType, setDateFilterType, setCustomStartDate, setCustomEndDate }) {
+  const branding = useBranding();
 
   // --- ส่วนของรายงานย้อนหลัง (อัปเกรด: เลือกช่วงเวลาได้) ---
   const [reportStartDate, setReportStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -98,7 +100,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
       }
     });
     msg += `========================\n`;
-    msg += `รายงานโดย: Stock Jin System`;
+    msg += `รายงานโดย: ${branding.appName}`;
 
     return msg;
   };
@@ -138,7 +140,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
   const handleExportExcel = () => {
     setIsExporting(true);
     try {
-      exportToExcel(transactions, reportStartDate, reportEndDate, reportType, products, categories);
+      exportToExcel(transactions, reportStartDate, reportEndDate, reportType, products, categories, branding);
     } catch (error) {
       console.error(error);
       alert('❌ เกิดข้อผิดพลาดในการสร้างไฟล์ Excel');
@@ -151,7 +153,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
   const handleExportPDF = () => {
     setIsExporting(true);
     try {
-      exportToPDF(transactions, reportStartDate, reportEndDate, reportType, products, categories);
+      exportToPDF(transactions, reportStartDate, reportEndDate, reportType, products, categories, branding);
     } catch (error) {
       console.error(error);
       alert('❌ เกิดข้อผิดพลาดในการสร้างไฟล์ PDF');
@@ -162,7 +164,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
 
   // --- ANALYTICS ---
   // Validated pair (dataviz validate_palette.js, light surface): IN teal, OUT brand purple
-  const SERIES = { IN: '#0f9f8f', OUT: '#6355d8' };
+  const SERIES = { IN: '#0f9f8f', OUT: 'rgb(var(--brand-500))' };
   const PERIODS = [
     { key: 'today', label: 'วันนี้', days: 1 },
     { key: '7days', label: '7 วัน', days: 7 },

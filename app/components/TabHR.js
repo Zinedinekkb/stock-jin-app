@@ -18,6 +18,7 @@ import AttendancePhotoModal from './AttendancePhotoModal';
 import LeaveDocumentModal from './LeaveDocumentModal';
 import { blobToDataUrl } from '@/app/utils/cameraUtils';
 import { leaveToCalendar } from '@/lib/calendarLink';
+import { useBranding } from './BrandingProvider';
 import { sendPushEvent } from '@/lib/pushClient';
 
 const LEAVE_TYPES = [
@@ -35,6 +36,7 @@ function getTimeStr() {
 }
 
 export default function TabHR({ user, initialView = 'my', initialSubTab = 'attendance' }) {
+  const { appName } = useBranding();
   const [view, setView] = useState(initialView); // 'my' | 'team' (admin)
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
@@ -584,7 +586,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
                         </button>
                         {lv.status === 'approved' && (
                           <a
-                            href={leaveToCalendar(lv)}
+                            href={leaveToCalendar(lv, appName)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="hr-doc-btn"
@@ -660,7 +662,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
               onClick={() => setAdminSubTab('attendance')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 adminSubTab === 'attendance'
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-brand-600 text-white shadow-sm'
                   : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
               }`}
             >
@@ -672,7 +674,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
               onClick={() => setAdminSubTab('leaves')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
                 adminSubTab === 'leaves'
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-brand-600 text-white shadow-sm'
                   : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
               }`}
             >
@@ -762,7 +764,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
                             onClick={() => handleOpenLeaveDoc(lv)}
                             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
                               lv.status === 'pending'
-                                ? 'bg-brand-500 hover:bg-[#5244c4] text-white hover:scale-105 active:scale-95 shadow-purple-500/20'
+                                ? 'bg-brand-500 hover:bg-[#5244c4] text-white hover:scale-105 active:scale-95 shadow-brand-500/20'
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
                             }`}
                             title="ตรวจสอบเอกสาร A4 และลงนามพิจารณา"
@@ -772,7 +774,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
                           </button>
                           {lv.status === 'approved' && (
                             <a
-                              href={leaveToCalendar(lv)}
+                              href={leaveToCalendar(lv, appName)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="hr-doc-btn"
