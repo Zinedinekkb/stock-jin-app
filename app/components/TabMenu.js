@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import {
   User, Settings, Smartphone, LogOut, ShieldCheck, Check, X, History, Briefcase,
-  ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone, Boxes, Eye
+  ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone, Boxes, Eye, Palette
 } from 'lucide-react';
 import { GlassCard, Button, Badge, SectionHeader, ListRow } from './ui';
 import InstallAppButton from './InstallAppButton';
@@ -28,7 +28,9 @@ export default function TabMenu({
   // Props สำหรับแอดมินอนุมัติ
   pendingUsers = [], approvalHistory = [], handleApproveUser, handleRejectUser,
   // Props สำหรับแก้ไขโปรไฟล์
-  handleUpdateProfile
+  handleUpdateProfile,
+  // Admin: open the shop branding tab
+  onOpenBranding
 }) {
   const [userToApprove, setUserToApprove] = useState(null);
   const [selectedPosition, setSelectedPosition] = useState('พนักงานเสิร์ฟ');
@@ -263,6 +265,14 @@ export default function TabMenu({
                   </div>
                 )}
               </>
+            )}
+            {isUserAdmin && onOpenBranding && (
+              <ListRow
+                icon={Palette}
+                label="ตั้งค่าร้าน"
+                description="โลโก้ สีหลัก ชื่อแอป และข้อมูลร้านสำหรับเอกสาร"
+                onClick={onOpenBranding}
+              />
             )}
             {isUserAdmin && onToggleStockOnlyMode && (
               <ListRow

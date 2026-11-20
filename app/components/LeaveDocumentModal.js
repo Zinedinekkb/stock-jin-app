@@ -12,6 +12,8 @@ import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { sendPushEvent } from '@/lib/pushClient';
+import { useBranding } from './BrandingProvider';
+import { displayShopName } from '../../lib/branding/sanitize';
 
 const THAI_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -82,7 +84,8 @@ export default function LeaveDocumentModal({
   const [approverPosition, setApproverPosition] = useState(
     leave?.approverPosition || 'ผู้จัดการฝ่าย / ผู้มีอำนาจอนุมัติ'
   );
-  const [organizationName, setOrganizationName] = useState('บริษัท สต็อกโปร จำกัด (StockPro)');
+  const branding = useBranding();
+  const [organizationName, setOrganizationName] = useState(displayShopName(branding));
 
   // Executive Decision state
   const [currentStatus, setCurrentStatus] = useState(leave?.status || 'pending');

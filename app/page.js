@@ -16,6 +16,7 @@ import TabHR from './components/TabHR';
 import TabDocuments from './components/TabDocuments';
 import TabNotifications from './components/TabNotifications';
 import TabUserDirectory from './components/TabUserDirectory';
+import TabBranding from './components/TabBranding';
 import TransactionDocumentModal from './components/TransactionDocumentModal';
 import MoreDrawer from './components/MoreDrawer';
 import DesktopSidebar from './components/DesktopSidebar';
@@ -1116,6 +1117,7 @@ export default function StockJinApp() {
     status: { title: 'สถานะรายการ', desc: 'ตรวจสอบและยืนยันรายการที่รอดำเนินการ' },
     notifications: { title: 'ศูนย์แจ้งเตือน', desc: 'แจ้งเตือนสินค้าหมด การเคลื่อนไหว และคำขอสมัครสมาชิก' },
     hr: { title: 'เข้า-ออกงาน / ลาหยุด', desc: 'บันทึกเวลาทำงาน ยื่นใบลาหยุด และดูสถิติทีมงาน' },
+    branding: { title: 'ตั้งค่าร้าน', desc: 'โลโก้ สีหลัก ชื่อแอป และข้อมูลร้านสำหรับเอกสาร' },
     documents: { title: 'เอกสาร', desc: 'เก็บและจัดการเอกสารสำคัญต่างๆ เช่น ใบสั่งซื้อ ใบเสร็จ สัญญา' },
     menu: { title: 'บัญชีของฉัน', desc: 'โปรไฟล์ สิทธิ์ และการตั้งค่า' },
     users: { title: 'จัดการบัญชีผู้ใช้', desc: 'ตรวจสอบจำนวนบัญชี ดูพนักงานแต่ละหน่วยงาน และจัดการสิทธิ์' },
@@ -1211,8 +1213,10 @@ export default function StockJinApp() {
           stockOnlyMode={stockOnlyMode} onToggleStockOnlyMode={handleToggleStockOnlyMode}
           pendingUsers={pendingUsers} approvalHistory={approvalHistory} handleApproveUser={handleApproveUser} handleRejectUser={handleRejectUser}
           handleUpdateProfile={handleUpdateProfile}
+          onOpenBranding={() => setActiveTab('branding')}
       />}
       {activeTab === 'users' && user && isAdmin(viewUser) && <TabUserDirectory user={viewUser} />}
+      {activeTab === 'branding' && user && isAdmin(viewUser) && <TabBranding user={viewUser} showNotification={showNotification} />}
     </>
   );
 

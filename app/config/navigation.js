@@ -2,7 +2,7 @@
 // Single source of truth for the app menu (desktop sidebar + mobile drawer).
 import {
   Home, Package, ArrowRightLeft, ClipboardList, Bell, Clock, FolderOpen, Users, Settings,
-  Star, Boxes, ChefHat, Wallet, Store, Truck, Briefcase, Globe, BarChart3
+  Star, Boxes, ChefHat, Wallet, Store, Truck, Briefcase, Globe, BarChart3, Palette
 } from 'lucide-react';
 import { isAdmin } from '../utils/permissions';
 import { getUserCluster } from '../services/taskService';
@@ -32,6 +32,7 @@ export const NAV_ITEMS = [
   { key: 'documents', label: 'เอกสาร', icon: FolderOpen, desc: 'คลังเอกสาร ใบลา ใบสั่งของ' },
   { key: 'notifications', label: 'การแจ้งเตือน', icon: Bell, desc: 'ข้อความและแจ้งเตือนระบบ' },
   { key: 'users', label: 'จัดการบัญชีผู้ใช้', icon: Users, desc: 'รายชื่อและสิทธิ์ผู้ใช้งาน', adminOnly: true },
+  { key: 'branding', label: 'ตั้งค่าร้าน', icon: Palette, desc: 'โลโก้ สี ชื่อร้าน และข้อมูลเอกสาร', adminOnly: true },
   { key: 'menu', label: 'ตั้งค่า & บัญชี', icon: Settings, desc: 'ข้อมูลส่วนตัวและบัญชี' },
 ];
 
