@@ -26,7 +26,7 @@
 | `EMAIL_USER`, `EMAIL_PASS` | ใช่ | มีอยู่แล้ว (Gmail App Password) |
 | `EMAIL_HOST` / `SMTP_HOST`, `EMAIL_PORT` / `SMTP_PORT` | ไม่ | ค่าเริ่มต้น smtp.gmail.com และ 465 |
 | `REPORT_EMAILS` | ไม่ | รายชื่ออีเมลผู้รับรายงานประจำวัน คั่นด้วยเครื่องหมายจุลภาค ถ้าไม่ตั้งจะใช้ `ADMIN_EMAILS` / `ADMIN_EMAIL` |
-| `NEXT_PUBLIC_APP_URL` | ไม่ | URL ของแอป ค่าเริ่มต้น `https://stock-jin-app.vercel.app` |
+| `NEXT_PUBLIC_APP_URL` | ไม่ | URL ของแอป ถ้าไม่ตั้งจะใช้โดเมนของคำขอ (request origin) แทน |
 
 ### วิธีได้ค่าแต่ละตัว
 
@@ -143,6 +143,6 @@ node scripts/setup-rich-menu.mjs --dry-run
 ```
 
 - ต้องตั้งค่า `LINE_CHANNEL_ACCESS_TOKEN` ใน `.env.local` ก่อนรันจริง
-- `NEXT_PUBLIC_APP_URL` ใช้เป็นลิงก์ของปุ่ม "เปิดแอป" (ค่าเริ่มต้น `https://stock-jin-app.vercel.app`)
+- `NEXT_PUBLIC_APP_URL` ใช้เป็นลิงก์ของปุ่ม "เปิดแอป" (จำเป็นเมื่อรัน scripts/setup-rich-menu.mjs)
 - รูปที่สร้างอยู่ที่ `scripts/rich-menu.png` (2500x843, ไม่เกิน 1MB)
 - การกดปุ่มข้อความจะส่งข้อความปกติเข้าบอท บอทตอบกลับด้วย reply message ซึ่ง **ไม่นับโควตา push 300 ข้อความ/เดือน**

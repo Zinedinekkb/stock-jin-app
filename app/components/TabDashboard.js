@@ -4,9 +4,11 @@ import { Calendar, Send, FileText, Package, AlertCircle, Copy, FileSpreadsheet, 
 import { GlassCard, Button, Badge } from './ui';
 import { exportToExcel, exportToPDF } from '../utils/exportUtils';
 import { useBranding } from './BrandingProvider';
+import { useIntegrations } from './useIntegrations';
 
 export default function TabDashboard({ transactions, products, categories, dateFilterType, setDateFilterType, setCustomStartDate, setCustomEndDate }) {
   const branding = useBranding();
+  const integrations = useIntegrations();
 
   // --- ส่วนของรายงานย้อนหลัง (อัปเกรด: เลือกช่วงเวลาได้) ---
   const [reportStartDate, setReportStartDate] = useState(new Date().toISOString().split('T')[0]);
@@ -374,7 +376,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
       <GlassCard className="p-4 sm:p-5 space-y-3">
         <div>
           <h3 className="text-base font-bold text-ink flex items-center gap-2"><Calendar size={18} className="text-brand-500" /> รายงานสรุปตามช่วงวันที่</h3>
-          <p className="text-xs text-ink-subtle">ส่งเข้า LINE คัดลอก หรือดาวน์โหลดเป็น Excel / PDF</p>
+          <p className="text-xs text-ink-subtle">{integrations?.line ? 'ส่งเข้า LINE คัดลอก หรือดาวน์โหลดเป็น Excel / PDF' : 'คัดลอก หรือดาวน์โหลดเป็น Excel / PDF'}</p>
         </div>
         <div className="grid grid-cols-2 gap-2.5">
           <label className="block">
@@ -398,7 +400,7 @@ export default function TabDashboard({ transactions, products, categories, dateF
           ))}
         </div>
         <div className="grid grid-cols-2 gap-2.5">
-          <Button icon={Send} loading={isSending} onClick={handleSendDailyReport}>ส่งเข้า LINE</Button>
+          {integrations?.line && <Button icon={Send} loading={isSending} onClick={handleSendDailyReport}>ส่งเข้า LINE</Button>}
           <Button variant="secondary" icon={Copy} onClick={handleCopyReport}>คัดลอก</Button>
           <Button variant="secondary" icon={FileSpreadsheet} disabled={isExporting} onClick={handleExportExcel}>Excel</Button>
           <Button variant="secondary" icon={FileText} disabled={isExporting} onClick={handleExportPDF}>PDF</Button>

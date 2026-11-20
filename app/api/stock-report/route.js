@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
+import { integrationStatus, LINE_SKIPPED } from '../../../lib/integrations.js';
 
 export async function POST(request) {
+  if (!integrationStatus().line) return NextResponse.json(LINE_SKIPPED);
   try {
     const { categories, products, user, dateStr } = await request.json();
-    const CHANNEL_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
+    const CHANNEL_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN || process.env.LINE_CHANNEL_ACCESS_TOKEN;
     
     // --- [แก้ไขจุดสำคัญ] ---
     // ให้เช็คว่ามี Group ID ไหม? ถ้ามีให้ใช้ Group ก่อน ถ้าไม่มีให้ใช้ User ID

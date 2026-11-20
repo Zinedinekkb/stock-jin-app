@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 import { getBrandingServer, tripletToHex } from '../../../lib/branding/server.js';
 import { buildBrandPalette } from '../../../lib/theme/palette.js';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://stock-jin-app.vercel.app';
+import { appUrl } from '../../../lib/integrations.js';
 
 const THAI_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
@@ -48,7 +48,7 @@ function getLeaveTypeLabel(type) {
 // -------------------------------------------------------------
 // HTML Email Templates
 // -------------------------------------------------------------
-function generateTaskAssignedHtml({ task, currentUser, branding }) {
+function generateTaskAssignedHtml({ task, currentUser, branding, APP_URL }) {
   const brand = brandHex(branding);
   const priorityInfo = getPriorityLabel(task.priority, brand);
   const appName = escHtml(branding.appName);
@@ -128,7 +128,7 @@ function generateTaskAssignedHtml({ task, currentUser, branding }) {
   `;
 }
 
-function generateLeaveSubmittedHtml({ leave, branding }) {
+function generateLeaveSubmittedHtml({ leave, branding, APP_URL }) {
   const brand = brandHex(branding);
   const appName = escHtml(branding.appName);
   const leaveLabel = getLeaveTypeLabel(leave.leaveType || leave.type);
@@ -197,7 +197,7 @@ function generateLeaveSubmittedHtml({ leave, branding }) {
   `;
 }
 
-function generateLeaveDecisionHtml({ leave, branding }) {
+function generateLeaveDecisionHtml({ leave, branding, APP_URL }) {
   const appName = escHtml(branding.appName);
   const isApproved = leave.status === 'approved';
   const leaveLabel = getLeaveTypeLabel(leave.leaveType || leave.type);
@@ -295,6 +295,8 @@ export async function POST(request) {
         dataSummary: { title: data?.title, user: data?.userName || data?.targetUserName, status: data?.status }
       });
       return NextResponse.json({
+        ok: true,
+        skipped: 'email_not_configured',
         success: true,
         simulated: true,
         message: 'Email service ready! To send live emails, configure EMAIL_USER and EMAIL_PASS (App Password) in .env.local',
@@ -318,15 +320,15 @@ export async function POST(request) {
 
     if (type === 'task_assigned') {
       mailSubject = mailSubject || `🎯 [${branding.appName}] คุณได้รับมอบหมายงานใหม่: ${data.title || ''}`;
-      mailHtml = generateTaskAssignedHtml({ task: data, currentUser: data.currentUser, branding });
+      mailHtml = generateTaskAssignedHtml({ task: data, currentUser: data.currentUser, branding, APP_URL: appUrl(request) });
     } else if (type === 'leave_submitted') {
       mailTo = mailTo || adminEmails;
       mailSubject = mailSubject || `📋 [${branding.appName}] มีคำขอลาใหม่จาก ${data.userName || 'พนักงาน'} รอการพิจารณา`;
-      mailHtml = generateLeaveSubmittedHtml({ leave: data, branding });
+      mailHtml = generateLeaveSubmittedHtml({ leave: data, branding, APP_URL: appUrl(request) });
     } else if (type === 'leave_decision') {
       const isApprove = data.status === 'approved';
       mailSubject = mailSubject || `📋 [${branding.appName}] ผลการพิจารณาคำขอลาของคุณ: ${isApprove ? '✅ อนุมัติแล้ว' : '❌ ไม่อนุมัติ'}`;
-      mailHtml = generateLeaveDecisionHtml({ leave: data, branding });
+      mailHtml = generateLeaveDecisionHtml({ leave: data, branding, APP_URL: appUrl(request) });
     }
 
     if (!mailTo || (Array.isArray(mailTo) && mailTo.length === 0)) {

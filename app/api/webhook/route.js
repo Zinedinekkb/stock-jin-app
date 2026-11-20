@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { integrationStatus } from '../../../lib/integrations.js';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 import {
   todayKeyBangkok, dayRangeBangkok, buildMovementSummary, getLowStock,
@@ -75,6 +76,10 @@ async function messageForCommand(text) {
 }
 
 export async function POST(request) {
+  // LINE ไม่ได้ตั้งค่า: ตอบ 200 เพื่อให้ปุ่ม Verify ของ LINE ผ่าน แต่ไม่ทำอะไร
+  if (!integrationStatus().line) {
+    return NextResponse.json({ status: 'ok', skipped: 'line_not_configured' });
+  }
   try {
     // ต้องใช้ raw text เพื่อตรวจลายเซ็นให้ตรงกับที่ LINE ส่งมา
     const rawBody = await request.text();

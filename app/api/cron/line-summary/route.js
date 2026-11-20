@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebaseAdmin';
 import { isCronAuthorized } from '@/lib/cronAuth';
+import { integrationStatus, LINE_SKIPPED } from '../../../../lib/integrations.js';
 import { getBrandingServer } from '../../../../lib/branding/server.js';
 import { halfMonthRangeBangkok, buildMovementSummary, getLowStock } from '@/lib/reportData';
 import {
@@ -15,6 +16,8 @@ export async function GET(request) {
   if (!isCronAuthorized(request)) {
     return new Response('Unauthorized', { status: 401 });
   }
+
+  if (!integrationStatus().line) return NextResponse.json(LINE_SKIPPED);
 
   try {
     const target = process.env.LINE_GROUP_ID || process.env.LINE_USER_ID;

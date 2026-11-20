@@ -4,6 +4,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Bell, BellOff } from 'lucide-react';
 import { GlassCard, Button, Badge } from './ui';
+import { useIntegrations } from './useIntegrations';
 import { getPushStatus, enablePush, disablePush } from '@/lib/pushClient';
 
 const STATUS_VIEW = {
@@ -35,6 +36,7 @@ const STATUS_VIEW = {
 };
 
 export default function PushToggle({ user }) {
+  const integrations = useIntegrations();
   const [status, setStatus] = useState('disabled');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -68,6 +70,8 @@ export default function PushToggle({ user }) {
       setBusy(false);
     }
   };
+
+  if (!integrations?.push) return null; // push ไม่ได้ตั้งค่า (หรือยังโหลดไม่เสร็จ) → ซ่อนการ์ด
 
   const view = STATUS_VIEW[status] || STATUS_VIEW.disabled;
   const canToggle = status === 'enabled' || status === 'disabled';

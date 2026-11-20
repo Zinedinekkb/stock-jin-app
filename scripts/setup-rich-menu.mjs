@@ -9,7 +9,7 @@
  *
  * ค่าที่ต้องมี / Required env:
  *   LINE_CHANNEL_ACCESS_TOKEN (หรือ LINE_ACCESS_TOKEN) Channel access token ของ LINE Official Account
- *   NEXT_PUBLIC_APP_URL        URL ของแอป (ค่าเริ่มต้น https://stock-jin-app.vercel.app)
+ *   NEXT_PUBLIC_APP_URL        URL ของแอป (จำเป็นเมื่อรันจริง ไม่มีค่าเริ่มต้น)
  *
  * หมายเหตุ: เมื่อผู้ใช้กดปุ่มใน Rich Menu (ปุ่มข้อความ) LINE จะส่งข้อความปกติเข้ามาที่บอท
  * บอทตอบกลับด้วย reply message ซึ่ง "ไม่นับ" โควตา push 300 ข้อความ/เดือน
@@ -45,7 +45,7 @@ const OUT_PNG = path.join(path.dirname(fileURLToPath(import.meta.url)), 'rich-me
 const APP_NAME = process.env.APP_NAME || 'StockPro'; // shop display name (set APP_NAME to rebrand)
 const dryRun = process.argv.slice(2).includes('--dry-run');
 const TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN || process.env.LINE_ACCESS_TOKEN; // app uses LINE_ACCESS_TOKEN
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://stock-jin-app.vercel.app';
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || '').replace(/\/+$/, '');
 
 if (!dryRun && !TOKEN) {
   console.error(
@@ -54,6 +54,12 @@ if (!dryRun && !TOKEN) {
       'LINE_CHANNEL_ACCESS_TOKEN is missing. Set it in .env.local and run:\n' +
       '  node --env-file=.env.local scripts/setup-rich-menu.mjs'
   );
+  process.exit(1);
+}
+
+if (!dryRun && !APP_URL) {
+  console.error('ไม่พบ NEXT_PUBLIC_APP_URL กรุณาตั้งค่าเป็น URL ของแอป (เช่น https://your-shop.vercel.app)
+NEXT_PUBLIC_APP_URL is missing. Set it to your deployed app URL.');
   process.exit(1);
 }
 
@@ -83,7 +89,7 @@ const ICONS = {
 const COLUMNS = [
   { label: 'สรุปวันนี้', sub: 'ยอดเข้า-ออกวันนี้', icon: 'chart', action: { type: 'message', text: 'สรุปวันนี้' } },
   { label: 'สต็อกต่ำ', sub: 'สินค้าใกล้หมด', icon: 'box', action: { type: 'message', text: 'สต็อกต่ำ' } },
-  { label: 'เปิดแอป', sub: APP_NAME, icon: 'app', action: { type: 'uri', uri: APP_URL } },
+  { label: 'เปิดแอป', sub: APP_NAME, icon: 'app', action: { type: 'uri', uri: APP_URL || 'https://example.com' } },
 ];
 
 function buildSvg() {
