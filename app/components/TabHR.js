@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Clock, LogIn, LogOut, Calendar, FileText, CheckCircle, XCircle,
   ChevronDown, User, Users, ClipboardList, AlertCircle, Plus, X,
-  Camera, MapPin, Image as ImageIcon
+  Camera, MapPin, Image as ImageIcon, CalendarPlus
 } from 'lucide-react';
 import { db } from '@/lib/firebase';
 import {
@@ -17,6 +17,8 @@ import CameraAttendanceModal from './CameraAttendanceModal';
 import AttendancePhotoModal from './AttendancePhotoModal';
 import LeaveDocumentModal from './LeaveDocumentModal';
 import { blobToDataUrl } from '@/app/utils/cameraUtils';
+import { leaveToCalendar } from '@/lib/calendarLink';
+import { sendPushEvent } from '@/lib/pushClient';
 
 const LEAVE_TYPES = [
   { value: 'sick', label: 'ลาป่วย', color: '#ef4444', bg: '#fef2f2' },
@@ -276,18 +278,10 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
         createdAt: serverTimestamp(),
       };
       const docRef = await addDoc(collection(db, 'leaves'), newLeave);
+      sendPushEvent('leave_created', { leaveId: docRef.id }); // แจ้งเตือนแอดมิน (ไม่ block)
       setLeaveForm({ type: 'sick', startDate: '', endDate: '', reason: '' });
       setShowLeaveForm(false);
       showNote('✅ ส่งคำขอลาเรียบร้อย! เปิดเอกสารใบลาให้คุณแล้ว');
-
-      // LINE / webhook notification to admin
-      fetch('/api/notify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: `📢 มีคำขอลาใหม่รออนุมัติ!\nพนักงาน: ${user.name}\nประเภท: ${leaveTypeInfo(newLeave.type).label}\nวันที่: ${newLeave.startDate} ถึง ${newLeave.endDate}\nเหตุผล: ${newLeave.reason}`
-        })
-      }).catch(() => {});
 
       // Email notification to Admin(s)
       fetch('/api/notify-email', {
@@ -588,6 +582,19 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
                           <FileText size={13} />
                           <span>ใบลา PDF</span>
                         </button>
+                        {lv.status === 'approved' && (
+                          <a
+                            href={leaveToCalendar(lv)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hr-doc-btn"
+                            title="เพิ่มวันลาลงปฏิทิน Google"
+                            aria-label="เพิ่มวันลาลงปฏิทิน Google"
+                          >
+                            <CalendarPlus size={13} />
+                            <span>เพิ่มลงปฏิทิน</span>
+                          </a>
+                        )}
                         {statusBadge(lv.status)}
                       </div>
                     </div>
@@ -763,6 +770,19 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
                             <FileText size={14} />
                             <span>{lv.status === 'pending' ? '📄 ตรวจสอบเอกสาร & พิจารณา' : '📄 ดูใบลา A4'}</span>
                           </button>
+                          {lv.status === 'approved' && (
+                            <a
+                              href={leaveToCalendar(lv)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hr-doc-btn"
+                              title="เพิ่มวันลาของพนักงานลงปฏิทิน Google"
+                              aria-label={`เพิ่มวันลาของ ${lv.userName || 'พนักงาน'} ลงปฏิทิน Google`}
+                            >
+                              <CalendarPlus size={13} />
+                              <span>เพิ่มลงปฏิทิน</span>
+                            </a>
+                          )}
                           {statusBadge(lv.status)}
                         </div>
                       </div>

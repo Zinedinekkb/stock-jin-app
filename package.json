@@ -16,6 +16,7 @@
     "@sentry/nextjs": "^10.69.0",
     "autoprefixer": "^10.4.22",
     "firebase": "^12.6.0",
+    "firebase-admin": "^14.5.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",

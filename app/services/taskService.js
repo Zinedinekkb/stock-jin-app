@@ -7,6 +7,7 @@ import {
   doc 
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase.js';
+import { sendPushEvent } from '../../lib/pushClient.js';
 
 // ============================================
 // แม่แบบงานประจำวันเริ่มต้นตามตำแหน่งงาน (Default Routine Checklist)
@@ -604,20 +605,10 @@ export const isTaskCompletedToday = (task, todayKey = getTodayKey()) => {
 // ส่งแจ้งเตือน LINE และ อีเมล สำหรับงานที่มอบหมาย
 export const notifyTaskAssigned = async (task, currentUser, targetEmails = []) => {
   try {
-    const targetLabel = task.targetType === 'user' 
-      ? (task.targetUserName || 'พนักงาน') 
-      : (task.targetPosition || 'ทุกคน');
-    const priorityIcon = task.priority === 'urgent' ? '🔴 [ด่วนมาก]' : task.priority === 'high' ? '🟡 [สำคัญ]' : '📋';
-    const message = `${priorityIcon} มอบหมายงาน: ${task.title}\nผู้รับผิดชอบ: ${targetLabel}\nกำหนด: ${task.dueDate || 'วันนี้'} ${task.dueTime ? task.dueTime + ' น.' : ''}\nสั่งโดย: ${currentUser?.name || 'ผู้ดูแลระบบ'}${task.description ? '\nรายละเอียด: ' + task.description : ''}`;
+    // 0. Push แจ้งเตือนบนมือถือ/เดสก์ท็อป (เซิร์ฟเวอร์คำนวณผู้รับเอง)
+    if (task?.id) sendPushEvent('task_assigned', { taskId: task.id });
 
-    // 1. ส่ง LINE Notify
-    fetch('/api/notify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
-    }).catch(() => {});
-
-    // 2. ส่ง Email Notify
+    // 1. ส่ง Email Notify
     const recipientEmails = (targetEmails && targetEmails.length > 0)
       ? targetEmails
       : (task.targetUserEmail ? [task.targetUserEmail] : []);

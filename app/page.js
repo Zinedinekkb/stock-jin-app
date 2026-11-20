@@ -26,6 +26,7 @@ import ModernAuthView from './components/ModernAuthView';
 import ModernPendingApproval from './components/ModernPendingApproval';
 import { PageHeader } from './components/ui';
 import { hasPermission, isAdmin } from './utils/permissions';
+import { sendPushEvent, listenForeground } from '@/lib/pushClient';
 import * as Sentry from '@sentry/nextjs';
 
 // --- IMPORT SERVICES ---
@@ -230,6 +231,44 @@ export default function StockJinApp() {
     return () => unsubscribe();
   }, []);
 
+  // --- Deep link: ?tab=<key> (จากการแจ้งเตือน) ใช้ครั้งเดียวหลังโหลดผู้ใช้ ---
+  const deepLinkHandledRef = useRef(false);
+  useEffect(() => {
+    if (!user?.uid || deepLinkHandledRef.current) return;
+    deepLinkHandledRef.current = true;
+    try {
+      const KNOWN_TABS = ['dashboard', 'stock', 'transaction', 'status', 'hr', 'documents', 'notifications', 'users', 'menu'];
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab && KNOWN_TABS.includes(tab)) {
+        setActiveTab(tab);
+        params.delete('tab');
+        const qs = params.toString();
+        window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : '') + window.location.hash);
+      }
+    } catch { /* URL ใช้ไม่ได้ ข้ามไป */ }
+  }, [user?.uid]);
+
+  // --- Push: รับการแจ้งเตือนขณะเปิดแอปอยู่ (เฉพาะผู้ใช้ที่อนุมัติแล้ว; ไม่ขอสิทธิ์อัตโนมัติ) ---
+  useEffect(() => {
+    if (!user?.uid || user.status !== 'approved') return;
+    let unsubscribe = null;
+    let cancelled = false;
+    listenForeground((payload) => {
+      const title = payload?.title;
+      const body = payload?.body;
+      const msg = [title, body].filter(Boolean).join(' · ');
+      if (msg) showNotification(msg);
+    }).then((unsub) => {
+      if (cancelled) unsub?.();
+      else unsubscribe = unsub;
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [user?.uid, user?.status]);
+
   // --- REAL-TIME LISTENER: status/role changes apply immediately ---
   useEffect(() => {
     if (!user?.uid) return;
@@ -415,6 +454,7 @@ export default function StockJinApp() {
           cancelledAt: new Date().toLocaleString('th-TH')
        }, ['pending', 'completed']);
        setVerifyingTx(null); showNotification('ยกเลิกบิลและคืนค่าสต็อกแล้ว');
+       sendPushEvent('tx_cancelled', { txId: tx.id });
     }, 'danger');
   };
 
@@ -433,7 +473,7 @@ export default function StockJinApp() {
 
   const handleEditCompletedTx = (tx) => {
     showConfirm('ต้องการแก้ไขรายการ?', 'สต็อกจะถูกคืนค่าเดิม และรายการนี้จะกลับไปสถานะ "รอตรวจสอบ"', async () => {
-       await revertStock(tx, { status: 'pending', actualItems: null, verifiedBy: null, verifiedAt: null }, ['completed']);
+       await revertStock(tx, { status: 'pending', actualItems: null, verifiedBy: null, verifiedAt: null, verifiedAtMs: null }, ['completed']);
        setStatusFilter('pending'); 
        const initialActual = {};
        (tx.items || []).forEach(item => { initialActual[item.id] = (tx.actualItems && tx.actualItems[item.id] !== undefined) ? tx.actualItems[item.id] : item.qty; });
@@ -502,7 +542,7 @@ export default function StockJinApp() {
   };
 
   // ยืนยันบิล: ตัดสต็อกตามยอด qtyMap และเปลี่ยนสถานะเป็นสำเร็จ (ใช้ทั้งหน้าตรวจละเอียดและปุ่มอนุมัติด่วน)
-  const confirmVerifyTransaction = (tx, qtyMap, extraItems = [], { title, intro }) => {
+  const confirmVerifyTransaction = (tx, qtyMap, extraItems = [], itemNotes = {}, { title, intro }) => {
     // เตือนก่อนถ้าเบิกเกินสต็อกที่มี (ไม่ปัดเป็น 0 แบบเงียบ ๆ อีกต่อไป)
     const overdrawn = tx.type === 'OUT'
       ? products.filter(p => (parseInt(qtyMap[p.id]) || 0) > (p.stock || 0))
@@ -513,7 +553,10 @@ export default function StockJinApp() {
     showConfirm(
       title, `${intro}${overdrawnText}`,
       async () => {
-        const finalItems = [...(tx.items || []), ...extraItems];
+        const finalItems = [...(tx.items || []), ...extraItems].map(item => {
+          const note = (itemNotes[item.id] || '').trim();
+          return note ? { ...item, note } : item;
+        });
         const txRef = doc(db, 'transactions', tx.id);
         const verifiedAtDate = new Date().toLocaleString('th-TH');
         await runTransaction(db, async (t) => {
@@ -536,7 +579,8 @@ export default function StockJinApp() {
             items: finalItems,
             actualItems: qtyMap,
             verifiedBy: user ? user.name : 'Admin',
-            verifiedAt: verifiedAtDate
+            verifiedAt: verifiedAtDate,
+            verifiedAtMs: Date.now()
           });
         });
 
@@ -560,13 +604,14 @@ export default function StockJinApp() {
 
         setVerifyingTx(null);
         showNotification('ยืนยันแล้ว สต็อกอัปเดตเรียบร้อย');
+        sendPushEvent('tx_verified', { txId: tx.id });
       }, 'info'
     );
   };
 
-  const handleVerifyAndSave = (extraItems = []) => {
+  const handleVerifyAndSave = (extraItems = [], itemNotes = {}) => {
     if (!verifyingTx) return;
-    confirmVerifyTransaction(verifyingTx, actualQty, extraItems, {
+    confirmVerifyTransaction(verifyingTx, actualQty, extraItems, itemNotes, {
       title: 'ยืนยันยอดจริงถูกต้อง?',
       intro: 'สต็อกจะถูกอัปเดตตามยอดนี้ และสถานะจะเปลี่ยนเป็นสำเร็จ',
     });
@@ -577,7 +622,7 @@ export default function StockJinApp() {
     const qtyMap = {};
     (tx.items || []).forEach(item => { qtyMap[item.id] = parseInt(item.qty) || 0; });
     const summary = (tx.items || []).map(item => `• ${item.name} ${item.qty} ${item.unit || ''}`.trim()).join('\n');
-    confirmVerifyTransaction(tx, qtyMap, [], {
+    confirmVerifyTransaction(tx, qtyMap, [], {}, {
       title: `อนุมัติ${tx.type === 'IN' ? 'รับเข้า' : 'เบิกออก'}ตามที่ขอ?`,
       intro: `${summary}\n\nสต็อกจะ${tx.type === 'IN' ? 'เพิ่ม' : 'ลด'}ตามยอดนี้ทันที`,
     });

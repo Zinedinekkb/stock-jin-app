@@ -6,6 +6,7 @@ import {
   Mail, Lock, User, Eye, EyeOff, Package, Sparkles, 
   ShieldCheck, ArrowRight, Loader2, CheckCircle2, Clock, AlertCircle
 } from 'lucide-react';
+import InstallAppButton from './InstallAppButton';
 
 export default function ModernAuthView({
   loginForm,
@@ -382,6 +383,9 @@ export default function ModernAuthView({
               )}
             </button>
           </form>
+
+          {/* Install as an app (shows only when the browser allows it) */}
+          <InstallAppButton variant="full" className="mt-4" />
 
           {/* Admin Approval Notice Banner */}
           <div className="mt-6 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-start gap-2.5 text-amber-800">

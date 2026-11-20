@@ -1,6 +1,7 @@
 import { addDoc, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { uploadAndSaveTransactionDocument, generateDocNumber } from '@/app/utils/transactionPdfGenerator';
+import { sendPushEvent } from '@/lib/pushClient';
 
 export const submitTransactionService = async ({ cart, transMode, note, user }) => {
     const now = new Date();
@@ -21,6 +22,7 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
 
     try {
         const docRef = await addDoc(collection(db, 'transactions'), newTx);
+        sendPushEvent('tx_created', { txId: docRef.id }); // แจ้งเตือนผู้ตรวจสอบ (ไม่ block)
         const docNumber = generateDocNumber(transMode, docRef.id, now.getTime());
 
         // 2. สร้างเอกสารทางการเป็น PDF และเก็บลงเอกสาร (documents) ให้อัตโนมัติ
@@ -35,28 +37,7 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
             console.error("Auto PDF Generation Error (Non-blocking):", pdfErr);
         }
 
-        // 3. ส่ง LINE (แจ้งเตือนทั้ง IN และ OUT)
-        const cleanPayload = {
-            transMode: transMode,
-            note: note || '-',
-            user: { name: user ? user.name : 'Staff' },
-            dateStr: dateStr,
-            cart: cart.map(item => ({
-                name: item.name,
-                qty: item.qty,
-                unit: item.unit,
-                currentStock: item.stock || 0
-            }))
-        };
-
-        const res = await fetch('/api/notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(cleanPayload)
-        });
-        if (!res.ok) console.error("Notify failed:", await res.text());
-
-        return { 
+        return {
             success: true, 
             id: docRef.id, 
             docNumber: docNumber, 

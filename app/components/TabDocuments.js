@@ -21,6 +21,7 @@ const DOC_CATEGORIES = [
   { value: 'payment', label: 'ใบสำคัญจ่าย / สำรองจ่าย', icon: '💸' },
   { value: 'leave', label: 'ใบลา / คำขอ', icon: '📋' },
   { value: 'contract', label: 'สัญญา', icon: '📝' },
+  { value: 'report', label: 'รายงาน', icon: '📊' },
   { value: 'image', label: 'รูปภาพ', icon: '🖼️' },
   { value: 'other', label: 'อื่นๆ', icon: '📄' },
 ];
@@ -31,6 +32,7 @@ const getFileIcon = (url = '', type, name = '') => {
   if (type === 'sales') return <FileText size={20} className="text-blue-700" />;
   if (type === 'payment') return <FileText size={20} className="text-amber-700" />;
   if (type === 'leave' || name?.includes('ใบขอลา') || name?.includes('ใบลา')) return <FileText size={20} className="text-purple-600" />;
+  if (type === 'report' || name?.startsWith('รายงานประจำวัน')) return <FileText size={20} className="text-indigo-600" />;
   if (type === 'image') return <Image size={20} className="text-blue-500" />;
   if (url.includes('drive.google')) return <File size={20} className="text-yellow-600" />;
   if (url.includes('line') || url.includes('chat')) return <Link2 size={20} className="text-success-600" />;
