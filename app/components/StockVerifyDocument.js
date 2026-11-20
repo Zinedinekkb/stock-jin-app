@@ -122,7 +122,7 @@ export default function StockVerifyDocument({
           </div>
 
           {/* ตัวกระดาษ A4 */}
-          <div className="bg-white text-slate-800 rounded-md shadow-2xl p-5 md:p-8 font-sans text-[13px] leading-relaxed">
+          <div className="paper-light bg-white text-slate-800 rounded-md shadow-2xl p-5 md:p-8 font-sans text-[13px] leading-relaxed">
             {/* หัวเอกสาร */}
             <div className="flex justify-between items-start gap-3 border-b-2 border-brand-900 pb-3 mb-4">
               <div className="min-w-0">

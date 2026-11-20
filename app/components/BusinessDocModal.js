@@ -27,7 +27,7 @@ function A4Preview({ html }) {
   }, []);
   return (
     <div ref={wrapRef} className="w-full">
-      <div className="mx-auto shadow-glass-lg rounded-md overflow-hidden bg-white" style={{ width: 794 * scale, height: 1123 * scale }}>
+      <div className="paper-light mx-auto shadow-glass-lg rounded-md overflow-hidden bg-white" style={{ width: 794 * scale, height: 1123 * scale }}>
         {/* Our own template output; user text is escaped in buildBusinessDocHtml */}
         <div style={{ width: 794, transform: `scale(${scale})`, transformOrigin: 'top left' }} dangerouslySetInnerHTML={{ __html: html }} />
       </div>

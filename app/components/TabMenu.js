@@ -8,6 +8,7 @@ import {
 import { GlassCard, Button, Badge, SectionHeader, ListRow } from './ui';
 import InstallAppButton from './InstallAppButton';
 import PushToggle from './PushToggle';
+import ThemeModeToggle from './ThemeModeToggle';
 import { useBranding } from './BrandingProvider';
 
 const PRESET_POSITIONS = [
@@ -195,6 +196,9 @@ export default function TabMenu({
 
         {/* Push notifications on this device */}
         <PushToggle user={user} />
+
+        {/* Light / dark / system mode (per user) */}
+        <ThemeModeToggle user={user} />
 
         {/* Admin: pending sign-ups need action, so they come first */}
         {isUserAdmin && pendingUsers.length > 0 && (

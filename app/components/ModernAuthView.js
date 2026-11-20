@@ -50,7 +50,7 @@ export default function ModernAuthView({
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f5fa] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-brand-100">
+    <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-brand-100">
       <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row min-h-[640px]">
         
         {/* ========================================= */}

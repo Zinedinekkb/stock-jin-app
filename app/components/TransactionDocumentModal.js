@@ -234,7 +234,7 @@ export default function TransactionDocumentModal({
           <div
             id="transaction-document-sheet"
             ref={sheetRef}
-            className="leave-doc-sheet"
+            className="leave-doc-sheet paper-light"
             style={{ width: '794px', minHeight: '1123px' }}
           >
             {/* Top Emblem & Header */}

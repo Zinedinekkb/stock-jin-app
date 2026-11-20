@@ -598,7 +598,7 @@ export default function DailyTaskDashboard({
                   setEditingTask(null);
                   setIsCreateModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-500 text-white text-xs font-bold shadow-md hover:bg-[#5244c4] transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-500 text-white text-xs font-bold shadow-md hover:bg-brand-700 transition-all"
               >
                 <Plus size={16} />
                 <span>{isUserAdmin ? 'สั่งงานใหม่' : 'เพิ่มงานส่วนตัว'}</span>
@@ -843,7 +843,7 @@ export default function DailyTaskDashboard({
               </button>
               <button
                 onClick={handleSaveNote}
-                className="px-5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold hover:bg-[#5244c4] shadow-sm"
+                className="px-5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold hover:bg-brand-700 shadow-sm"
               >
                 บันทึกหมายเหตุ
               </button>
@@ -935,7 +935,7 @@ export default function DailyTaskDashboard({
                       setLeaveDocModalOpen(true);
                       setPendingLeavesListModalOpen(false);
                     }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-xs transition-all shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-700 text-white text-xs font-black shadow-xs transition-all shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
                   >
                     <span>📄 ตรวจเอกสาร</span>
                   </button>

@@ -442,7 +442,7 @@ export default function CreateTaskModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-lg shadow-brand-500/25 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-lg shadow-brand-500/25 transition-all disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>

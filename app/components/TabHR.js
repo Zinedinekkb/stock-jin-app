@@ -22,9 +22,9 @@ import { useBranding } from './BrandingProvider';
 import { sendPushEvent } from '@/lib/pushClient';
 
 const LEAVE_TYPES = [
-  { value: 'sick', label: 'ลาป่วย', color: '#ef4444', bg: '#fef2f2' },
-  { value: 'personal', label: 'ลากิจ', color: '#f59e0b', bg: '#fffbeb' },
-  { value: 'vacation', label: 'ลาพักร้อน', color: '#3b82f6', bg: '#eff6ff' },
+  { value: 'sick', label: 'ลาป่วย', color: '#ef4444', bg: 'var(--tint-red-50)' },
+  { value: 'personal', label: 'ลากิจ', color: '#f59e0b', bg: 'var(--tint-amber-50)' },
+  { value: 'vacation', label: 'ลาพักร้อน', color: '#3b82f6', bg: 'var(--tint-blue-50)' },
 ];
 
 function getTodayStr() {
@@ -464,19 +464,19 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
           {/* Stats */}
           <div className="hr-stats-row">
             <div className="hr-stat-card">
-              <span className="hr-stat-num" style={{ color: '#1e1b3a' }}>
+              <span className="hr-stat-num" style={{ color: 'rgb(var(--ink))' }}>
                 {workedDays}
               </span>
               <span className="hr-stat-label">วันทำงาน</span>
             </div>
             <div className="hr-stat-card">
-              <span className="hr-stat-num" style={{ color: '#1e1b3a' }}>
+              <span className="hr-stat-num" style={{ color: 'rgb(var(--ink))' }}>
                 {pendingLeaves}
               </span>
               <span className="hr-stat-label">รอพิจารณา</span>
             </div>
             <div className="hr-stat-card">
-              <span className="hr-stat-num" style={{ color: '#1e1b3a' }}>
+              <span className="hr-stat-num" style={{ color: 'rgb(var(--ink))' }}>
                 {approvedLeaves}
               </span>
               <span className="hr-stat-label">ลาที่อนุมัติ</span>
@@ -764,7 +764,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
                             onClick={() => handleOpenLeaveDoc(lv)}
                             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
                               lv.status === 'pending'
-                                ? 'bg-brand-500 hover:bg-[#5244c4] text-white hover:scale-105 active:scale-95 shadow-brand-500/20'
+                                ? 'bg-brand-500 hover:bg-brand-700 text-white hover:scale-105 active:scale-95 shadow-brand-500/20'
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
                             }`}
                             title="ตรวจสอบเอกสาร A4 และลงนามพิจารณา"

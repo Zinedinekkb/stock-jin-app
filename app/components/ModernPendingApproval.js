@@ -32,7 +32,7 @@ export default function ModernPendingApproval({
     : 'อีเมล / รหัสผ่าน';
 
   return (
-    <div className="min-h-screen bg-[#f4f5fa] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-brand-100">
+    <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-brand-100">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 sm:p-10 text-center relative overflow-hidden">
         
         {/* Decorative Top Ambient */}

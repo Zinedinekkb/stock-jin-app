@@ -34,7 +34,8 @@ import * as Sentry from '@sentry/nextjs';
 import { submitTransactionService, sendStockReportService, sendDailyReportService } from '@/app/services/transactionService';
 import { uploadAndSaveTransactionDocument } from '@/app/utils/transactionPdfGenerator';
 import { compressImageFile, blobToDataUrl } from '@/app/utils/cameraUtils';
-import { useBranding } from './components/BrandingProvider';
+import { useBranding, applyThemeMode, readThemeMode } from './components/BrandingProvider';
+import { normalizeMode } from '../lib/theme/mode';
 
 // --- FIREBASE IMPORTS ---
 import { db, auth, storage } from '@/lib/firebase';
@@ -278,6 +279,10 @@ export default function HomePage() {
     const unsubUser = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        // Adopt the per-user theme mode if it differs from this device
+        if (data.themeMode && normalizeMode(data.themeMode) === data.themeMode && data.themeMode !== readThemeMode()) {
+          applyThemeMode(data.themeMode);
+        }
         if ((data.status && data.status !== user.status) || (data.role && data.role !== user.role) || (data.position && data.position !== user.position)) {
           setUser(prev => ({
             ...prev,
@@ -1226,7 +1231,7 @@ export default function HomePage() {
   // --- RENDER MAIN ---
   if (isLoadingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f4f5fa]">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--app-bg)]">
         <div className="text-center space-y-3">
           <Loader2 size={40} className="animate-spin text-brand-500 mx-auto"/>
           <p className="text-slate-700 font-bold animate-pulse">กำลังตรวจสอบสิทธิ์...</p>

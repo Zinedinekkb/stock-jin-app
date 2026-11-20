@@ -668,7 +668,7 @@ export default function LeaveDocumentModal({
             <div
               id="leave-document-sheet"
               ref={sheetRef}
-              className="leave-doc-sheet"
+              className="leave-doc-sheet paper-light"
             >
               {/* Header: Priority & Emblem */}
               <div className="leave-doc-header">
