@@ -1,28 +1,33 @@
 'use client'
 // Shown only in the demo build (NEXT_PUBLIC_DEMO_MODE=true).
-// Floating pill with a role switcher (admin / staff). The switcher stays visible even after the
+// Floating pill with a role switcher (admin + 6 position groups). The switcher stays visible even after the
 // notice text is dismissed. Switching writes role + position on the signed-in demo user's doc in the
 // in-memory store, so the app's own users/{uid} listener re-renders the whole UI with no reload.
 import { useEffect, useState } from 'react'
-import { X, FlaskConical, Info } from 'lucide-react'
+import { X, FlaskConical, Info, Check, Minus } from 'lucide-react'
+import {
+  ACCESS_MATRIX, ACCESS_GROUPS, ACCESS_GROUP_LABELS, TRANSACTION_DOC_GROUPS, getUserAccessGroup,
+} from '@/app/config/accessMatrix'
 
 const DEMO_UID = 'demo-admin'
-// Same fields the app's permission logic reads (role + position). Staff uses the default position a
-// newly approved staff user gets, so no position-based extras (stock verify / team tab) apply.
+// role + position written onto users/demo-admin. Positions match the POSITION_CLUSTERS keywords, so the
+// app's own getUserAccessGroup() resolves each one to the intended access group.
 const ROLES = {
   admin: { label: 'แอดมิน', patch: { role: 'admin', position: 'ผู้ดูแลระบบ' } },
-  staff: { label: 'พนักงาน', patch: { role: 'staff', position: 'พนักงานทั่วไป' } },
+  warehouse: { label: 'คลัง/สต็อก', patch: { role: 'staff', position: 'เจ้าหน้าที่สต็อก' } },
+  kitchen: { label: 'ครัว', patch: { role: 'staff', position: 'เชฟ' } },
+  finance: { label: 'การเงิน', patch: { role: 'staff', position: 'แคชเชียร์' } },
+  service: { label: 'หน้าร้าน', patch: { role: 'staff', position: 'พนักงานเสิร์ฟ' } },
+  shipping: { label: 'จัดส่ง', patch: { role: 'staff', position: 'พนักงานจัดส่ง' } },
+  general: { label: 'พนักงานทั่วไป', patch: { role: 'staff', position: 'พนักงานทั่วไป' } },
 }
 
-// Derived from app/utils/permissions.js (PERMISSIONS), app/config/navigation.js (adminOnly)
-// and getVisibleSubItems (dashboard sub-tabs).
-const STAFF_HIDDEN = [
-  'เมนู "จัดการบัญชีผู้ใช้" และ "ตั้งค่าร้าน"',
-  'แท็บแดชบอร์ดของทีมอื่น (เห็นเฉพาะงานของฉัน, ทีมตนเอง, สถิติ)',
-  'แก้ไข/เพิ่ม/ลบสินค้า และจัดการหมวดหมู่',
-  'อนุมัติ/ยกเลิก/แก้ไขรายการเบิก-รับ และลบประวัติ',
-  'สั่งงานให้คนอื่น, ส่งรายงานเข้า LINE, อนุมัติลา/ผู้ใช้, แจ้งเตือนฝั่งแอดมิน',
+// Rows of the info table are generated from ACCESS_MATRIX (plus data scope rules from the same module)
+const SCOPE_ROWS = [
+  { label: 'ขอบเขตเอกสาร', cell: (g) => g === 'admin' ? 'ทั้งหมด' : TRANSACTION_DOC_GROUPS.includes(g) ? 'ของตน + เบิก/รับ' : 'ของตน' },
+  { label: 'ขอบเขตใบลา', cell: (g) => g === 'admin' ? 'ทั้งหมด' : 'ของตน' },
 ]
+const ADMIN_ONLY = 'เฉพาะแอดมิน: จัดการบัญชีผู้ใช้, ตั้งค่าร้าน, แก้ไข/เพิ่ม/ลบสินค้า, จัดการหมวดหมู่, อนุมัติ/ยกเลิก/แก้ไขรายการเบิก-รับ, ส่งรายงาน LINE, อนุมัติลา/ผู้ใช้'
 
 export default function DemoBanner() {
   const [noticeOpen, setNoticeOpen] = useState(true)
@@ -40,7 +45,7 @@ export default function DemoBanner() {
       const [{ db }, { doc, onSnapshot }] = await Promise.all([import('@/lib/firebase'), import('firebase/firestore')])
       if (cancelled) return
       unsub = onSnapshot(doc(db, 'users', DEMO_UID), (snap) => {
-        if (snap.exists()) setRole(snap.data().role === 'admin' ? 'admin' : 'staff')
+        if (snap.exists()) setRole(getUserAccessGroup(snap.data()))
       })
     })()
     return () => { cancelled = true; unsub() }
@@ -63,14 +68,43 @@ export default function DemoBanner() {
   return (
     <div className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-4 z-[60] max-w-[calc(100vw-1.5rem)] flex flex-col items-center gap-2">
       {hintOpen && (
-        <div role="note" className="w-[min(22rem,calc(100vw-1.5rem))] rounded-2xl bg-white text-ink shadow-lg border border-brand-200 p-3 text-xs leading-relaxed">
-          <p className="font-bold mb-1">
-            {role === 'staff' ? 'ตอนนี้ดูในฐานะพนักงาน' : 'ตอนนี้ดูในฐานะแอดมิน'}
-          </p>
-          <p className="font-semibold">พนักงานจะไม่เห็น/ทำไม่ได้:</p>
-          <ul className="list-disc pl-4 mt-0.5 space-y-0.5">
-            {STAFF_HIDDEN.map(t => <li key={t}>{t}</li>)}
-          </ul>
+        <div role="note" className="w-[min(34rem,calc(100vw-1.5rem))] rounded-2xl bg-white text-ink shadow-lg border border-brand-200 p-3 text-xs leading-relaxed">
+          <p className="font-bold mb-1.5">ตอนนี้ดูในฐานะ: {ROLES[role]?.label}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[11px] text-center">
+              <thead>
+                <tr>
+                  <th className="text-left font-semibold pb-1 pr-2">ฟีเจอร์</th>
+                  {ACCESS_GROUPS.map(g => (
+                    <th key={g} className={`px-1 pb-1 font-semibold ${g === role ? 'bg-brand-100 text-brand-700 rounded-t-md' : ''}`}>{ACCESS_GROUP_LABELS[g]}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(ACCESS_MATRIX).map(([key, row]) => (
+                  <tr key={key} className="border-t border-gray-100">
+                    <td className="text-left py-1 pr-2">{row.label}</td>
+                    {ACCESS_GROUPS.map(g => (
+                      <td key={g} className={`px-1 ${g === role ? 'bg-brand-50' : ''}`}>
+                        {g === 'admin' || row.groups.includes(g)
+                          ? <Check size={13} className="inline text-success-600" aria-label="ทำได้" />
+                          : <Minus size={13} className="inline text-gray-300" aria-label="ทำไม่ได้" />}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                {SCOPE_ROWS.map(r => (
+                  <tr key={r.label} className="border-t border-gray-100">
+                    <td className="text-left py-1 pr-2">{r.label}</td>
+                    {ACCESS_GROUPS.map(g => (
+                      <td key={g} className={`px-1 leading-tight ${g === role ? 'bg-brand-50 font-semibold' : ''}`}>{r.cell(g)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-1.5 text-ink-muted">{ADMIN_ONLY}</p>
           <p className="mt-1 text-ink-muted">ข้อมูลจะรีเซ็ตเมื่อรีเฟรชหน้า</p>
         </div>
       )}
@@ -80,20 +114,17 @@ export default function DemoBanner() {
       >
         <FlaskConical size={16} className="shrink-0" aria-hidden="true" />
         {noticeOpen && <span className="leading-snug hidden sm:inline">โหมดทดลอง</span>}
-        <div role="group" aria-label="สลับบทบาทผู้ใช้ (เดโม)" className="flex rounded-full bg-white/20 p-0.5">
+        <select
+          aria-label="สลับบทบาทผู้ใช้ (เดโม)"
+          value={role}
+          disabled={busy}
+          onChange={(e) => switchTo(e.target.value)}
+          className="rounded-full bg-white text-brand-700 text-xs font-bold pl-3 pr-2 py-1.5 outline-none cursor-pointer"
+        >
           {Object.entries(ROLES).map(([key, r]) => (
-            <button
-              key={key}
-              type="button"
-              disabled={busy}
-              aria-pressed={role === key}
-              onClick={() => switchTo(key)}
-              className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${role === key ? 'bg-white text-brand-700' : 'text-white hover:bg-white/20'}`}
-            >
-              {r.label}
-            </button>
+            <option key={key} value={key}>{r.label}</option>
           ))}
-        </div>
+        </select>
         <button
           type="button"
           onClick={() => setHintOpen(v => !v)}

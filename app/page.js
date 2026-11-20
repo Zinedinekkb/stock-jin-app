@@ -27,6 +27,7 @@ import ModernAuthView from './components/ModernAuthView';
 import ModernPendingApproval from './components/ModernPendingApproval';
 import { PageHeader } from './components/ui';
 import { hasPermission, isAdmin } from './utils/permissions';
+import { canAccessTab, canAccess, filterVisibleLeaves } from './config/accessMatrix';
 import { sendPushEvent, listenForeground } from '@/lib/pushClient';
 import * as Sentry from '@sentry/nextjs';
 
@@ -178,7 +179,7 @@ export default function HomePage() {
   const [registerForm, setRegisterForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [registerError, setRegisterError] = useState('');
   const [pendingUsers, setPendingUsers] = useState([]);
-  const [pendingLeaves, setPendingLeaves] = useState([]);
+  const [pendingLeavesRaw, setPendingLeaves] = useState([]);
   const [approvalHistory, setApprovalHistory] = useState([]);
 
   // --- DEV ONLY: preview the app as a staff member (UI only; Firestore still sees the real admin) ---
@@ -188,6 +189,8 @@ export default function HomePage() {
     () => (isDevBuild && previewAsStaff && user) ? { ...user, role: 'staff', position: 'พนักงานคุมสต็อก' } : user,
     [isDevBuild, previewAsStaff, user]
   );
+  // Leave requests are scoped by position: admin sees all, everyone else only their own
+  const pendingLeaves = useMemo(() => filterVisibleLeaves(viewUser, pendingLeavesRaw), [viewUser, pendingLeavesRaw]);
 
   // --- NOTIFICATION STATE ---
   const [notifications, setNotifications] = useState([]);
@@ -399,6 +402,9 @@ export default function HomePage() {
 
   // Admin-only tabs: if the role drops to staff while one is open (e.g. demo role switcher), leave it
   if (user && !isAdmin(viewUser) && (activeTab === 'users' || activeTab === 'branding')) setActiveTab('dashboard');
+
+  // Position-based access: leave any tab the current position can no longer open (e.g. demo role switcher)
+  if (user && !canAccessTab(viewUser, activeTab)) setActiveTab('dashboard');
 
   // --- HELPER FUNCTIONS ---
   const stockError = (userMessage) => Object.assign(new Error(userMessage), { userMessage });
@@ -1032,7 +1038,7 @@ export default function HomePage() {
 
     // 3. รายการรอตรวจสอบ
     const pendingTx = transactions.filter(tx => tx.status === 'pending');
-    if (pendingTx.length > 0) {
+    if (pendingTx.length > 0 && canAccess(viewUser, 'txHistory')) {
       notifs.push({
         id: `tx_pending_${Date.now()}`,
         category: 'movement',
@@ -1078,7 +1084,7 @@ export default function HomePage() {
     }
 
     // 6. คำขอลาหยุดงานรออนุมัติ (เฉพาะ Admin / เจ้าของร้าน)
-    if (isAdmin(user) && pendingLeaves.length > 0) {
+    if (isAdmin(viewUser) && pendingLeaves.length > 0) {
       notifs.push({
         id: `leave_pending_${Date.now()}`,
         category: 'hr',
@@ -1092,7 +1098,7 @@ export default function HomePage() {
     }
 
     setNotifications(notifs);
-  }, [products, transactions, pendingUsers, pendingLeaves, user]);
+  }, [products, transactions, pendingUsers, pendingLeaves, user, viewUser]);
 
   // สร้าง notifications ทุกครั้งที่ข้อมูลเปลี่ยน
   useEffect(() => {
@@ -1104,9 +1110,10 @@ export default function HomePage() {
     return notifications.filter(n => {
       if (n.category === 'user' && !isAdmin(user)) return false;
       if (n.category === 'hr' && !isAdmin(user)) return false;
+      if (n.category === 'movement' && !canAccess(viewUser, 'txHistory')) return false;
       return !n.read;
     }).length;
-  }, [notifications, user]);
+  }, [notifications, user, viewUser]);
 
   // Mark as read
   const handleMarkAsRead = (notifId) => {
@@ -1225,7 +1232,7 @@ export default function HomePage() {
           initialSubTab={hrInitialSubTab} 
         />
       )}
-      {activeTab === 'documents' && <TabDocuments user={viewUser} />}
+      {activeTab === 'documents' && user && <TabDocuments user={viewUser} />}
       {activeTab === 'menu' && <TabMenu 
           user={viewUser} handleLogout={handleLogout}
           canPreviewAsStaff={isDevBuild && isAdmin(user) && !previewAsStaff} onPreviewAsStaff={() => { setPreviewAsStaff(true); setActiveTab('dashboard'); }}
@@ -1489,7 +1496,7 @@ export default function HomePage() {
               { key: 'stock', label: 'คลัง', icon: Package },
               { key: 'transaction', label: 'เบิก/รับ', icon: ArrowRightLeft },
               { key: 'status', label: 'สถานะ', icon: ClipboardList },
-            ].map(({ key, label, icon: Icon }) => {
+            ].filter(({ key }) => canAccessTab(viewUser, key)).map(({ key, label, icon: Icon }) => {
               const active = activeTab === key;
               return (
                 <button key={key} onClick={() => setActiveTab(key)} aria-current={active ? 'page' : undefined}
