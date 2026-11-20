@@ -397,6 +397,9 @@ export default function HomePage() {
   // In stock-only mode the HR tab is hidden; send anyone who lands there to the dashboard
   if (stockOnlyMode && activeTab === 'hr') setActiveTab('dashboard');
 
+  // Admin-only tabs: if the role drops to staff while one is open (e.g. demo role switcher), leave it
+  if (user && !isAdmin(viewUser) && (activeTab === 'users' || activeTab === 'branding')) setActiveTab('dashboard');
+
   // --- HELPER FUNCTIONS ---
   const stockError = (userMessage) => Object.assign(new Error(userMessage), { userMessage });
 
