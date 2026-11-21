@@ -7,6 +7,7 @@ const plexThai = IBM_Plex_Sans_Thai({ subsets: ['thai', 'latin'], weight: ['400'
 
 import BrandingProvider from './components/BrandingProvider'
 import DemoBanner from './components/DemoBanner'
+import DemoAnalytics from './components/DemoAnalytics'
 import { getBrandingServer, tripletToHex } from '../lib/branding/server.js'
 import { buildBrandPalette } from '../lib/theme/palette.js'
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }) {
       <body className={`${plexThai.variable} ${plexThai.className}`}>
         <BrandingProvider>{children}</BrandingProvider>
         <DemoBanner />
+        <DemoAnalytics />
       </body>
     </html>
   )

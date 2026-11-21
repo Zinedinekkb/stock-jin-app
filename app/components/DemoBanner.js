@@ -4,7 +4,8 @@
 // notice text is dismissed. Switching writes role + position on the signed-in demo user's doc in the
 // in-memory store, so the app's own users/{uid} listener re-renders the whole UI with no reload.
 import { useEffect, useState } from 'react'
-import { X, FlaskConical, Info, Check, Minus } from 'lucide-react'
+import { X, FlaskConical, Info, Check, Minus, ClipboardList } from 'lucide-react'
+import { trackDemoView, trackDemoEvent } from '@/lib/demo/analytics'
 import {
   ACCESS_MATRIX, ACCESS_GROUPS, ACCESS_GROUP_LABELS, TRANSACTION_DOC_GROUPS, getUserAccessGroup,
 } from '@/app/config/accessMatrix'
@@ -35,6 +36,7 @@ export default function DemoBanner() {
   const [role, setRole] = useState('admin')
   const [busy, setBusy] = useState(false)
   const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+  const surveyUrl = process.env.NEXT_PUBLIC_SURVEY_URL
 
   // Follow the demo user's doc so the control reflects the real current role
   useEffect(() => {
@@ -60,6 +62,8 @@ export default function DemoBanner() {
       const [{ db }, { doc, updateDoc }] = await Promise.all([import('@/lib/firebase'), import('firebase/firestore')])
       await updateDoc(doc(db, 'users', DEMO_UID), ROLES[key].patch)
       setRole(key)
+      trackDemoView(`/role/${key}`)
+      trackDemoEvent('role_switch', { role: key })
     } finally {
       setBusy(false)
     }
@@ -134,6 +138,18 @@ export default function DemoBanner() {
         >
           <Info size={15} />
         </button>
+        {surveyUrl && (
+          <a
+            href={surveyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => trackDemoEvent('survey_click')}
+            className="shrink-0 rounded-full bg-white/15 hover:bg-white/25 transition-colors px-2.5 py-1.5 text-xs font-bold flex items-center gap-1"
+          >
+            <ClipboardList size={14} aria-hidden="true" />
+            <span>ทำแบบสอบถาม</span>
+          </a>
+        )}
         {noticeOpen && (
           <button
             type="button"

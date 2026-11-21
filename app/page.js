@@ -49,6 +49,7 @@ import {
   GoogleAuthProvider, GithubAuthProvider, signInWithPopup
 } from "firebase/auth";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { trackDemoView } from '@/lib/demo/analytics';
 
 // First-admin bootstrap. One transaction reads settings/setup: if it is missing, this user
 // claims it and becomes admin/approved; otherwise they register as pending staff.
@@ -97,6 +98,9 @@ export default function HomePage() {
   const [dashboardPosTab, setDashboardPosTab] = useState('my'); // 'my' | 'warehouse' | 'kitchen' | 'finance' | 'service' | 'shipping' | 'management' | 'all'
   const [hrInitialView, setHrInitialView] = useState('my');
   const [hrInitialSubTab, setHrInitialSubTab] = useState('attendance');
+
+  // Demo build only: anonymous tab-view stats (no-op in real deployments)
+  useEffect(() => { trackDemoView(`/tab/${activeTab}`) }, [activeTab]);
 
   // Handle navigation with sub-topics (from Accordion Drawer)
   const handleNavigateWithSub = (tabKey, params = {}) => {
