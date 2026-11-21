@@ -551,6 +551,7 @@ export async function uploadAndSaveTransactionDocument({ transaction, user, isVe
       category: category,
       note: noteText,
       createdBy: user?.name || transaction.recorder || 'ระบบอัตโนมัติ',
+      createdByUid: user?.uid || '',
       transactionId: transaction.id || '',
       docNumber: cleanDocNumber,
       type: transaction.type,
@@ -561,6 +562,9 @@ export async function uploadAndSaveTransactionDocument({ transaction, user, isVe
     };
 
     if (existingDocId) {
+      // keep the original owner (an admin verifying must not take over ownership)
+      delete docPayload.createdBy;
+      delete docPayload.createdByUid;
       await updateDoc(doc(db, 'documents', existingDocId), docPayload);
     } else {
       docPayload.createdAt = serverTimestamp();

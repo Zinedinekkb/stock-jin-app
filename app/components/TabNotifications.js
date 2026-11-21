@@ -7,6 +7,7 @@ import {
   ChevronRight, ArrowDownCircle, ArrowUpCircle, ShieldAlert, FileText
 } from 'lucide-react';
 import { hasPermission, isAdmin } from '../utils/permissions';
+import { canAccess } from '../config/accessMatrix';
 
 const NOTIF_CATEGORIES = [
   { key: 'all', label: 'ทั้งหมด', icon: Bell, color: 'text-gray-600', bg: 'bg-gray-100' },
@@ -32,6 +33,7 @@ export default function TabNotifications({
     return notifications.filter(n => {
       if (n.category === 'user' && !isAdmin(user)) return false;
       if (n.category === 'hr' && !isAdmin(user)) return false;
+      if (n.category === 'movement' && !canAccess(user, 'txHistory')) return false;
       return true;
     });
   }, [notifications, user]);
@@ -103,6 +105,7 @@ export default function TabNotifications({
   const availableCategories = NOTIF_CATEGORIES.filter(cat => {
     if (cat.key === 'user' && !isAdmin(user)) return false;
     if (cat.key === 'hr' && !isAdmin(user)) return false;
+    if (cat.key === 'movement' && !canAccess(user, 'txHistory')) return false;
     return true;
   });
 

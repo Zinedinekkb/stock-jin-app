@@ -6,6 +6,8 @@ import { IBM_Plex_Sans_Thai } from 'next/font/google'
 const plexThai = IBM_Plex_Sans_Thai({ subsets: ['thai', 'latin'], weight: ['400', '500', '600', '700'], display: 'swap', variable: '--font-thai' })
 
 import BrandingProvider from './components/BrandingProvider'
+import DemoBanner from './components/DemoBanner'
+import DemoAnalytics from './components/DemoAnalytics'
 import { getBrandingServer, tripletToHex } from '../lib/branding/server.js'
 import { buildBrandPalette } from '../lib/theme/palette.js'
 
@@ -53,6 +55,8 @@ export default function RootLayout({ children }) {
       </head>
       <body className={`${plexThai.variable} ${plexThai.className}`}>
         <BrandingProvider>{children}</BrandingProvider>
+        <DemoBanner />
+        <DemoAnalytics />
       </body>
     </html>
   )

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { isAdmin } from '../utils/permissions';
 import { getUserCluster } from '../services/taskService';
+import { canAccessTab } from './accessMatrix';
 
 export const NAV_ITEMS = [
   {
@@ -41,6 +42,7 @@ export const getVisibleNavItems = (user, { stockOnlyMode = false } = {}) => {
   const admin = isAdmin(user);
   return NAV_ITEMS
     .filter(item => !item.adminOnly || admin)
+    .filter(item => canAccessTab(user, item.key)) // position-based (ACCESS_MATRIX)
     .filter(item => !(stockOnlyMode && item.hiddenInStockOnly))
     .map(item => (stockOnlyMode && item.key === 'dashboard')
       ? { ...item, label: 'ภาพรวมสต็อก', desc: 'สถิติสต็อกและรายงาน' }
