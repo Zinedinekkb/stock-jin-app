@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react'
 import { X, FlaskConical, Info, Check, Minus, ClipboardList } from 'lucide-react'
 import { trackDemoView, trackDemoEvent } from '@/lib/demo/analytics'
+import DemoSurvey from './DemoSurvey'
 import {
   ACCESS_MATRIX, ACCESS_GROUPS, ACCESS_GROUP_LABELS, TRANSACTION_DOC_GROUPS, getUserAccessGroup,
 } from '@/app/config/accessMatrix'
@@ -37,6 +38,8 @@ export default function DemoBanner() {
   const [busy, setBusy] = useState(false)
   const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
   const surveyUrl = process.env.NEXT_PUBLIC_SURVEY_URL
+  const [surveyOpen, setSurveyOpen] = useState(false)
+  const [visited, setVisited] = useState(['admin'])
 
   // Follow the demo user's doc so the control reflects the real current role
   useEffect(() => {
@@ -62,6 +65,7 @@ export default function DemoBanner() {
       const [{ db }, { doc, updateDoc }] = await Promise.all([import('@/lib/firebase'), import('firebase/firestore')])
       await updateDoc(doc(db, 'users', DEMO_UID), ROLES[key].patch)
       setRole(key)
+      setVisited(v => (v.includes(key) ? v : [...v, key]))
       trackDemoView(`/role/${key}`)
       trackDemoEvent('role_switch', { role: key })
     } finally {
@@ -70,6 +74,8 @@ export default function DemoBanner() {
   }
 
   return (
+    <>
+    {surveyOpen && <DemoSurvey roleTried={visited} onClose={() => setSurveyOpen(false)} />}
     <div className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-4 z-[60] max-w-[calc(100vw-1.5rem)] flex flex-col items-center gap-2">
       {hintOpen && (
         <div role="note" className="w-[min(34rem,calc(100vw-1.5rem))] rounded-2xl bg-white text-ink shadow-lg border border-brand-200 p-3 text-xs leading-relaxed">
@@ -138,7 +144,7 @@ export default function DemoBanner() {
         >
           <Info size={15} />
         </button>
-        {surveyUrl && (
+        {surveyUrl ? (
           <a
             href={surveyUrl}
             target="_blank"
@@ -149,6 +155,15 @@ export default function DemoBanner() {
             <ClipboardList size={14} aria-hidden="true" />
             <span>ทำแบบสอบถาม</span>
           </a>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setSurveyOpen(true); trackDemoEvent('survey_click') }}
+            className="shrink-0 rounded-full bg-white/15 hover:bg-white/25 transition-colors px-2.5 py-1.5 text-xs font-bold flex items-center gap-1"
+          >
+            <ClipboardList size={14} aria-hidden="true" />
+            <span>ทำแบบสอบถาม</span>
+          </button>
         )}
         {noticeOpen && (
           <button
@@ -162,5 +177,6 @@ export default function DemoBanner() {
         )}
       </div>
     </div>
+    </>
   )
 }
