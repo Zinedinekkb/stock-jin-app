@@ -12,6 +12,7 @@ import {
 import { GlassCard, Button, Badge, SectionHeader } from './ui';
 import { getTaskSteps } from '../services/taskSteps';
 import { taskToCalendar } from '@/lib/calendarLink';
+import { useBranding } from './BrandingProvider';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { 
@@ -49,6 +50,7 @@ export default function DailyTaskDashboard({
   initialPosTab = 'my',
   onPosTabChange = () => {}
 }) {
+  const { appName } = useBranding();
   const isUserAdmin = isAdmin(user);
   const visiblePositionTabs = useMemo(() => getVisiblePositionTabs(user), [user]);
 
@@ -521,10 +523,10 @@ export default function DailyTaskDashboard({
                       setSearchQuery(member.name || '');
                       setViewMode('tasks');
                     }}
-                    className="p-4 bg-white rounded-2xl border border-slate-100 hover:border-purple-300 shadow-xs hover:shadow-md transition-all cursor-pointer group"
+                    className="p-4 bg-white rounded-2xl border border-slate-100 hover:border-brand-300 shadow-xs hover:shadow-md transition-all cursor-pointer group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-500 to-purple-400 text-white font-bold flex items-center justify-center overflow-hidden shrink-0">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-500 to-brand-400 text-white font-bold flex items-center justify-center overflow-hidden shrink-0">
                         {member.photoURL ? (
                           <img src={member.photoURL} alt={member.name} className="w-full h-full object-cover" />
                         ) : (
@@ -537,7 +539,7 @@ export default function DailyTaskDashboard({
                             {member.name || 'พนักงาน'}
                           </h4>
                           {member.role === 'admin' && (
-                            <span className="text-xs px-1.5 py-0.2 bg-purple-100 text-brand-500 font-bold rounded-md">
+                            <span className="text-xs px-1.5 py-0.2 bg-brand-100 text-brand-500 font-bold rounded-md">
                               Admin
                             </span>
                           )}
@@ -582,7 +584,7 @@ export default function DailyTaskDashboard({
             </div>
           ) : filteredTasks.length === 0 ? (
             <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 space-y-3">
-              <div className="w-16 h-16 rounded-full bg-purple-50 text-brand-500 text-3xl flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 rounded-full bg-brand-50 text-brand-500 text-3xl flex items-center justify-center mx-auto">
                 🎉
               </div>
               <h4 className="text-base font-black text-slate-800">
@@ -596,7 +598,7 @@ export default function DailyTaskDashboard({
                   setEditingTask(null);
                   setIsCreateModalOpen(true);
                 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-500 text-white text-xs font-bold shadow-md hover:bg-[#5244c4] transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-500 text-white text-xs font-bold shadow-md hover:bg-brand-700 transition-all"
               >
                 <Plus size={16} />
                 <span>{isUserAdmin ? 'สั่งงานใหม่' : 'เพิ่มงานส่วนตัว'}</span>
@@ -647,7 +649,7 @@ export default function DailyTaskDashboard({
                       </button>
                       {task.dueDate && (
                         <a
-                          href={taskToCalendar(task)}
+                          href={taskToCalendar(task, appName)}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -841,7 +843,7 @@ export default function DailyTaskDashboard({
               </button>
               <button
                 onClick={handleSaveNote}
-                className="px-5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold hover:bg-[#5244c4] shadow-sm"
+                className="px-5 py-2 rounded-xl bg-brand-500 text-white text-xs font-bold hover:bg-brand-700 shadow-sm"
               >
                 บันทึกหมายเหตุ
               </button>
@@ -888,7 +890,7 @@ export default function DailyTaskDashboard({
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 space-y-4 max-h-[85vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-2xl bg-purple-100 text-brand-500 flex items-center justify-center font-bold text-lg">
+                <div className="w-10 h-10 rounded-2xl bg-brand-100 text-brand-500 flex items-center justify-center font-bold text-lg">
                   📄
                 </div>
                 <div>
@@ -910,7 +912,7 @@ export default function DailyTaskDashboard({
               {pendingLeaves.map((lv) => (
                 <div
                   key={lv.id}
-                  className="p-4 rounded-2xl bg-slate-50 hover:bg-purple-50/50 border border-slate-200/80 hover:border-purple-200 transition-all flex items-center justify-between gap-3"
+                  className="p-4 rounded-2xl bg-slate-50 hover:bg-brand-50/50 border border-slate-200/80 hover:border-brand-200 transition-all flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -933,7 +935,7 @@ export default function DailyTaskDashboard({
                       setLeaveDocModalOpen(true);
                       setPendingLeavesListModalOpen(false);
                     }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-[#5244c4] text-white text-xs font-black shadow-xs transition-all shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-700 text-white text-xs font-black shadow-xs transition-all shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
                   >
                     <span>📄 ตรวจเอกสาร</span>
                   </button>

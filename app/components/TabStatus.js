@@ -84,7 +84,7 @@ export default function TabStatus({
   return (
       <div className="space-y-4 pb-20 animate-fade-in-slide relative">
         {/* Search + status filter in one sticky block (the page title already sits in the header) */}
-        <div className="sticky top-0 z-20 pt-1 pb-2 space-y-2.5 bg-[#f4f5fa]/95 backdrop-blur-md rounded-b-card">
+        <div className="sticky top-0 z-20 pt-1 pb-2 space-y-2.5 bg-[var(--app-bg)]/95 backdrop-blur-md rounded-b-card">
             <label className="relative block">
                 <span className="sr-only">ค้นหารายการ</span>
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-subtle pointer-events-none" />

@@ -3,11 +3,13 @@
 import React, { useState, useRef } from 'react';
 import {
   User, Settings, Smartphone, LogOut, ShieldCheck, Check, X, History, Briefcase,
-  ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone, Boxes, Eye
+  ChevronDown, Clock, Camera, Pencil, Save, Trash2, Crown, Building2, Phone, Boxes, Eye, Palette
 } from 'lucide-react';
 import { GlassCard, Button, Badge, SectionHeader, ListRow } from './ui';
 import InstallAppButton from './InstallAppButton';
 import PushToggle from './PushToggle';
+import ThemeModeToggle from './ThemeModeToggle';
+import { useBranding } from './BrandingProvider';
 
 const PRESET_POSITIONS = [
   { label: 'เชฟ / แม่ครัว' },
@@ -28,8 +30,11 @@ export default function TabMenu({
   // Props สำหรับแอดมินอนุมัติ
   pendingUsers = [], approvalHistory = [], handleApproveUser, handleRejectUser,
   // Props สำหรับแก้ไขโปรไฟล์
-  handleUpdateProfile
+  handleUpdateProfile,
+  // Admin: open the shop branding tab
+  onOpenBranding
 }) {
+  const { appName, tagline } = useBranding();
   const [userToApprove, setUserToApprove] = useState(null);
   const [selectedPosition, setSelectedPosition] = useState('พนักงานเสิร์ฟ');
   const [customPosition, setCustomPosition] = useState('');
@@ -192,6 +197,9 @@ export default function TabMenu({
         {/* Push notifications on this device */}
         <PushToggle user={user} />
 
+        {/* Light / dark / system mode (per user) */}
+        <ThemeModeToggle user={user} />
+
         {/* Admin: pending sign-ups need action, so they come first */}
         {isUserAdmin && pendingUsers.length > 0 && (
           <section>
@@ -264,6 +272,14 @@ export default function TabMenu({
                 )}
               </>
             )}
+            {isUserAdmin && onOpenBranding && (
+              <ListRow
+                icon={Palette}
+                label="ตั้งค่าร้าน"
+                description="โลโก้ สีหลัก ชื่อแอป และข้อมูลร้านสำหรับเอกสาร"
+                onClick={onOpenBranding}
+              />
+            )}
             {isUserAdmin && onToggleStockOnlyMode && (
               <ListRow
                 icon={Boxes}
@@ -285,7 +301,7 @@ export default function TabMenu({
                 onClick={onPreviewAsStaff}
               />
             )}
-            <ListRow icon={Smartphone} label="เกี่ยวกับแอป" description="StockPro · ระบบคลังสินค้าและบุคลากร" trailing={<Badge tone="neutral">v2.2</Badge>} />
+            <ListRow icon={Smartphone} label="เกี่ยวกับแอป" description={`${appName} · ${tagline}`} />
           </GlassCard>
         </section>
 

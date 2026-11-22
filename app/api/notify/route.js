@@ -1,18 +1,22 @@
 import { NextResponse } from 'next/server';
+import { getBrandingServer } from '../../../lib/branding/server.js';
+import { integrationStatus, appUrl, LINE_SKIPPED } from '../../../lib/integrations.js';
 
 export async function POST(request) {
+    if (!integrationStatus().line) return NextResponse.json(LINE_SKIPPED);
     try {
         // รับข้อมูลทั้งหมดมาก่อน
         const body = await request.json();
         const { message, cart, transMode, note, user, dateStr } = body;
 
-        const CHANNEL_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN;
+        const CHANNEL_ACCESS_TOKEN = process.env.LINE_ACCESS_TOKEN || process.env.LINE_CHANNEL_ACCESS_TOKEN;
         const TARGET_ID = process.env.LINE_GROUP_ID || process.env.LINE_USER_ID;
 
         if (!CHANNEL_ACCESS_TOKEN || !TARGET_ID) {
             return NextResponse.json({ error: 'Config missing' }, { status: 500 });
         }
 
+        const branding = await getBrandingServer();
         let linePayload = {};
 
         // ==========================================
@@ -77,7 +81,7 @@ export async function POST(request) {
                         backgroundColor: themeColor,
                         paddingAll: "lg",
                         contents: [
-                            { type: "text", text: "StockPro UPDATE", color: "#ffffff", weight: "bold", size: "xs" },
+                            { type: "text", text: `${branding.appName} UPDATE`, color: "#ffffff", weight: "bold", size: "xs" },
                             { type: "text", text: headerTitle, color: "#ffffff", weight: "bold", size: "xl", margin: "sm" }
                         ]
                     },
@@ -139,7 +143,7 @@ export async function POST(request) {
                         contents: [
                             {
                                 type: "button",
-                                action: { type: "uri", label: "ตรวจสอบในระบบ", uri: "https://stock-jin-app.vercel.app/" },
+                                action: { type: "uri", label: "ตรวจสอบในระบบ", uri: `${appUrl(request) || "/"}/` },
                                 style: "primary",
                                 color: themeColor,
                                 height: "sm"

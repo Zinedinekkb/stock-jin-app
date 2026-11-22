@@ -4,8 +4,9 @@
 import React, { useState } from 'react';
 import { 
   ShieldAlert, Clock, CheckCircle2, RefreshCw, LogOut, 
-  MessageSquare, User, Mail, Sparkles, Loader2 
+  User, Mail, Sparkles, Loader2 
 } from 'lucide-react';
+import { useBranding } from './BrandingProvider';
 
 export default function ModernPendingApproval({
   user,
@@ -13,7 +14,7 @@ export default function ModernPendingApproval({
   onCheckStatus
 }) {
   const [isChecking, setIsChecking] = useState(false);
-  const [copiedLine, setCopiedLine] = useState(false);
+  const { appName } = useBranding();
 
   const handleRefresh = async () => {
     setIsChecking(true);
@@ -24,12 +25,6 @@ export default function ModernPendingApproval({
     }
   };
 
-  const handleCopyLine = () => {
-    navigator.clipboard.writeText('@stockpro_admin');
-    setCopiedLine(true);
-    setTimeout(() => setCopiedLine(false), 2000);
-  };
-
   const providerLabel = user?.provider?.includes('google')
     ? 'Google (Gmail)'
     : user?.provider?.includes('github')
@@ -37,13 +32,13 @@ export default function ModernPendingApproval({
     : 'อีเมล / รหัสผ่าน';
 
   return (
-    <div className="min-h-screen bg-[#f4f5fa] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-purple-100">
+    <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-brand-100">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 sm:p-10 text-center relative overflow-hidden">
         
         {/* Decorative Top Ambient */}
-        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-400 via-brand-500 to-purple-400" />
+        <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-amber-400 via-brand-500 to-brand-400" />
         <div className="absolute -top-16 -right-16 w-36 h-36 bg-amber-200/40 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-purple-200/40 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-36 h-36 bg-brand-200/40 rounded-full blur-2xl pointer-events-none" />
 
         {/* Pulsing Icon */}
         <div className="relative mx-auto w-20 h-20 mb-6 flex items-center justify-center">
@@ -85,7 +80,7 @@ export default function ModernPendingApproval({
               </p>
             </div>
             <div className="text-right shrink-0">
-              <span className="text-xs font-bold px-2 py-1 rounded-full bg-purple-100 text-brand-500 border border-purple-200">
+              <span className="text-xs font-bold px-2 py-1 rounded-full bg-brand-100 text-brand-500 border border-brand-200">
                 {providerLabel}
               </span>
             </div>
@@ -128,7 +123,7 @@ export default function ModernPendingApproval({
                 <Sparkles size={15} />
               </div>
               <div className="text-xs flex-1">
-                <p className="font-bold text-gray-700">3. เข้าใช้งานระบบ StockPro</p>
+                <p className="font-bold text-gray-700">3. เข้าใช้งานระบบ {appName}</p>
                 <p className="text-xs text-gray-400">ระบบจะนำเข้าสู่แดชบอร์ดอัตโนมัติทันทีที่ได้รับอนุมัติ</p>
               </div>
               <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded">รอดำเนินการ</span>
@@ -143,7 +138,7 @@ export default function ModernPendingApproval({
             type="button"
             disabled={isChecking}
             onClick={handleRefresh}
-            className="w-full py-3 px-4 rounded-2xl bg-brand-500 hover:bg-[#5446cc] active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md shadow-purple-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
+            className="w-full py-3 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 active:scale-[0.99] text-white text-xs sm:text-sm font-bold shadow-md shadow-brand-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
           >
             <RefreshCw size={16} className={isChecking ? 'animate-spin' : ''} />
             <span>{isChecking ? 'กำลังตรวจสอบ...' : 'ตรวจสอบสถานะอีกครั้ง'}</span>
@@ -153,17 +148,8 @@ export default function ModernPendingApproval({
           <div className="flex gap-2.5">
             <button
               type="button"
-              onClick={handleCopyLine}
-              className="flex-1 py-2.5 px-3 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            >
-              <MessageSquare size={14} className="text-success-600" />
-              <span>{copiedLine ? 'คัดลอก LINE แล้ว!' : 'แจ้งแอดมินทาง LINE'}</span>
-            </button>
-
-            <button
-              type="button"
               onClick={handleLogout}
-              className="flex-1 py-2.5 px-3 rounded-2xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              className="w-full py-2.5 px-3 rounded-2xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
             >
               <LogOut size={14} />
               <span>ออกจากระบบ</span>

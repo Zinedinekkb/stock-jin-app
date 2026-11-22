@@ -2,6 +2,18 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { DEFAULT_BRANDING } from '../../lib/branding/defaults';
+import { buildBrandPalette } from '../../lib/theme/palette';
+
+// Filename slug: lowercase, spaces -> '-', keeps Thai characters.
+function slug(name) {
+  return String(name || 'report').trim().toLowerCase().replace(/\s+/g, '-').replace(/[\/:*?"<>|]/g, '') || 'report';
+}
+
+function brandRgb(branding) {
+  return buildBrandPalette(branding.primaryColor)[500].split(' ').map(Number);
+}
+
 
 // =============================================
 //  HELPER FUNCTIONS
@@ -11,7 +23,7 @@ import 'jspdf-autotable';
  * รวบรวมข้อมูลจาก transactions ตาม filter
  * พร้อมจัดกลุ่มตามหมวดหมู่
  */
-function aggregateData(transactions, startDate, endDate, reportType, products, categories) {
+function aggregateData(transactions, startDate, endDate, reportType, products, categories, branding = DEFAULT_BRANDING) {
   const startOfDay = new Date(startDate).setHours(0, 0, 0, 0);
   const endOfDay = new Date(endDate).setHours(23, 59, 59, 999);
 
@@ -133,7 +145,7 @@ function getReportTypeLabel(type) {
 //  EXPORT TO EXCEL (.xlsx) — Executive Edition
 // =============================================
 
-export function exportToExcel(transactions, startDate, endDate, reportType, products, categories) {
+export function exportToExcel(transactions, startDate, endDate, reportType, products, categories, branding = DEFAULT_BRANDING) {
   const data = aggregateData(transactions, startDate, endDate, reportType, products, categories);
   const { filtered, itemSummary, categoryBreakdown, dailyBreakdown, billIn, billOut, skuIn, skuOut } = data;
 
@@ -150,7 +162,7 @@ export function exportToExcel(transactions, startDate, endDate, reportType, prod
 
   // ===== SHEET 1: Executive Dashboard =====
   const dashRows = [
-    ['📊 StockPro — EXECUTIVE DASHBOARD'],
+    [`📊 ${branding.appName} — EXECUTIVE DASHBOARD`],
     [''],
     ['ช่วงเวลา:', dateDisplay],
     ['ประเภทรายงาน:', getReportTypeLabel(reportType)],
@@ -312,7 +324,7 @@ export function exportToExcel(transactions, startDate, endDate, reportType, prod
   XLSX.utils.book_append_sheet(wb, ws4, 'รายการบิลทั้งหมด');
 
   // สร้างชื่อไฟล์
-  const fileName = `StockJin_Report_${startDate}_to_${endDate}.xlsx`;
+  const fileName = `${slug(branding.appName)}_Report_${startDate}_to_${endDate}.xlsx`;
   XLSX.writeFile(wb, fileName);
   return true;
 }
@@ -322,7 +334,7 @@ export function exportToExcel(transactions, startDate, endDate, reportType, prod
 //  EXPORT TO PDF — Executive Formal Report
 // =============================================
 
-export function exportToPDF(transactions, startDate, endDate, reportType, products, categories) {
+export function exportToPDF(transactions, startDate, endDate, reportType, products, categories, branding = DEFAULT_BRANDING) {
   const data = aggregateData(transactions, startDate, endDate, reportType, products, categories);
   const { filtered, itemSummary, categoryBreakdown, dailyBreakdown, billIn, billOut, skuIn, skuOut } = data;
 
@@ -350,15 +362,15 @@ export function exportToPDF(transactions, startDate, endDate, reportType, produc
     pdf.setFillColor(15, 23, 42); // #0f172a
     pdf.rect(0, 0, pageWidth, 42, 'F');
     
-    // แถบเส้นสี Indigo
-    pdf.setFillColor(99, 102, 241); // indigo-500
+    // แถบเส้นสีแบรนด์
+    pdf.setFillColor(...brandRgb(branding));
     pdf.rect(0, 42, pageWidth, 2, 'F');
 
     // ชื่อร้าน
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(22);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('StockPro System', pageWidth / 2, 16, { align: 'center' });
+    pdf.text(branding.appName, pageWidth / 2, 16, { align: 'center' });
 
     // ชื่อรายงาน
     pdf.setFontSize(12);
@@ -626,7 +638,7 @@ export function exportToPDF(transactions, startDate, endDate, reportType, produc
     didParseCell: function (hookData) {
       if (hookData.row.index === dailyBody.length - 1 && hookData.section === 'body') {
         hookData.cell.styles.fontStyle = 'bold';
-        hookData.cell.styles.fillColor = [191, 219, 254]; // blue-200
+        hookData.cell.styles.fillColor = [191, 219, 254]; // light blue (net row)
       }
       // Net color
       if (hookData.column.index === 5 && hookData.section === 'body') {
@@ -702,12 +714,12 @@ export function exportToPDF(transactions, startDate, endDate, reportType, produc
     pdf.setTextColor(180, 220, 180);
     pdf.setFont('helvetica', 'normal');
 
-    pdf.text(`Generated: ${now}  |  Stock Jin System  |  Confidential — For Internal Use Only`, margin, pageH - 8);
+    pdf.text(`Generated: ${now}  |  ${branding.appName}  |  Confidential — For Internal Use Only`, margin, pageH - 8);
     pdf.text(`Page ${i} / ${totalPages}`, pageWidth - margin, pageH - 8, { align: 'right' });
   }
 
   // บันทึกไฟล์
-  const fileName = `StockJin_Report_${startDate}_to_${endDate}.pdf`;
+  const fileName = `${slug(branding.appName)}_Report_${startDate}_to_${endDate}.pdf`;
   pdf.save(fileName);
   return true;
 }

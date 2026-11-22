@@ -2,36 +2,42 @@
 // Service worker สำหรับรับ Push จาก FCM (ตอนแอปปิดหรืออยู่เบื้องหลัง)
 // เสิร์ฟที่ /firebase-messaging-sw.js ด้วย config สาธารณะของ Firebase (ไม่ใช่ความลับ)
 
+import { getBrandingServer } from '../../lib/branding/server.js';
+
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 // เวอร์ชันต้องตรงกับ firebase ใน package.json (ปัจจุบัน 12.x)
 const FIREBASE_SDK_VERSION = '12.6.0';
 
-function buildServiceWorker(firebaseConfig) {
+function slug(s) {
+  return String(s).toLowerCase().trim().replace(/\s+/g, '-');
+}
+
+function buildServiceWorker(firebaseConfig, branding) {
   const lines = [
-    "/* StockPro FCM service worker (generated) */",
+    "/* FCM service worker (generated) */",
     "importScripts('https://www.gstatic.com/firebasejs/" + FIREBASE_SDK_VERSION + "/firebase-app-compat.js');",
     "importScripts('https://www.gstatic.com/firebasejs/" + FIREBASE_SDK_VERSION + "/firebase-messaging-compat.js');",
     "",
     "firebase.initializeApp(" + JSON.stringify(firebaseConfig) + ");",
     "var messaging = firebase.messaging();",
     "",
-    "var ICON = '/icons/icon-192.png';",
+    "var ICON = '/api/brand/icon/192';",
     "",
     "// แสดงการแจ้งเตือนเมื่อแอปอยู่เบื้องหลัง/ปิด",
     "// tag ซ้ำกันจะแทนที่การแจ้งเตือนเดิม (กันการแจ้งเตือนซ้ำเมื่อ FCM แสดงให้อัตโนมัติ)",
     "messaging.onBackgroundMessage(function (payload) {",
     "  var data = (payload && payload.data) || {};",
     "  var notif = (payload && payload.notification) || {};",
-    "  var title = data.title || notif.title || 'StockPro';",
+    "  var title = data.title || notif.title || " + JSON.stringify(branding.appName) + ";",
     "  var body = data.body || notif.body || '';",
     "  var url = data.url || '/';",
     "  return self.registration.showNotification(title, {",
     "    body: body,",
     "    icon: data.icon || ICON,",
     "    badge: ICON,",
-    "    tag: 'stockpro-' + url + '-' + title,",
+    "    tag: " + JSON.stringify(slug(branding.appName) + '-') + " + url + '-' + title,",
     "    data: { url: url }",
     "  });",
     "});",
@@ -64,6 +70,7 @@ function buildServiceWorker(firebaseConfig) {
 }
 
 export async function GET() {
+  const branding = await getBrandingServer();
   const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -74,7 +81,7 @@ export async function GET() {
     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
   };
 
-  return new Response(buildServiceWorker(firebaseConfig), {
+  return new Response(buildServiceWorker(firebaseConfig, branding), {
     status: 200,
     headers: {
       'Content-Type': 'application/javascript; charset=utf-8',

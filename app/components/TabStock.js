@@ -21,11 +21,12 @@ import {
   arrayMove
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useBranding } from './BrandingProvider';
 
 const AVAILABLE_COLORS = [
     'bg-green-600', 'bg-green-800', 'bg-yellow-500', 'bg-yellow-600', 
     'bg-red-600', 'bg-orange-600', 'bg-gray-500', 'bg-gray-700',
-    'bg-blue-600', 'bg-blue-800', 'bg-indigo-600', 'bg-purple-700',
+    'bg-brand-600', 'bg-brand-800', 'bg-brand-600', 'bg-brand-700',
 ];
 
 // Stock level for colouring: out (≤0, including negative), low (≤ minStock), ok
@@ -158,6 +159,7 @@ export default function TabStock({
   // Search is shared with the desktop header; falls back to local state
   searchQuery: externalQuery, setSearchQuery: setExternalQuery
 }) {
+  const { appName } = useBranding();
   const canEdit = hasPermission(user, 'STOCK_EDIT');
   const canSendLine = hasPermission(user, 'SEND_LINE_REPORT');
   const [showColorPicker, setShowColorPicker] = useState(false);
@@ -266,7 +268,7 @@ export default function TabStock({
         report += `\n⚠️ อื่นๆ (ไม่ระบุหมวด)\n`;
         noCatProducts.forEach(p => { report += `- ${p.name} : ${p.stock} ${p.unit}\n`; });
     }
-    report += `\n--------------------------------\nเช็คยอดโดย: Stock Jin App`;
+    report += `\n--------------------------------\nเช็คยอดโดย: ${appName}`;
     copyToClipboard(report);
   };
 
@@ -300,7 +302,7 @@ export default function TabStock({
   return (
       <div className="space-y-4 pb-24 animate-fade-in-slide relative">
         {/* Toolbar: search + actions, sticky so it is reachable while scrolling */}
-        <div className="sticky top-0 z-20 -mx-1 px-1 pt-1 pb-2 space-y-2.5 bg-[#f4f5fa]/95 backdrop-blur-md rounded-b-card">
+        <div className="sticky top-0 z-20 -mx-1 px-1 pt-1 pb-2 space-y-2.5 bg-[var(--app-bg)]/95 backdrop-blur-md rounded-b-card">
           <div className="flex gap-2">
             <label className="relative flex-1">
               <span className="sr-only">ค้นหาสินค้า</span>

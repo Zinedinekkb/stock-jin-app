@@ -3,7 +3,7 @@ import { db } from '@/lib/firebase';
 import { uploadAndSaveTransactionDocument, generateDocNumber } from '@/app/utils/transactionPdfGenerator';
 import { sendPushEvent } from '@/lib/pushClient';
 
-export const submitTransactionService = async ({ cart, transMode, note, user }) => {
+export const submitTransactionService = async ({ cart, transMode, note, user, branding }) => {
     const now = new Date();
     const dateStr = now.toLocaleString('th-TH');
 
@@ -31,7 +31,8 @@ export const submitTransactionService = async ({ cart, transMode, note, user }) 
             docResult = await uploadAndSaveTransactionDocument({
                 transaction: { id: docRef.id, ...newTx, docNumber },
                 user: user,
-                isVerified: false
+                isVerified: false,
+                options: { branding }
             });
         } catch (pdfErr) {
             console.error("Auto PDF Generation Error (Non-blocking):", pdfErr);

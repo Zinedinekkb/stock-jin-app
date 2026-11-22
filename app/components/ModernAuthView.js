@@ -7,6 +7,7 @@ import {
   ShieldCheck, ArrowRight, Loader2, CheckCircle2, Clock, AlertCircle
 } from 'lucide-react';
 import InstallAppButton from './InstallAppButton';
+import { useBranding } from './BrandingProvider';
 
 export default function ModernAuthView({
   loginForm,
@@ -23,6 +24,7 @@ export default function ModernAuthView({
   handleGithubSignIn,
   socialLoading
 }) {
+  const { appName, logoUrl, tagline } = useBranding();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -48,28 +50,27 @@ export default function ModernAuthView({
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f5fa] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-purple-100">
+    <div className="min-h-screen bg-[var(--app-bg)] flex items-center justify-center p-4 md:p-8 font-sans selection:bg-brand-100">
       <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col lg:flex-row min-h-[640px]">
         
         {/* ========================================= */}
         {/* LEFT COLUMN: HERO BRANDING (Desktop only) */}
         {/* ========================================= */}
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-600 via-brand-500 to-[#8072f5] p-12 text-white flex-col justify-between relative overflow-hidden">
+        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-600 via-brand-500 to-brand-400 p-12 text-white flex-col justify-between relative overflow-hidden">
           {/* Ambient Glows */}
           <div className="absolute -top-24 -left-24 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-amber-400/20 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-1/2 left-1/3 w-60 h-60 bg-purple-300/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute top-1/2 left-1/3 w-60 h-60 bg-brand-300/20 rounded-full blur-2xl pointer-events-none" />
 
           {/* Top Logo */}
           <div className="relative z-10">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 shadow-lg">
-                <Package size={26} className="text-white" strokeWidth={2.2} />
+                {logoUrl ? <img src={logoUrl} alt={appName} className="w-full h-full object-contain rounded-2xl" /> : <Package size={26} className="text-white" strokeWidth={2.2} />}
               </div>
               <div>
-                <span className="text-2xl font-black tracking-wide text-white">StockPro</span>
-                <span className="ml-2 text-xs font-bold uppercase tracking-wider px-2 py-0.5 bg-white/20 rounded-full text-white/90">v2.5</span>
-                <p className="text-xs text-purple-200 mt-0.5">Smart Inventory & Workforce</p>
+                <span className="text-2xl font-black tracking-wide text-white">{appName}</span>
+                <p className="text-xs text-brand-200 mt-0.5">{tagline}</p>
               </div>
             </div>
           </div>
@@ -87,7 +88,7 @@ export default function ModernAuthView({
               ได้อย่างไร้รอยต่อ
             </h2>
 
-            <p className="text-sm text-purple-100/80 leading-relaxed max-w-md">
+            <p className="text-sm text-brand-100/80 leading-relaxed max-w-md">
               ออกแบบเพื่อความคล่องตัวสูงสุด รองรับทั้งคอมพิวเตอร์และมือถือ พร้อมการแจ้งเตือน LINE แบบเรียลไทม์ และระบบสิทธิ์อนุมัติที่ปลอดภัย
             </p>
 
@@ -99,7 +100,7 @@ export default function ModernAuthView({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-white">ระบบจัดการสต็อกและ POS สองคอลัมน์</p>
-                  <p className="text-xs text-purple-200">เบิก/รับสะดวกรวดเร็ว ตรวจนับแม่นยำ</p>
+                  <p className="text-xs text-brand-200">เบิก/รับสะดวกรวดเร็ว ตรวจนับแม่นยำ</p>
                 </div>
               </div>
 
@@ -109,15 +110,15 @@ export default function ModernAuthView({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-white">ระบบสิทธิ์และการอนุมัติขั้นสูง</p>
-                  <p className="text-xs text-purple-200">ปลอดภัย ผู้ใช้ใหม่รอการอนุมัติก่อนเริ่มงาน</p>
+                  <p className="text-xs text-brand-200">ปลอดภัย ผู้ใช้ใหม่รอการอนุมัติก่อนเริ่มงาน</p>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Bottom Footer Note */}
-          <div className="relative z-10 text-xs text-purple-200/70 flex items-center justify-between border-t border-white/10 pt-4">
-            <span>© 2026 StockPro Inc.</span>
+          <div className="relative z-10 text-xs text-brand-200/70 flex items-center justify-between border-t border-white/10 pt-4">
+            <span>© {appName}</span>
             <span>Fast, Reliable & Modern</span>
           </div>
         </div>
@@ -130,14 +131,13 @@ export default function ModernAuthView({
           {/* Mobile Brand Header (< lg) */}
           <div className="lg:hidden flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
             <div className="w-10 h-10 bg-brand-500 rounded-2xl flex items-center justify-center text-white shadow-md">
-              <Package size={22} />
+              {logoUrl ? <img src={logoUrl} alt={appName} className="w-full h-full object-contain rounded-2xl" /> : <Package size={22} />}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black text-brand-500">StockPro</h1>
-                <span className="text-xs font-bold px-2 py-0.5 bg-purple-100 text-brand-500 rounded-full">v2.5</span>
+                <h1 className="text-xl font-black text-brand-500">{appName}</h1>
               </div>
-              <p className="text-xs text-gray-400">Inventory & Workforce Platform</p>
+              <p className="text-xs text-gray-400">{tagline}</p>
             </div>
           </div>
 
@@ -149,7 +149,7 @@ export default function ModernAuthView({
             <p className="text-xs sm:text-sm text-gray-500 mt-1">
               {isRegisterMode 
                 ? 'กรอกข้อมูลหรือเชื่อมต่อผ่านโซเชียลเพื่อขอสิทธิ์ใช้งาน' 
-                : 'เข้าสู่ระบบจัดการสต็อกและบุคลากร StockPro'}
+                : `เข้าสู่ระบบ ${appName}`}
             </p>
           </div>
 
@@ -263,7 +263,7 @@ export default function ModernAuthView({
                     placeholder="เช่น สมชาย ใจดี"
                     value={registerForm.name}
                     onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
+                    className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-xs sm:text-sm outline-none transition-all"
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1 pl-1">
@@ -282,7 +282,7 @@ export default function ModernAuthView({
                 <input
                   type="email"
                   required
-                  placeholder="เช่น user@stockpro.com"
+                  placeholder="เช่น you@example.com"
                   value={isRegisterMode ? registerForm.email : loginForm.username}
                   onChange={(e) => {
                     if (isRegisterMode) {
@@ -291,7 +291,7 @@ export default function ModernAuthView({
                       setLoginForm({ ...loginForm, username: e.target.value });
                     }
                   }}
-                  className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
+                  className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-xs sm:text-sm outline-none transition-all"
                 />
               </div>
             </div>
@@ -317,7 +317,7 @@ export default function ModernAuthView({
                       setLoginForm({ ...loginForm, password: e.target.value });
                     }
                   }}
-                  className="w-full pl-10 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
+                  className="w-full pl-10 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-xs sm:text-sm outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -343,7 +343,7 @@ export default function ModernAuthView({
                     placeholder="••••••••"
                     value={registerForm.confirmPassword}
                     onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
-                    className="w-full pl-10 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-purple-500/10 text-xs sm:text-sm outline-none transition-all"
+                    className="w-full pl-10 pr-11 py-3 rounded-2xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 text-xs sm:text-sm outline-none transition-all"
                   />
                   <button
                     type="button"
@@ -368,7 +368,7 @@ export default function ModernAuthView({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-brand-500 to-[#7b6ef6] hover:from-[#5749cc] hover:to-[#6f62ea] active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-purple-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
+              className="w-full mt-2 py-3.5 px-4 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-400 hover:from-brand-600 hover:to-brand-500 active:scale-[0.98] text-white text-sm font-bold shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition-all disabled:opacity-60 cursor-pointer"
             >
               {isSubmitting ? (
                 <>

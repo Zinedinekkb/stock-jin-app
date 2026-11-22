@@ -9,11 +9,12 @@ import {
   buildDailyExtras, thaiDateLabel,
 } from '@/lib/reportData';
 import { renderDailyReportHtml } from '@/lib/reportHtml';
+import { appUrl } from '../../../../lib/integrations.js';
+import { getBrandingServer } from '../../../../lib/branding/server.js';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://stock-jin-app.vercel.app';
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function getRecipients() {
@@ -66,9 +67,10 @@ export async function GET(request) {
     const reportRef = db.collection('daily_reports').doc(dateKey);
     const existing = await reportRef.get();
     const viewToken = (existing.exists && existing.data()?.viewToken) || crypto.randomBytes(16).toString('hex');
-    const viewUrl = `${APP_URL}/api/reports/${dateKey}?t=${viewToken}`;
+    const viewUrl = `${appUrl(request)}/api/reports/${dateKey}?t=${viewToken}`;
 
-    const html = renderDailyReportHtml({ dateKey, summary, lowStock, extras, viewUrl });
+    const branding = await getBrandingServer();
+    const html = renderDailyReportHtml({ dateKey, summary, lowStock, extras, viewUrl, branding });
     const dateLabel = thaiDateLabel(dateKey);
     const note = `เสร็จ ${summary.completedCount} รายการ · รอดำเนินการ ${summary.pendingCount} · สินค้าใกล้หมด ${lowStock.length}`;
 
@@ -124,7 +126,7 @@ export async function GET(request) {
       console.warn('[daily-report]', emailSkipped);
     } else {
       await mailer.transporter.sendMail({
-        from: `"StockPro System" <${mailer.from}>`,
+        from: `"${branding.appName}" <${mailer.from}>`,
         to: recipients.join(', '),
         subject: `📊 รายงานประจำวัน ${dateLabel}`,
         html,

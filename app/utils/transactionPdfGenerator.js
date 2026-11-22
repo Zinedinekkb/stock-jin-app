@@ -3,6 +3,7 @@
 
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { DEFAULT_BRANDING } from '../../lib/branding/defaults';
 import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -44,12 +45,15 @@ export function generateDocNumber(type, id, timestamp) {
  */
 export function buildTransactionHtml(transaction, options = {}) {
   const {
-    organizationName = 'บริษัท สต็อกโปร ซิสเต็มส์ จำกัด (มหาชน)',
+    branding = DEFAULT_BRANDING,
+    organizationName = branding.shopName || branding.appName,
     warehouseName = 'คลังสินค้าและพัสดุส่วนกลาง (Main Warehouse Hub)',
     customApproverName = '',
     customApproverPosition = '',
   } = options;
 
+  const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const safeAppUpper = esc(branding.appName).toUpperCase();
   const isModeIn = transaction.type === 'IN';
   const isCompleted = transaction.status === 'completed';
   const docNumber = transaction.docNumber || generateDocNumber(transaction.type, transaction.id, transaction.timestamp);
@@ -142,10 +146,10 @@ export function buildTransactionHtml(transaction, options = {}) {
           </div>
           <div>
             <div style="font-size: 16px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px;">
-              ${organizationName}
+              ${esc(organizationName)}
             </div>
             <div style="font-size: 12px; color: #475569; margin-top: 2px; font-weight: 500;">
-              STOCKPRO INVENTORY MANAGEMENT SYSTEM
+              ${safeAppUpper}
             </div>
             <div style="font-size: 11px; color: #64748b; margin-top: 1px;">
               ${warehouseName} · เอกสารคลังพัสดุทางการ
@@ -378,7 +382,7 @@ export function buildTransactionHtml(transaction, options = {}) {
           box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
           pointer-events: none;
         ">
-          <div>★ STOCKPRO VERIFIED ★</div>
+          <div>★ ${safeAppUpper} VERIFIED ★</div>
           <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.5px; margin-top: 2px;">
             อนุมัติและปรับยอดสต็อกแล้ว
           </div>
@@ -403,7 +407,7 @@ export function buildTransactionHtml(transaction, options = {}) {
         color: #94a3b8;
       ">
         <div>
-          เอกสารนี้สร้างขึ้นโดยระบบสารสนเทศอัตโนมัติ StockPro Inventory System (ใบสำคัญทางการ)
+          เอกสารนี้สร้างขึ้นโดยระบบสารสนเทศอัตโนมัติ ${esc(branding.appName)} (ใบสำคัญทางการ)
         </div>
         <div>
           System Ref ID: ${transaction.id || '-'} · ${docNumber}

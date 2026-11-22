@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Share, PlusSquare, CheckCircle2, X } from 'lucide-react';
+import { useBranding } from './BrandingProvider';
 
 // Platform is read from the browser only, so the server render stays empty and no hydration mismatch happens.
 function noopSubscribe() {
@@ -38,6 +39,7 @@ const IOS_STEPS = [
 ];
 
 export default function InstallAppButton({ variant = 'full', className = '' }) {
+  const { appName } = useBranding();
   const platform = useSyncExternalStore(noopSubscribe, detectPlatform, () => SERVER_SNAPSHOT);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [installed, setInstalled] = useState(false);
@@ -96,7 +98,7 @@ export default function InstallAppButton({ variant = 'full', className = '' }) {
         type="button"
         onClick={onClick}
         className={`${baseClass} ${variantClass[variant] || variantClass.full}`}
-        aria-label="ติดตั้งแอป StockPro ลงหน้าจอโฮม"
+        aria-label={`ติดตั้งแอป ${appName} ลงหน้าจอโฮม`}
       >
         <span aria-hidden="true">📲</span>
         <span>ติดตั้งแอป</span>
@@ -116,7 +118,7 @@ export default function InstallAppButton({ variant = 'full', className = '' }) {
           >
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <h3 id="install-ios-title" className="text-base font-black text-ink">ติดตั้ง StockPro บน iPhone / iPad</h3>
+                <h3 id="install-ios-title" className="text-base font-black text-ink">ติดตั้ง {appName} บน iPhone / iPad</h3>
                 <p className="text-xs text-ink-muted mt-1">ทำตาม 3 ขั้นตอนนี้ใน Safari</p>
               </div>
               <button
@@ -145,7 +147,7 @@ export default function InstallAppButton({ variant = 'full', className = '' }) {
               </p>
             )}
             <p className="mt-3 text-xs text-ink-subtle leading-relaxed">
-              หลังติดตั้งแล้ว ให้เปิดจากไอคอน StockPro บนหน้าจอโฮม การแจ้งเตือนบน iPhone / iPad ต้องใช้ iOS 16.4 ขึ้นไป
+              หลังติดตั้งแล้ว ให้เปิดจากไอคอน {appName} บนหน้าจอโฮม การแจ้งเตือนบน iPhone / iPad ต้องใช้ iOS 16.4 ขึ้นไป
             </p>
           </div>
         </div>
