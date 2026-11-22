@@ -1,7 +1,20 @@
 // app/utils/permissions.js
 // ============================================
 // ระบบสิทธิ์การเข้าถึง (Role-Based Access Control)
+// สิทธิ์ที่ขึ้นกับตำแหน่งงานอ่านจาก app/config/accessMatrix.js (ACCESS_MATRIX)
 // ============================================
+import { canAccess } from '../config/accessMatrix.js';
+
+// PERMISSIONS key -> feature ใน ACCESS_MATRIX (ตัดสินด้วยตำแหน่ง ไม่ใช่แค่ role)
+const MATRIX_FEATURES = {
+  STOCK_VIEW: 'stockView',
+  CREATE_TX: 'txCreate',
+  VIEW_TX_HISTORY: 'txHistory',
+  VIEW_NOTIFICATIONS: 'notifications',
+  VIEW_DASHBOARD: 'dashboard',
+  VIEW_HR: 'hr',
+  VIEW_DOCUMENTS: 'documents',
+};
 
 export const PERMISSIONS = {
   // คลังสินค้า
@@ -13,6 +26,7 @@ export const PERMISSIONS = {
   // รายการ Transaction
   CREATE_TX: ['admin', 'staff'],
   VERIFY_TX: ['admin'],
+  VIEW_TX_HISTORY: ['admin', 'staff'],
   VOID_TX: ['admin'],
   EDIT_COMPLETED_TX: ['admin'],
   DELETE_HISTORY: ['admin'],
@@ -49,6 +63,7 @@ export const PERMISSIONS = {
  */
 export const hasPermission = (user, permission) => {
   if (!user || !user.role) return false;
+  if (MATRIX_FEATURES[permission]) return canAccess(user, MATRIX_FEATURES[permission]);
   return PERMISSIONS[permission]?.includes(user.role) || false;
 };
 
@@ -61,9 +76,6 @@ export const isAdmin = (user) => {
   return user?.role === 'admin';
 };
 
-// คีย์เวิร์ดตรงกับ POSITION_CLUSTERS.warehouse ใน taskService.js (inline ไว้เพื่อหลีกเลี่ยง circular import)
-const WAREHOUSE_POSITION_KEYWORDS = ['สต็อก', 'คลัง', 'stock', 'warehouse', 'พัสดุ', 'คุมสต็อก'];
-
 /**
  * ผู้ที่กรอก/ยืนยันยอดจริงได้: Admin หรือตำแหน่งสต็อก/คลัง
  * @param {object} user
@@ -72,8 +84,7 @@ const WAREHOUSE_POSITION_KEYWORDS = ['สต็อก', 'คลัง', 'stock',
 export const canVerifyStock = (user) => {
   if (!user) return false;
   if (user.role === 'admin') return true;
-  const userPos = (user.position || '').toLowerCase();
-  return WAREHOUSE_POSITION_KEYWORDS.some(k => userPos.includes(k));
+  return canAccess(user, 'txVerify');
 };
 
 /**

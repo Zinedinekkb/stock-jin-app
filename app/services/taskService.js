@@ -8,6 +8,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase.js';
 import { sendPushEvent } from '../../lib/pushClient.js';
+import { POSITION_CLUSTERS, checkIsAdmin, getUserCluster } from '../config/accessMatrix.js';
 
 // ============================================
 // แม่แบบงานประจำวันเริ่มต้นตามตำแหน่งงาน (Default Routine Checklist)
@@ -393,45 +394,8 @@ export const getTodayKey = () => {
 // ============================================
 // คลัสเตอร์ตำแหน่งงานและแท็บแผนก
 // ============================================
-export const POSITION_CLUSTERS = {
-  kitchen: ['เชฟ', 'แม่ครัว', 'ครัว', 'ผู้ช่วยเชฟ', 'cook', 'chef', 'kitchen'],
-  warehouse: ['สต็อก', 'คลัง', 'stock', 'warehouse', 'พัสดุ', 'คุมสต็อก'],
-  finance: ['แคชเชียร์', 'การเงิน', 'บัญชี', 'cashier', 'finance', 'accounting'],
-  service: ['เสิร์ฟ', 'หน้าร้าน', 'บริการ', 'service', 'waiter', 'waitress', 'บาริสต้า', 'ต้อนรับ'],
-  shipping: ['ส่ง', 'จัดส่ง', 'โลจิสติกส์', 'ไรเดอร์', 'delivery', 'logistics', 'ขนส่ง', 'พัสดุ'],
-  management: ['ผู้จัดการ', 'บริหาร', 'admin', 'ผู้ดูแลระบบ', 'manager', 'owner', 'เจ้าของ', 'หัวหน้า'],
-};
-
-export const checkIsAdmin = (user) => {
-  if (!user) return false;
-  const userRole = (user.role || '').toLowerCase();
-  const userPos = (user.position || '').toLowerCase();
-  return userRole === 'admin' || 
-    userPos.includes('admin') || 
-    userPos.includes('ผู้ดูแลระบบ') || 
-    userPos.includes('ผู้จัดการ') || 
-    userPos.includes('เจ้าของ') || 
-    userPos.includes('owner');
-};
-
-// Helper: ดึงคีย์คลัสเตอร์ของตำแหน่งงานผู้ใช้
-export const getUserCluster = (user) => {
-  if (!user) return null;
-  const userRole = (user.role || '').toLowerCase();
-  const userPos = (user.position || '').toLowerCase();
-
-  if (checkIsAdmin(user)) {
-    return 'management';
-  }
-
-  for (const [clusterKey, keywords] of Object.entries(POSITION_CLUSTERS)) {
-    if (keywords.some(k => userPos.includes(k))) {
-      return clusterKey;
-    }
-  }
-
-  return null;
-};
+// POSITION_CLUSTERS / checkIsAdmin / getUserCluster ย้ายไป app/config/accessMatrix.js (pure, ทดสอบได้) — re-export เพื่อความเข้ากันได้
+export { POSITION_CLUSTERS, checkIsAdmin, getUserCluster };
 
 // รายการแท็บตำแหน่งงานทั้งหมด
 export const POSITION_TABS = [

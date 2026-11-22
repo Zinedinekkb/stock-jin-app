@@ -19,6 +19,7 @@ import LeaveDocumentModal from './LeaveDocumentModal';
 import { blobToDataUrl } from '@/app/utils/cameraUtils';
 import { leaveToCalendar } from '@/lib/calendarLink';
 import { useBranding } from './BrandingProvider';
+import { filterVisibleLeaves } from '../config/accessMatrix';
 import { sendPushEvent } from '@/lib/pushClient';
 
 const LEAVE_TYPES = [
@@ -129,7 +130,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
             const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
             return tb - ta;
           });
-        setLeaves(records);
+        setLeaves(filterVisibleLeaves(user, records));
       },
       (error) => {
         console.error('Leaves listener error:', error);
@@ -158,7 +159,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
             const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
             return tb - ta;
           });
-        setTeamLeaves(records);
+        setTeamLeaves(filterVisibleLeaves(user, records));
       },
       (error) => {
         console.error('Team leaves listener error:', error);
@@ -271,6 +272,7 @@ export default function TabHR({ user, initialView = 'my', initialSubTab = 'atten
     try {
       const newLeave = {
         userId: user.uid,
+        createdByUid: user.uid,
         userName: user.name,
         userPosition: user.position || 'เจ้าหน้าที่ปฏิบัติการ',
         department: user.department || 'ฝ่ายคลังสินค้าและการจัดส่ง',

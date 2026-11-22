@@ -1,6 +1,6 @@
 // app/components/TabDocuments.js
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   FolderOpen, Plus, Search, ExternalLink, Trash2, FileText,
   Image, File, Link2, X, ChevronDown, Download, Copy, Star, Eye
@@ -8,6 +8,7 @@ import {
 import { db } from '@/lib/firebase';
 import BusinessDocModal from './BusinessDocModal';
 import { BUSINESS_DOC_TYPES } from '../utils/businessDocTemplates';
+import { filterVisibleDocuments } from '../config/accessMatrix';
 import {
   collection, addDoc, onSnapshot, deleteDoc, doc,
   query, orderBy, serverTimestamp, updateDoc
@@ -79,6 +80,9 @@ export default function TabDocuments({ user }) {
     return () => unsub();
   }, []);
 
+  // Position-based scope: admin sees everything; others only their own (finance/warehouse also see transaction docs)
+  const visibleDocs = useMemo(() => filterVisibleDocuments(user, docs), [user, docs]);
+
   const handleAdd = async () => {
     if (!formData.name.trim()) return showNote('กรุณาระบุชื่อเอกสาร');
     setIsSubmitting(true);
@@ -86,6 +90,7 @@ export default function TabDocuments({ user }) {
       await addDoc(collection(db, 'documents'), {
         ...formData,
         createdBy: user?.name || 'Unknown',
+        createdByUid: user?.uid || '',
         createdAt: serverTimestamp(),
         starred: false,
       });
@@ -149,7 +154,7 @@ export default function TabDocuments({ user }) {
   };
 
   // Filter
-  let filtered = docs;
+  let filtered = visibleDocs;
   if (activeCategory !== 'all') filtered = filtered.filter(d => d.category === activeCategory);
   if (starredOnly) filtered = filtered.filter(d => d.starred);
   if (searchQuery.trim()) {

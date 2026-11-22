@@ -296,6 +296,8 @@ export default function LeaveDocumentModal({
         note: `ใบขอลา (${leaveTypeLabel}) - ${leave.reason} [สถานะ: ${isApproved ? 'อนุมัติแล้ว' : isRejected ? 'ปฏิเสธ' : 'รอพิจารณา'}]`,
         createdAt: serverTimestamp(),
         createdBy: currentUser?.name || leave.userName || 'ระบบ',
+        // เจ้าของเอกสารคือผู้ยื่นใบลา (เพื่อให้เจ้าของเห็นแม้แอดมินเป็นคนกดบันทึก)
+        createdByUid: leave.createdByUid || leave.userId || currentUser?.uid || '',
         leaveId: leave.id || '',
         fileSizeKb: Math.round(pdfBlob.size / 1024),
         starred: false,

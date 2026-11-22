@@ -123,3 +123,15 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://<โดเมน>/api/cron/
 - คอลเลกชัน `settings` เอกสาร `setup` ฟิลด์ `adminUid` (string) = UID ของแอดมินคนปัจจุบัน
 
 Upgrading an existing install: before deploying the new rules, create `settings/setup` with `adminUid` set to your current admin's UID. Otherwise the next new sign-up becomes admin.
+
+## Demo deployment (โหมดทดลอง)
+
+ใช้เปิดให้คนทั่วไปลองระบบโดยไม่ต้องล็อกอินและไม่มี backend ข้อมูลทั้งหมดอยู่ในหน่วยความจำของเบราว์เซอร์ และรีเซ็ตทุกครั้งที่รีเฟรชหน้า
+
+1. สร้างโปรเจกต์ Vercel ใหม่ **อีกอัน** จาก repo เดียวกัน (แยกจากโปรเจกต์จริง)
+2. ตั้ง Environment Variable เดียว: `NEXT_PUBLIC_DEMO_MODE=true` (ไม่ต้องใส่ค่า Firebase, LINE, อีเมล หรือ Sentry)
+3. Deploy ตามปกติ (`npm run build`) ค่า `NEXT_PUBLIC_*` ฝังตอน build ต้อง Redeploy ทุกครั้งที่เปลี่ยน
+
+ทดลองในเครื่อง: `npm run dev:demo` หรือ `npm run build:demo`
+
+ในโหมดนี้ระบบจะสลับ `firebase/firestore`, `firebase/auth`, `firebase/storage` เป็นตัวจำลองใน `lib/demo/` อัตโนมัติ เข้าสู่ระบบเป็นแอดมินเดโมทันที และมีแถบ "โหมดทดลอง" แสดงอยู่ ฟีเจอร์ที่ต้องใช้เซิร์ฟเวอร์ (ส่ง LINE, อีเมล, Push) จะไม่ทำงาน

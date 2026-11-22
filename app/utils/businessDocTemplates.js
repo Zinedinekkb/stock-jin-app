@@ -270,6 +270,7 @@ export async function saveBusinessDocument(typeKey, data, user) {
     note: `${t.title} เลขที่ ${data.docNumber} · ${t.partyLabel} ${data.partyName || '-'} · ยอดรวม ${money(total)} บาท`,
     amount: total,
     createdBy: user?.name || 'พนักงาน',
+    createdByUid: user?.uid || '',
     starred: false,
     fileSizeKb: Math.round(blob.size / 1024),
     createdAt: serverTimestamp(),

@@ -29,3 +29,19 @@ test('displayShopName', () => {
   assert.equal(displayShopName({ ...DEFAULT_BRANDING, shopName: '' }), 'StockPro');
   assert.equal(displayShopName({ ...DEFAULT_BRANDING, shopName: 'ร้านA' }), 'ร้านA');
 });
+
+test('data: logo URL rejected unless demo mode', () => {
+  const dataUrl = 'data:image/png;base64,iVBORw0KGgo=';
+  const prev = process.env.NEXT_PUBLIC_DEMO_MODE;
+  try {
+    delete process.env.NEXT_PUBLIC_DEMO_MODE;
+    assert.equal(sanitizeBranding({ logoUrl: dataUrl }).logoUrl, '');
+    process.env.NEXT_PUBLIC_DEMO_MODE = 'true';
+    assert.equal(sanitizeBranding({ logoUrl: dataUrl }).logoUrl, dataUrl);
+    assert.equal(sanitizeBranding({ logoUrl: 'data:image/svg+xml;base64,PHN2Zz4=' }).logoUrl, '');
+    assert.equal(sanitizeBranding({ logoUrl: 'data:text/html;base64,PGI+' }).logoUrl, '');
+    assert.equal(sanitizeBranding({ logoUrl: 'javascript:alert(1)' }).logoUrl, '');
+  } finally {
+    if (prev === undefined) delete process.env.NEXT_PUBLIC_DEMO_MODE; else process.env.NEXT_PUBLIC_DEMO_MODE = prev;
+  }
+});
