@@ -76,7 +76,7 @@ export default function DemoBanner() {
   return (
     <>
     {surveyOpen && <DemoSurvey roleTried={visited} onClose={() => setSurveyOpen(false)} />}
-    <div className="fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-4 z-[60] max-w-[calc(100vw-1.5rem)] flex flex-col items-center gap-2">
+    <div className="demo-banner fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-4 z-[60] max-w-[calc(100vw-1.5rem)] flex flex-col items-center gap-2">
       {hintOpen && (
         <div role="note" className="w-[min(34rem,calc(100vw-1.5rem))] rounded-2xl bg-white text-ink shadow-lg border border-brand-200 p-3 text-xs leading-relaxed">
           <p className="font-bold mb-1.5">ตอนนี้ดูในฐานะ: {ROLES[role]?.label}</p>
