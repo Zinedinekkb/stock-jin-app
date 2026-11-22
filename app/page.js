@@ -24,6 +24,7 @@ import TopHeader from './components/TopHeader';
 import SmartDashboardView from './components/SmartDashboardView';
 import SmartRightPanel from './components/SmartRightPanel';
 import ModernAuthView from './components/ModernAuthView';
+import LandingHome from './components/LandingHome';
 import ModernPendingApproval from './components/ModernPendingApproval';
 import { PageHeader } from './components/ui';
 import { hasPermission, isAdmin } from './utils/permissions';
@@ -176,6 +177,7 @@ export default function HomePage() {
   const [user, setUser] = useState(null); 
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [showAuth, setShowAuth] = useState(false); // landing page -> login
   const [loginError, setLoginError] = useState('');
   const [socialLoading, setSocialLoading] = useState(false);
   
@@ -1274,9 +1276,13 @@ export default function HomePage() {
   }
 
   // ยังไม่ได้เข้าสู่ระบบ (Modern Auth View)
+  if (!user && !showAuth) {
+    return <LandingHome onGetStarted={() => setShowAuth(true)} />;
+  }
+
   if (!user) {
     return (
-      <ModernAuthView 
+      <ModernAuthView
         loginForm={loginForm}
         setLoginForm={setLoginForm}
         handleLogin={handleLogin}
