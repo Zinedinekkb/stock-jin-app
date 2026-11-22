@@ -23,6 +23,9 @@
   overflow-x: clip;
 }
 
+/* the demo role switcher belongs to the app, not the landing page */
+html[data-landing] .demo-banner { display: none; }
+
 /* ---------------------------------------------------------------- nav */
 .lh-nav {
   position: fixed; z-index: 50; top: 12px; left: 50%;

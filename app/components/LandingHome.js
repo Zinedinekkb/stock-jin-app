@@ -17,6 +17,7 @@ import {
   BarChart3, CalendarCheck, Boxes, ScanLine, Truck, Users, Send, CheckCircle2, AlertTriangle,
 } from 'lucide-react';
 import LandingShader from './landing/LandingShader';
+import { useBranding } from './BrandingProvider';
 import './landing/landing.css';
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
@@ -199,7 +200,13 @@ const CONFETTI = Array.from({ length: 18 }, (_, i) => ({
 
 // --- page ----------------------------------------------------------------------
 
-export default function LandingHome({ onGetStarted }) {
+// demo: public demo build (NEXT_PUBLIC_DEMO_MODE). CTAs enter the demo instead of opening login.
+export default function LandingHome({ onGetStarted, demo = false }) {
+  const { appName, logoUrl } = useBranding();
+  const brandName = appName || 'StockPro';
+  const navLabel = demo ? 'ทดลองใช้เดโม' : 'เข้าสู่ระบบ';
+  const heroLabel = demo ? 'ทดลองใช้เดโม' : 'เริ่มใช้งาน';
+  const ctaLabel = demo ? 'เข้าเดโมเลย' : 'เริ่มใช้งานเลย';
   const rootRef = useRef(null);
   const stageRef = useRef(null);
   const showRef = useRef(null);
@@ -208,6 +215,12 @@ export default function LandingHome({ onGetStarted }) {
   const [navDark, setNavDark] = useState(false);
   const [active, setActive] = useState(0);
   const [wordIndex, setWordIndex] = useState(0);
+
+  // Flag the document while the landing is up (hides app-level overlays such as the demo banner)
+  useEffect(() => {
+    document.documentElement.setAttribute('data-landing', '');
+    return () => document.documentElement.removeAttribute('data-landing');
+  }, []);
 
   // Cycle the accent word in the headline (the original cycles "you" through languages).
   useEffect(() => {
@@ -319,8 +332,14 @@ export default function LandingHome({ onGetStarted }) {
   return (
     <div ref={rootRef} className="lh-root font-sans">
       <header className={`lh-nav ${navDark ? 'is-dark' : ''}`}>
-        <div className="lh-nav-brand"><Package size={20} className={navDark ? 'text-white' : 'text-brand-600'} /> StockPro</div>
-        <button type="button" onClick={onGetStarted} className="lh-nav-btn">เข้าสู่ระบบ</button>
+        <div className="lh-nav-brand">
+          {logoUrl
+            // eslint-disable-next-line @next/next/no-img-element -- shop logo URL is user-configured
+            ? <img src={logoUrl} alt="" className="w-6 h-6 rounded-md object-contain" />
+            : <Package size={20} className={navDark ? 'text-white' : 'text-brand-600'} />}
+          {brandName}
+        </div>
+        <button type="button" onClick={onGetStarted} className="lh-nav-btn">{navLabel}</button>
       </header>
 
       {/* 1. Hero: ring splash in a 3D stage, scatters away as you scroll */}
@@ -360,9 +379,10 @@ export default function LandingHome({ onGetStarted }) {
             </h1>
             <p className="lh-sub">ดูสต็อก เบิกของ ตรวจนับ และรายงาน ได้จากมือถือ ทุกสาขาเห็นข้อมูลชุดเดียวกัน</p>
             <div className="lh-ctas">
-              <button type="button" onClick={onGetStarted} className="lh-comet">เริ่มใช้งาน <ArrowRight size={16} /></button>
+              <button type="button" onClick={onGetStarted} className="lh-comet">{heroLabel} <ArrowRight size={16} /></button>
               <button type="button" onClick={scrollToShowcase} className="lh-ghost">ดูฟีเจอร์</button>
             </div>
+            {demo && <p className="mt-4 text-xs text-slate-400">ข้อมูลตัวอย่าง ไม่ต้องสมัคร · รีเฟรชแล้วเริ่มใหม่</p>}
           </div>
 
           <button type="button" className="lh-cue" onClick={scrollToShowcase}>เลื่อนลง <ChevronDown size={16} /></button>
@@ -478,7 +498,7 @@ export default function LandingHome({ onGetStarted }) {
       {/* 6. CTA */}
       <section className="lh-cta">
         <h2>พร้อมจัดระเบียบสต็อกแล้วหรือยัง?</h2>
-        <button type="button" onClick={onGetStarted} className="lh-comet">เริ่มใช้งานเลย <ArrowRight size={16} /></button>
+        <button type="button" onClick={onGetStarted} className="lh-comet">{ctaLabel} <ArrowRight size={16} /></button>
       </section>
     </div>
   );

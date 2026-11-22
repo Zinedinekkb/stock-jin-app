@@ -178,6 +178,17 @@ export default function HomePage() {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [showAuth, setShowAuth] = useState(false); // landing page -> login
+  // Demo build is always signed in, so the landing is gated by an explicit "enter demo" click,
+  // remembered per tab. Safe to read lazily: the first render is the auth spinner on server and client.
+  const isDemoBuild = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+  const [demoEntered, setDemoEntered] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return window.sessionStorage.getItem('demo-entered') === '1'; } catch { return false; }
+  });
+  const enterDemo = () => {
+    try { window.sessionStorage.setItem('demo-entered', '1'); } catch { /* storage blocked: enter anyway */ }
+    setDemoEntered(true);
+  };
   const [loginError, setLoginError] = useState('');
   const [socialLoading, setSocialLoading] = useState(false);
   
@@ -1273,6 +1284,11 @@ export default function HomePage() {
         onCheckStatus={handleCheckUserStatus} 
       />
     );
+  }
+
+  // เดโม: แสดงหน้าแรกก่อน กด "ทดลองใช้เดโม" แล้วค่อยเข้าแอป
+  if (isDemoBuild && !demoEntered) {
+    return <LandingHome demo onGetStarted={enterDemo} />;
   }
 
   // ยังไม่ได้เข้าสู่ระบบ (Modern Auth View)
